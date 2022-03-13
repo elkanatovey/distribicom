@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
 
-project(sealpir_download NONE)
-
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/seal_download/_deps/com_microsoft_seal-build/cmake)
 include(FetchContent)
 FetchContent_Declare(
         com_sealpir
