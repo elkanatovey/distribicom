@@ -1,6 +1,3 @@
-message(".zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz ")
-message("${CMAKE_BINARY_DIR} ")
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/seal_download/_deps/com_microsoft_seal-build/cmake)
 find_package(SEAL 3.7.2 REQUIRED)
 
 

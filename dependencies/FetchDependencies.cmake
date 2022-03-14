@@ -1,6 +1,8 @@
-message(".zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz ")
-if(NOT DONT_COMPILE_DEPENDENCIES)
-    message("...using Foo found in ")
+
+message("seal dir is ${SEAL_DIR}")
+# get seal if no seal_dir
+if((NOT SEAL_DIR) OR GET_SEAL)
+    message("Getting dependencies... ")
     # get dependencies (just seal for now)
     configure_file(dependencies/FetchSeal.cmake seal_download/CMakeLists.txt)
 
@@ -19,12 +21,11 @@ if(NOT DONT_COMPILE_DEPENDENCIES)
     if(result)
         message(FATAL_ERROR "Build step for seal failed: ${result}")
     endif()
-
-
-    ###################################################
-
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/seal_download/_deps/com_microsoft_seal-build/cmake)
-    # get sealpir
-    include(dependencies/FetchSealPIR.cmake)
-
+    set(SEAL_DIR ${CMAKE_BINARY_DIR}/seal_download/_deps/com_microsoft_seal-build/cmake CACHE STRING "" FORCE)
+    message("seal dir is ${SEAL_DIR}")
 endif()
+
+message("seal dir is ${SEAL_DIR}")
+set(SEAL_DIR ${SEAL_DIR} CACHE STRING "" FORCE)
+# get sealpir
+include(dependencies/FetchSealPIR.cmake)
