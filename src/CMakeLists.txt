@@ -1,7 +1,7 @@
 find_package(SEAL 3.7.2 REQUIRED)
 
 
-add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp  master_server.hpp master_server.cpp clientside_server.hpp clientside_server.cpp)
+add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp master.hpp master.cpp worker.hpp worker.cpp)
 
 target_include_directories(distribicom_cpp PUBLIC ${com_sealpir_SOURCE_DIR}/src)
 target_link_libraries(distribicom_cpp sealpir)
