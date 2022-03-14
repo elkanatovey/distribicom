@@ -1,0 +1,6 @@
+include_directories (${SealPIR_SOURCE_DIR}/src)
+include_directories (${distribicom_SOURCE_DIR}/src)
+
+add_executable(distribute_query_test distribute_query_test.cpp)
+target_link_libraries(distribute_query_test distribicom_cpp)
+add_test(NAME distribute_query_test COMMAND distribute_query_test)

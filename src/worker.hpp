@@ -28,7 +28,7 @@ private:
                              vector<seal::Ciphertext> &intermediateCtxts, seal::Ciphertext &temp);
 
     void turn_intermediateCtexts_to_db_format( Database &intermediate_plain,
-                                               const vector<seal::Ciphertext> &intermediateCtxts,
+                                               vector<seal::Ciphertext> &intermediateCtxts,
                                                uint64_t &product, Database *&cur);
 
 

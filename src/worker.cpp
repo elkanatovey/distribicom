@@ -161,7 +161,7 @@ vector<Ciphertext> &expanded_query,
  *  to intermediate_plain. This will be treated as the current db in the next iteration of multiplications
  */
 inline void ClientSideServer::turn_intermediateCtexts_to_db_format( vector<Plaintext>
-        &intermediate_plain, const vector<Ciphertext> &intermediateCtxts,
+        &intermediate_plain, vector<Ciphertext> &intermediateCtxts,
                                                             uint64_t &product, vector<Plaintext> *&cur) {
     intermediate_plain.clear();
     intermediate_plain.reserve(pir_params_.expansion_ratio * product);
@@ -169,8 +169,15 @@ inline void ClientSideServer::turn_intermediateCtexts_to_db_format( vector<Plain
 
 
     for (uint64_t rr = 0; rr < product; rr++) {
-
-        vector<Plaintext> plains = decompose_to_plaintexts(context_->first_context_data()->parms(),
+        EncryptionParameters parms;
+        if(pir_params_.enable_mswitching){
+            evaluator_->mod_switch_to_inplace(intermediateCtxts[rr], context_->last_parms_id());
+            parms = context_->last_context_data()->parms();
+        }
+        else{
+            parms = context_->first_context_data()->parms();
+        }
+        vector<Plaintext> plains = decompose_to_plaintexts(parms,
                                                            intermediateCtxts[rr]);
 
         for (uint32_t jj = 0; jj < plains.size(); jj++) {
