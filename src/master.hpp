@@ -8,8 +8,12 @@ class MasterServer : public PIRServer {
 
     std::map<std::uint64_t, DatabaseShard> db_rows_;
     std::map<std::uint64_t, std::string> db_rows_serialized_;
+    std::map<int, std::stringstream> galoisKeys_serialised_;
+
     std::map<std::uint64_t, DistributedQueryContextBucket> query_buckets_;
     std::map<std::uint64_t, DistributedQueryContextBucketSerial> query_buckets_serialized_;
+
+    std::map<std::uint64_t, DistributedGaloisContextBucketSerial> galois_buckets_serialized_;
     std::map<ClientID , PirReplyShard> partialReplies_;
     uint64_t ptext_len_;
 
@@ -42,8 +46,10 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     uint64_t getNumberOfPartitions();
 
+    void store_query_ser(uint32_t client_id, const string &query);
 
+    void store_galois_key_ser(uint32_t client_id, string &galois);
 
-    void store_query_ser(uint32_t client_id, uint32_t count, const string &query, const string &galois_key);
+    void generate_final_reply_ser(uint32_t client_id, stringstream &stream);
 };
 

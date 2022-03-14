@@ -9,7 +9,8 @@ using namespace seal::util;
 
 
 /**
- * create row partition of db for distibuting work
+ * create row partition of db for distributing work - both serialised version and not serialsed
+ * version
  */
 void MasterServer::generate_dbase_partition() {
     vector<uint64_t> nvec = pir_params_.nvec;
@@ -45,13 +46,13 @@ void MasterServer::generate_dbase_partition() {
 /**
  *  store queries for redistribution to clients for sharded calculation. Assumes that galois key has been set
  */
-void MasterServer::store_query_ser(uint32_t client_id, uint32_t count, const string & query, const string & galois_key)
+void MasterServer::store_query_ser(uint32_t client_id, const string & query)
 {
     auto num_of_rows = this->getNumberOfPartitions();
     uint32_t bucket_id = client_id / num_of_rows;
 //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
 
-    DistributedQueryContextSerial query_context_serial{client_id, query, galois_key};
+    DistributedQueryContextSerial query_context_serial{client_id, query};
 
 
     // no query inserted to bucket yet case
@@ -68,6 +69,30 @@ void MasterServer::store_query_ser(uint32_t client_id, uint32_t count, const str
 
 
 /**
+ *  store galois keyd for redistribution to clients for sharded calculation.
+ */
+void MasterServer::store_galois_key_ser(uint32_t client_id, string & galois)
+{
+    auto num_of_rows = this->getNumberOfPartitions();
+    uint32_t bucket_id = client_id / num_of_rows;
+    //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
+
+    DistributedGaloisContextSerial galois_context_serial{client_id, galois};
+
+
+    // no query inserted to bucket yet case
+    if (this->galois_buckets_serialized_.find(bucket_id) == this->galois_buckets_serialized_.end())
+    {
+        vector<DistributedGaloisContextSerial> current_bucket_serial;
+        current_bucket_serial.push_back(galois_context_serial);
+        this->galois_buckets_serialized_[bucket_id] = move(current_bucket_serial);
+    }
+    else{
+        this->galois_buckets_serialized_[bucket_id].push_back(galois_context_serial);
+    }
+}
+
+/**
  *  store queries for redistribution to clients for sharded calculation. Assumes that galois key has been set
  */
 void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
@@ -76,7 +101,7 @@ void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
     auto num_of_rows = this->getNumberOfPartitions();
     uint32_t bucket_id = client_id / num_of_rows;
 //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
-    DistributedQueryContext query_context{client_id, query, this->galoisKeys_[client_id]};
+    DistributedQueryContext query_context{client_id, query};
 
     uint32_t count = query[0].size(); //@todo verify this
 
@@ -183,6 +208,10 @@ PirReply MasterServer::generateFinalReply(std::uint32_t client_id){
         evaluator_->transform_from_ntt_inplace(i);
     }
     return reply;
+}
+void MasterServer::generate_final_reply_ser(std::uint32_t client_id , std::stringstream &stream){
+    PirReply reply = generateFinalReply(client_id);
+    serialize_reply(reply, stream);
 }
 std::uint64_t MasterServer::getNumberOfPartitions(){
     vector<uint64_t> nvec = pir_params_.nvec;

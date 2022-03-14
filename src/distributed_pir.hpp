@@ -6,13 +6,16 @@ typedef std::vector<seal::Ciphertext> PirQuerySingleDim; // one dimension of a P
 struct DistributedQueryContext {
     std::uint32_t client_id;
     const PirQuery query;                 // query
-    seal::GaloisKeys keys;          // client galois key
 };
 
 struct DistributedQueryContextSerial {
     std::uint32_t client_id;
     std::string query;                 // query
-    std::string keys;          // client galois key
+};
+
+struct DistributedGaloisContextSerial {
+    std::uint32_t client_id;
+    std::string galois;                 // galois key
 };
 
 typedef std::vector<seal::Plaintext> DatabaseShard;
@@ -23,6 +26,8 @@ typedef std::map<ClientID, PirReplyShard> PirReplyShardBucket;
 typedef std::vector<DistributedQueryContext> DistributedQueryContextBucket; // store pirQueries to pass to workers
 
 typedef std::vector<DistributedQueryContextSerial> DistributedQueryContextBucketSerial;
+
+typedef std::vector<DistributedGaloisContextSerial> DistributedGaloisContextBucketSerial;
 
 struct RegistrationParams {
     uint64_t number_of_items;

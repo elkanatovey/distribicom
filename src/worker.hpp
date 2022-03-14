@@ -15,9 +15,13 @@ public:
 // constructor for client side server
 ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams &pir_params,
                  unique_ptr<vector<seal::Plaintext>>db, uint32_t shard_id);
+ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams& pir_params,
+                 std::string db, uint32_t shard_id,uint32_t row_len);
 
 // distributed pir functions client side
 PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket queries);
+
+PirReplyShardBucketSer process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial queries);
 
 private:
     void expand_query_single_dim(vector<seal::Ciphertext> &expanded_query, std::uint64_t n_i,
