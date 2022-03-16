@@ -21,7 +21,8 @@ ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams&
 // distributed pir functions client side
 PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket queries);
 
-PirReplyShardBucketSer process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial queries);
+PirReplyShardBucketSerial process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial
+queries);
 
 private:
     void expand_query_single_dim(vector<seal::Ciphertext> &expanded_query, std::uint64_t n_i,
@@ -36,7 +37,7 @@ private:
                                                uint64_t &product, Database *&cur);
 
 
-
+    PirReplyShardSerial process_query_at_client_ser(stringstream &query_stream, uint32_t client_id);
 };
 
 

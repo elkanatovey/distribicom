@@ -138,11 +138,12 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         //measure individual client calculation time
         auto time_client_s = high_resolution_clock::now();
 //@todo continue serialization
-        auto clientReplies = clientSideServer.processQueryBucketAtClient(bucket);
+        auto clientReplies = clientSideServer.process_query_bucket_at_client_ser_(bucket);
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
         cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
              << endl;
+        //@todo continue serialization
         server.processQueriesAtServer(clientReplies);
     }
 

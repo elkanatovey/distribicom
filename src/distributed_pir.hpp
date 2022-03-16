@@ -23,6 +23,9 @@ typedef std::uint64_t ClientID;
 typedef std::vector<seal::Ciphertext> PirReplyShard;
 typedef std::map<ClientID, PirReplyShard> PirReplyShardBucket;
 
+typedef std::string PirReplyShardSerial;
+typedef std::map<ClientID, PirReplyShardSerial> PirReplyShardBucketSerial;
+
 typedef std::vector<DistributedQueryContext> DistributedQueryContextBucket; // store pirQueries to pass to workers
 
 typedef std::vector<DistributedQueryContextSerial> DistributedQueryContextBucketSerial;

@@ -55,13 +55,29 @@ queries){ // @todo parallelize
 /**
  *  get partial answers from a bucket
  */
-PirReplyShardBucket ClientSideServer::process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial queries){ // @todo parallelize
-    PirReplyShardBucket answers;
+PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
+(DistributedQueryContextBucketSerial queries){ // @todo parallelize
+    PirReplyShardBucketSerial answers;
+    stringstream q;
     for(const auto& query_context: queries){
-        PirReplyShard reply = processQueryAtClient(query_context.query, query_context.client_id);
-        answers[query_context.client_id] = reply;
+        q.str(query_context.query);
+        PirReplyShardSerial reply_ser = process_query_at_client_ser(q, query_context.client_id);
+
+        answers[query_context.client_id] = reply_ser;
+
+        q.clear();
     }
     return answers;
+}
+
+PirReplyShardSerial ClientSideServer::process_query_at_client_ser(stringstream &query_stream,uint32_t client_id){
+    PirQuery current_query = deserialize_query(query_stream);
+    query_stream.clear();
+    PirReplyShard reply = processQueryAtClient(current_query, client_id);
+    serialize_reply(reply, query_stream);
+    PirReplyShardSerial reply_str = query_stream.str();
+    query_stream.clear();
+    return reply_str;
 }
 
 /**
