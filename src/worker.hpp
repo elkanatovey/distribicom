@@ -24,6 +24,10 @@ PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket que
 PirReplyShardBucketSerial process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial
 queries);
 
+int process_query_at_client_ser(stringstream &query_stream, stringstream &reply_stream, uint32_t client_id);
+
+void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
+
 private:
     void expand_query_single_dim(vector<seal::Ciphertext> &expanded_query, std::uint64_t n_i,
                                  const PirQuerySingleDim& query, std::uint32_t client_id);
@@ -37,7 +41,6 @@ private:
                                                uint64_t &product, Database *&cur);
 
 
-    PirReplyShardSerial process_query_at_client_ser(stringstream &query_stream, uint32_t client_id);
 };
 
 

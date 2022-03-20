@@ -37,7 +37,11 @@ PIRServer(seal_params, pir_params)
 }
 
 
-
+void ClientSideServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
+    GaloisKeys gkey;
+    gkey.load(*context_, galois_stream);
+    set_galois_key(client_id, gkey);
+}
 
 /**
  *  get partial answers from a bucket
@@ -58,26 +62,26 @@ queries){ // @todo parallelize
 PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
 (DistributedQueryContextBucketSerial queries){ // @todo parallelize
     PirReplyShardBucketSerial answers;
-    stringstream q;
+    stringstream query_stream;
+    stringstream partial_reply_stream;
     for(const auto& query_context: queries){
-        q.str(query_context.query);
-        PirReplyShardSerial reply_ser = process_query_at_client_ser(q, query_context.client_id);
+        query_stream.str(query_context.query);
+        process_query_at_client_ser(query_stream,partial_reply_stream , query_context.client_id);
 
-        answers[query_context.client_id] = reply_ser;
-
-        q.clear();
+        answers[query_context.client_id] = partial_reply_stream.str();
+        query_stream.clear();
+        partial_reply_stream.clear();
     }
     return answers;
 }
 
-PirReplyShardSerial ClientSideServer::process_query_at_client_ser(stringstream &query_stream,uint32_t client_id){
+int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, stringstream&
+                                                                  reply_stream,uint32_t client_id){
     PirQuery current_query = deserialize_query(query_stream);
     query_stream.clear();
     PirReplyShard reply = processQueryAtClient(current_query, client_id);
-    serialize_reply(reply, query_stream);
-    PirReplyShardSerial reply_str = query_stream.str();
-    query_stream.clear();
-    return reply_str;
+    auto num_bytes = serialize_reply(reply, reply_stream);
+    return num_bytes;
 }
 
 /**
@@ -136,12 +140,10 @@ PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t cl
                 evaluator_->multiply_plain(expanded_query[this->shard_id_], (*cur)[k], intermediateCtxts[k]); //skip members of query vector according to row that we calculated from db
             }
         };
-        if(i == 0) {
-            for (uint32_t jj = 0; jj < intermediateCtxts.size(); jj++) {
-                evaluator_->transform_from_ntt_inplace(intermediateCtxts[jj]);
-                // print intermediate ctxts?
-                //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
-            }
+        for (uint32_t jj = 0; jj < intermediateCtxts.size(); jj++) {
+            evaluator_->transform_from_ntt_inplace(intermediateCtxts[jj]);
+            // print intermediate ctxts?
+            //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
         }
 
         if (i == nvec.size() - 1) {

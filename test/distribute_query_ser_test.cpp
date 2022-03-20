@@ -90,11 +90,9 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // Set galois key for client with id 0
     cout << "Main: Setting Galois keys...";
-    server.set_galois_key(0, galois_keys);
     stringstream gkey;
     galois_keys.save(gkey);
-    std::string s = gkey.str();
-    server.store_galois_key_ser(0, s);
+    server.store_galois_key_ser(0, gkey);
 
     // Measure database setup
     auto time_pre_s = high_resolution_clock::now();
@@ -129,36 +127,66 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // do computation at each client
     for(int i=0; i< pir_params.nvec[1]; i++) {
-        DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
         auto row = server.get_db_row_serialized(i);
         auto row_len = server.get_row_len();
 
+        DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
         ClientSideServer clientSideServer(enc_params, pir_params, row, i, row_len);
+        auto gkeys_ser = server.get_galois_bucket_ser(0);
+
+        stringstream galois_str;
+        for(int j=0;j<gkeys_ser.size();j++){
+            galois_str.str(gkeys_ser[j].galois);
+            clientSideServer.set_one_galois_key_ser(gkeys_ser[j].client_id, galois_str);
+            galois_str.clear();
+        }
 
         //measure individual client calculation time
         auto time_client_s = high_resolution_clock::now();
-//@todo continue serialization
-        auto clientReplies = clientSideServer.process_query_bucket_at_client_ser_(bucket);
+        stringstream worker_query_stream;
+        stringstream worker_reply_stream;
+
+        // for storing individual answers of single client in the test - dont need totrack id here as only client 0
+        // answers being given
+        vector<std::string> partial_answers;
+        for(auto & query_context : bucket){
+            worker_query_stream.str(query_context.query);
+            clientSideServer.process_query_at_client_ser(worker_query_stream, worker_reply_stream, query_context.client_id);
+            worker_query_stream.clear();
+            partial_answers.push_back(worker_reply_stream.str());
+            worker_reply_stream.clear();
+        }
+
+
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
         cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
              << endl;
-        //@todo continue serialization
-        server.processQueriesAtServer(clientReplies);
-    }
 
-    auto reply = server.generateFinalReply(0);
+        stringstream partial_reply_stream;
+        for(auto & answer : partial_answers){
+            partial_reply_stream << answer;
+            server.process_reply_at_server_ser(partial_reply_stream, 0);
+            partial_reply_stream.clear();
+        }
+    }
+    stringstream reply_stream;
+    server.generate_final_reply_ser(0, reply_stream);
 
 
     // Measure query processing (including expansion) in normal server
     auto time_server_s = high_resolution_clock::now();
-    PirReply repl1y = server.generate_reply(query, 0);
+    stringstream reply_server_individual;
+    PirQuery q2 = server.deserialize_query(query);
+    PirReply repl1y = server.generate_reply(q2, 0);
+    server.serialize_reply(repl1y, reply_server_individual);
     auto time_server_e = high_resolution_clock::now();
     auto time_server_us = duration_cast<microseconds>(time_server_e - time_server_s).count();
 
     // Measure response extraction
     auto time_decode_s = chrono::high_resolution_clock::now();
-    vector<uint8_t> elems = client.decode_reply(reply, offset);
+    repl1y = client.deserialize_reply(reply_server_individual);
+    vector<uint8_t> elems = client.decode_reply(repl1y, offset);
     auto time_decode_e = chrono::high_resolution_clock::now();
     auto time_decode_us = duration_cast<microseconds>(time_decode_e - time_decode_s).count();
 
@@ -188,7 +216,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     cout << "Main: PIRServer reply generation time: " << time_server_us / 1000 << " ms"
          << endl;
     cout << "Main: PIRClient answer decode time: " << time_decode_us / 1000 << " ms" << endl;
-    cout << "Main: Reply num ciphertexts: " << reply.size() << endl;
+    cout << "Main: Reply num ciphertexts: " << repl1y.size() << endl;
 
     return 0;
 }
