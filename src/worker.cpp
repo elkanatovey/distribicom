@@ -15,6 +15,34 @@ ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params
     shard_id_ = shard_id;
 }
 
+
+/**
+ *  Note for now: local server for client constructor
+ */
+ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams
+&pir_params, std::string db, uint32_t shard_id,uint32_t row_len) :
+PIRServer(seal_params, pir_params)
+{
+    db_ = make_unique<vector<seal::Plaintext>>();
+    stringstream temp_db_;
+    temp_db_ << db;
+    for (uint32_t j = 0; j < row_len; j++) {
+        Plaintext p;
+        p.load(*context_, temp_db_);
+        db_->push_back(p);
+    }
+
+    is_db_preprocessed_ = false;
+    shard_id_ = shard_id;
+}
+
+
+void ClientSideServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
+    GaloisKeys gkey;
+    gkey.load(*context_, galois_stream);
+    set_galois_key(client_id, gkey);
+}
+
 /**
  *  get partial answers from a bucket
  */
@@ -22,11 +50,38 @@ PirReplyShardBucket ClientSideServer::processQueryBucketAtClient(DistributedQuer
 queries){ // @todo parallelize
     PirReplyShardBucket answers;
     for(const auto& query_context: queries){
-        set_galois_key(query_context.client_id, query_context.keys);
         PirReplyShard reply = processQueryAtClient(query_context.query, query_context.client_id);
         answers[query_context.client_id] = reply;
     }
     return answers;
+}
+
+/**
+ *  get partial answers from a bucket
+ */
+PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
+(DistributedQueryContextBucketSerial queries){ // @todo parallelize
+    PirReplyShardBucketSerial answers;
+    stringstream query_stream;
+    stringstream partial_reply_stream;
+    for(const auto& query_context: queries){
+        query_stream.str(query_context.query);
+        process_query_at_client_ser(query_stream,partial_reply_stream , query_context.client_id);
+
+        answers[query_context.client_id] = partial_reply_stream.str();
+        query_stream.clear();
+        partial_reply_stream.clear();
+    }
+    return answers;
+}
+
+int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, stringstream&
+                                                                  reply_stream,uint32_t client_id){
+    PirQuery current_query = deserialize_query(query_stream);
+    query_stream.clear();
+    PirReplyShard reply = processQueryAtClient(current_query, client_id);
+    auto num_bytes = serialize_reply(reply, reply_stream);
+    return num_bytes;
 }
 
 /**
@@ -85,12 +140,10 @@ PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t cl
                 evaluator_->multiply_plain(expanded_query[this->shard_id_], (*cur)[k], intermediateCtxts[k]); //skip members of query vector according to row that we calculated from db
             }
         };
-        if(i == 0) {
-            for (uint32_t jj = 0; jj < intermediateCtxts.size(); jj++) {
-                evaluator_->transform_from_ntt_inplace(intermediateCtxts[jj]);
-                // print intermediate ctxts?
-                //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
-            }
+        for (uint32_t jj = 0; jj < intermediateCtxts.size(); jj++) {
+            evaluator_->transform_from_ntt_inplace(intermediateCtxts[jj]);
+            // print intermediate ctxts?
+            //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
         }
 
         if (i == nvec.size() - 1) {
