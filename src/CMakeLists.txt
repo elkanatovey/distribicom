@@ -1,4 +1,4 @@
-find_package(SEAL 3.7.2 REQUIRED)
+find_package(SEAL 4.0.0 REQUIRED)
 
 
 add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp master.hpp master.cpp worker.hpp worker.cpp)
