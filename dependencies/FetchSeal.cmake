@@ -7,7 +7,7 @@ include(FetchContent)
 FetchContent_Declare(
         com_microsoft_seal
         GIT_REPOSITORY https://github.com/microsoft/SEAL
-        GIT_TAG        79234726053c45eede688400aa219fdec0810bd8 #v3.7.2
+        GIT_TAG        a0fc0b732f44fa5242593ab488c8b2b3076a5f76 #v4.0.0
 )
 
 if(NOT com_microsoft_seal_POPULATED)
