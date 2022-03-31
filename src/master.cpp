@@ -44,6 +44,43 @@ void MasterServer::generate_dbase_partition() {
     }
 }
 
+
+
+/**
+ * part 1 of freivalds algo on db
+ * version
+ */
+void MasterServer::generate_freivalds_partition() {
+    vector<uint64_t> nvec = pir_params_.nvec;
+
+    unsigned long num_of_cols = 1;
+    auto num_of_rows = nvec[COL];
+    if (nvec.size() > 1) {
+        num_of_cols = nvec[COL];
+        num_of_rows = nvec[ROW];
+    }
+
+    vector<seal::Plaintext> *cur = db_.get();  // current left matrix
+    stringstream current_stream;
+
+    for (uint64_t k = 0; k < num_of_cols; k++) { // k is smaller than num of cols
+
+        vector<seal::Plaintext> current_col;
+        current_col.reserve(num_of_rows);
+        current_col.push_back((*cur)[k]);
+        (*cur)[k].save(current_stream);
+
+        for (uint64_t j = 1; j < num_of_rows; j++) {  // j is row
+            current_col.push_back((*cur)[k + j * num_of_cols]);
+            (*cur)[k + j * num_of_cols].save(current_stream);
+        }
+        string row = current_stream.str();
+        this->db_rows_serialized_[k] = move(row);
+        this->db_rows_[k] = move(current_col);
+        current_stream.clear();
+    }
+}
+
 /**
  *  store queries for redistribution to clients for sharded calculation. Assumes that galois key has been set
  */
