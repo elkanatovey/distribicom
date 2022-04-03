@@ -250,9 +250,6 @@ void MasterServer::processQueriesAtServer(const PirReplyShardBucket& queries) {
 PirReply MasterServer::generateFinalReply(std::uint32_t client_id){
     auto reply = partialReplies_[client_id];
 
-    for (auto & i : reply) {
-        evaluator_->transform_from_ntt_inplace(i);
-    }
     return reply;
 }
 int MasterServer::generate_final_reply_ser(std::uint32_t client_id , std::stringstream &stream){

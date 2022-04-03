@@ -72,10 +72,13 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     // the correct element.
     auto db_copy(make_unique<uint8_t[]>(number_of_items * size_per_item));
 
-    random_device rd;
+
+    seal::Blake2xbPRNGFactory factory;
+    auto gen =  factory.create();
+
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
-            auto val = rd() % 256;
+            auto val = gen->generate() % 256;
             db.get()[(i * size_per_item) + j] = val;
             db_copy.get()[(i * size_per_item) + j] = val;
         }
@@ -115,7 +118,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 //    auto z1 =  server.get_db_row(0);
 
     // Choose an index of an element in the DB
-    uint64_t ele_index = rd() % number_of_items; // element in DB at random position
+    uint64_t ele_index = gen->generate() % number_of_items; // element in DB at random position
     uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
     cout << "Main: element index = " << ele_index << " from [0, " << number_of_items -1 << "]" << endl;
