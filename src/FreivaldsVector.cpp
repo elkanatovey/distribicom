@@ -13,45 +13,60 @@ pir_params_(pir_params){  //generates the freeivalds vec
     auto num_of_rows = pir_params_.nvec[ROW];
 
     std::random_device rd; // @todo this needs to be implemented with a cprng
+    seal::Blake2xbPRNGFactory factory;
+    auto gen =  factory.create();
 
-    std::vector<std::vector<int>> freivalds_vector;
+    std::vector<std::vector<std::uint64_t>> freivalds_vector;
     freivalds_vector.reserve(num_of_rows);
 
     for (uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
 
-        std::vector<int> current_plaintext_multiplier;
-        current_plaintext_multiplier.reserve(pir_params_.slot_count);
-        generate(current_plaintext_multiplier.begin(), current_plaintext_multiplier.end(), rd()%2);
+        std::vector<std::uint64_t> current_plaintext_multiplier(pir_params_.slot_count);
+        generate(current_plaintext_multiplier.begin(), current_plaintext_multiplier.end(), [&gen](){return gen->generate(); });
         freivalds_vector.push_back(std::move(current_plaintext_multiplier));
     }
     this->random_vec = std::move(freivalds_vector);
 }
 
-void FreivaldsVector::multiply_with_db(const std::shared_ptr<Database> &db_) {
+void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> &db_unencoded) {
     auto num_of_rows = pir_params_.nvec[ROW];
     auto num_of_cols = pir_params_.nvec[COL];
 
-    std::vector<seal::Plaintext> *cur = db_.get();
-    std::vector<seal::Plaintext> multiplication_result;
-    multiplication_result.reserve(num_of_rows);
+    std::vector<std::vector<std::uint64_t>> result_vec;
+    result_vec.reserve(num_of_cols);
 
-    for(uint64_t i = 0; i < num_of_rows; i++){
-        seal::Plaintext pt(enc_params_.poly_modulus_degree());
-        pt.set_zero();
-        multiplication_result.push_back(pt);
+    for(uint64_t l = 0; l < num_of_cols; l++){
+        std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree());
+        result_vec.push_back(partial_result);
     }
+
+
+
 
 
     for(uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
-        encoder_->decode()
+        multiply_add(db_unencoded[k], random_vec[0], result_vec[0]);
 
         for (uint64_t j = 1; j < num_of_cols; j++) {  // j is column
-
+            multiply_add(db_unencoded[k + j * num_of_rows], random_vec[j], result_vec[j]);
         }
-
     }
 
+    std::vector<seal::Plaintext> multiplication_result;
+    multiplication_result.reserve(num_of_rows);
+    for(uint64_t i = 0; i < num_of_rows; i++){
+        seal::Plaintext pt(enc_params_.poly_modulus_degree());
+        pt.set_zero();
+        encoder_->encode(result_vec[i], pt);
+        multiplication_result.push_back(pt);
+    }
+    random_vec_mul_db = multiplication_result;
+}
 
-
+void FreivaldsVector::multiply_add(std::vector<std::uint64_t>& left, std::vector<std::uint64_t>& right,
+                               std::vector<std::uint64_t>& result){
+    for(int i=0;i< left.size(); i++){
+        result[i]+=(left[i] * right[i]);
+    }
 }
 

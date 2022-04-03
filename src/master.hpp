@@ -60,5 +60,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
     DistributedGaloisContextBucketSerial get_galois_bucket_ser(uint32_t client_id);
 
     void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
+
+    void db_to_vec(vector<std::vector<std::uint64_t>> &db_unencoded);
 };
 

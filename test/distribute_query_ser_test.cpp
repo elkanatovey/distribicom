@@ -9,6 +9,7 @@
 #include <random>
 #include <cstdint>
 #include <cstddef>
+#include "FreivaldsVector.hpp"
 
 using namespace std::chrono;
 using namespace std;
@@ -98,6 +99,12 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     auto time_pre_s = high_resolution_clock::now();
     server.set_database(move(db), number_of_items, size_per_item);
     server.generate_dbase_partition(); //@todo pretty this up
+
+    std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
+    server.db_to_vec(db_unencoded);
+    FreivaldsVector f(enc_params, pir_params);
+    f.multiply_with_db(db_unencoded);
+
     server.preprocess_database();
     cout << "Main: database pre processed " << endl;
     auto time_pre_e = high_resolution_clock::now();

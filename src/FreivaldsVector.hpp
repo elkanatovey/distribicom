@@ -10,7 +10,7 @@ class FreivaldsVector {
     std::unique_ptr<seal::BatchEncoder> encoder_;
     std::shared_ptr<seal::SEALContext> context_;
 
-    std::vector<std::vector<int>> random_vec;
+    std::vector<std::vector<std::uint64_t>> random_vec;
     std::vector<seal::Plaintext> random_vec_mul_db;
 
 
@@ -20,7 +20,10 @@ public:
     /**
      * vector always multiplies from left
      */
-    void multiply_with_db(const std::shared_ptr<Database> &db);
+    void multiply_with_db( std::vector<std::vector<std::uint64_t>> &db_unencoded);
+
+    static void multiply_add(std::vector<uint64_t> &left, std::vector<uint64_t> &right, std::vector<std::uint64_t>
+            &result);
 };
 
 
