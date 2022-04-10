@@ -9,7 +9,7 @@ class ClientSideServer : public PIRServer {
     std::uint32_t shard_id_;
 
 // client side pir computations
-PirReplyShard processQueryAtClient(PirQuery query, uint32_t client_id);
+PirReplyShard processQueryAtClient(PirQuery query, uint32_t client_id, bool do_second_level=true);
 
 public:
 // constructor for client side server
@@ -24,7 +24,10 @@ PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket que
 PirReplyShardBucketSerial process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial
 queries);
 
-int process_query_at_client_ser(stringstream &query_stream, stringstream &reply_stream, uint32_t client_id);
+/**
+ *  do_second_level decides if worker does partial pir also on second level of recursion
+ */
+int process_query_at_client_ser(stringstream &query_stream, stringstream &reply_stream, uint32_t client_id, bool do_second_level=true);
 
 void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
 

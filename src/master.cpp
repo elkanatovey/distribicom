@@ -294,6 +294,12 @@ PirReply MasterServer::generateFinalReply(std::uint32_t client_id){
 }
 int MasterServer::generate_final_reply_ser(std::uint32_t client_id , std::stringstream &stream){
     PirReply reply = generateFinalReply(client_id);
+    for (auto & jj : reply) {
+        evaluator_->transform_from_ntt_inplace(jj);
+        // print intermediate ctxts?
+        //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
+    }
+
    return serialize_reply(reply, stream);
 }
 std::uint64_t MasterServer::getNumberOfPartitions(){

@@ -76,10 +76,10 @@ PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
 }
 
 int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, stringstream&
-                                                                  reply_stream,uint32_t client_id){
+                                                                  reply_stream,uint32_t client_id, bool do_second_level){
     PirQuery current_query = deserialize_query(query_stream);
     query_stream.clear();
-    PirReplyShard reply = processQueryAtClient(current_query, client_id);
+    PirReplyShard reply = processQueryAtClient(current_query, client_id, do_second_level);
     auto num_bytes = serialize_reply(reply, reply_stream);
     return num_bytes;
 }
@@ -87,7 +87,7 @@ int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, st
 /**
  *  do matrix multiplication with local shard, returns local part of answer  --assumes db is 2dim and galois key inserted
  */
-PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t client_id) {
+PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t client_id, bool do_second_level) {
 
     vector<uint64_t> nvec = pir_params_.nvec;
     uint64_t product = nvec[0]; //don't count rows in calculation, as only one row in shard @todo check the math of this
@@ -144,6 +144,9 @@ PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t cl
             evaluator_->transform_from_ntt_inplace(intermediateCtxts[jj]);
             // print intermediate ctxts?
             //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
+        }
+        if (!do_second_level){
+            return intermediateCtxts;
         }
 
         if (i == nvec.size() - 1) {

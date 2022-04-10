@@ -174,7 +174,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         vector<std::string> partial_answers;
         for(auto & query_context : bucket){
             worker_query_stream.str(query_context.query);
-            clientSideServer.process_query_at_client_ser(worker_query_stream, worker_reply_stream, query_context.client_id);
+            clientSideServer.process_query_at_client_ser(worker_query_stream, worker_reply_stream, query_context.client_id, true);
             worker_query_stream.clear();
             partial_answers.push_back(worker_reply_stream.str());
             worker_reply_stream.clear();
@@ -208,7 +208,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // Measure response extraction
     auto time_decode_s = chrono::high_resolution_clock::now();
-    repl1y = client.deserialize_reply(reply_server_individual);
+    repl1y = client.deserialize_reply(reply_stream);
     vector<uint8_t> elems = client.decode_reply(repl1y, offset);
     auto time_decode_e = chrono::high_resolution_clock::now();
     auto time_decode_us = duration_cast<microseconds>(time_decode_e - time_decode_s).count();
