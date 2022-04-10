@@ -62,5 +62,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
     void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
 
     void db_to_vec(vector<std::vector<std::uint64_t>> &db_unencoded);
+
+    vector<seal::Ciphertext> get_expanded_query_first_dim(uint32_t client_id, stringstream &query_stream);
 };
 

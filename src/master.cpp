@@ -52,6 +52,39 @@ void MasterServer::db_to_vec(std::vector<std::vector<std::uint64_t>> &db_unencod
     }
 }
 
+std::vector<seal::Ciphertext> MasterServer::get_expanded_query_first_dim(uint32_t client_id, stringstream
+                                                          &query_stream) {
+    PirQuery query = deserialize_query(query_stream);
+
+    vector<Ciphertext> expanded_query;
+
+    uint64_t n_i = pir_params_.nvec[0];
+    cout << "Server: n_i = " << n_i << endl;
+    cout << "Server: expanding " << query[0].size() << " query ctxts" << endl;
+    for (uint32_t j = 0; j < query[0].size(); j++){
+        uint64_t total = enc_params_.poly_modulus_degree();
+        if (j == query[0].size() - 1){
+            total = n_i % enc_params_.poly_modulus_degree();
+        }
+        cout << "-- expanding one query ctxt into " << total  << " ctxts "<< endl;
+        vector<Ciphertext> expanded_query_part = expand_query(query[0][j], total, client_id);
+        expanded_query.insert(expanded_query.end(), std::make_move_iterator(expanded_query_part.begin()),
+                              std::make_move_iterator(expanded_query_part.end()));
+        expanded_query_part.clear();
+    }
+    cout << "Server: expansion done " << endl;
+    if (expanded_query.size() != n_i) {
+        cout << " size mismatch!!! " << expanded_query.size() << ", " << n_i << endl;
+    }
+
+    // Transform expanded query to NTT, and ...
+    for (uint32_t jj = 0; jj < expanded_query.size(); jj++) {
+        evaluator_->transform_to_ntt_inplace(expanded_query[jj]);
+    }
+
+    return expanded_query;
+}
+
 
 
 
@@ -82,6 +115,7 @@ void MasterServer::store_query_ser(uint32_t client_id, const string & query)
 
 /**
  *  store galois_stream keys for redistribution to clients for sharded calculation and for local calculation.
+ *  also saves usable version main server side
  */
 void MasterServer::store_galois_key_ser(uint32_t client_id, std::stringstream & galois_stream)
 {
@@ -103,6 +137,12 @@ void MasterServer::store_galois_key_ser(uint32_t client_id, std::stringstream & 
     }
 }
 
+
+/**
+ * deserialize and store galois key in server
+ * @param client_id
+ * @param galois_stream
+ */
 void MasterServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
     GaloisKeys gkey;
     gkey.load(*context_, galois_stream);

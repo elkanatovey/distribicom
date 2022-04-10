@@ -108,6 +108,9 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     FreivaldsVector f(enc_params, pir_params);
     f.multiply_with_db(db_unencoded);
 
+
+
+
     server.preprocess_database();
     cout << "Main: database pre processed " << endl;
     auto time_pre_e = high_resolution_clock::now();
@@ -133,7 +136,15 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     cout << "Main: query generated" << endl;
 
     //store query for multiple server computation
-    server.store_query_ser(0, query.str());
+    auto query_string = query.str();
+    server.store_query_ser(0, query_string);
+    stringstream query_copy;
+    query_copy.str(query_string);
+    auto expanded_query = server.get_expanded_query_first_dim(0, query_copy);
+
+
+    f.multiply_with_query(0, expanded_query);
+
 
     // do computation at each client
     for(int i=0; i< pir_params.nvec[1]; i++) {
@@ -144,6 +155,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         ClientSideServer clientSideServer(enc_params, pir_params, row, i, row_len);
         auto gkeys_ser = server.get_galois_bucket_ser(0);
 
+        // add client galois key - needed for expand
         stringstream galois_str;
         for(int j=0;j<gkeys_ser.size();j++){
             galois_str.str(gkeys_ser[j].galois);
@@ -156,6 +168,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         stringstream worker_query_stream;
         stringstream worker_reply_stream;
 
+        // calculate partial reply
         // for storing individual answers of single client in the test - dont need totrack id here as only client 0
         // answers being given
         vector<std::string> partial_answers;

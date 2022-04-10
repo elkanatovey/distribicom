@@ -58,8 +58,10 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
         seal::Plaintext pt(enc_params_.poly_modulus_degree());
         pt.set_zero();
         encoder_->encode(result_vec[i], pt);
+        evaluator_->transform_to_ntt_inplace(pt, context_->first_parms_id());
         multiplication_result.push_back(pt);
     }
+
     random_vec_mul_db = multiplication_result;
 }
 
@@ -68,5 +70,20 @@ void FreivaldsVector::multiply_add(std::vector<std::uint64_t>& left, std::vector
     for(int i=0;i< left.size(); i++){
         result[i]+=(left[i] * right[i]);
     }
+}
+
+void FreivaldsVector::multiply_with_query(uint32_t client_id, const std::vector<seal::Ciphertext>& query){
+
+    seal::Ciphertext temp;
+
+    seal::Ciphertext result;
+    evaluator_->multiply_plain(query[0],random_vec_mul_db[0] , result);
+
+    for(int i=1; i<random_vec_mul_db.size(); i++){
+        evaluator_->multiply_plain(query[i],random_vec_mul_db[i] , temp);
+        evaluator_->add_inplace(result, temp);
+    }
+
+    random_vec_mul_db_mul_query[client_id] = result;
 }
 
