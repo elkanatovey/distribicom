@@ -14,6 +14,8 @@ class MasterServer : public PIRServer {
 
     std::map<std::uint64_t, DistributedGaloisContextBucketSerial> galois_buckets_serialized_;
     std::map<ClientID , PirReplyShard> partialReplies_;
+
+    std::map<ClientID , PirQuerySingleDim> expanded_query_dim2;  //expanded dim 2 of query
     uint64_t ptext_len_;
 
 
@@ -63,6 +65,12 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     void db_to_vec(vector<std::vector<std::uint64_t>> &db_unencoded);
 
-    vector<seal::Ciphertext> get_expanded_query_first_dim(uint32_t client_id, stringstream &query_stream);
+    PirQuerySingleDim get_expanded_query_first_dim_ser(uint32_t client_id, stringstream &query_stream);
+
+    void process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply);
+
+    PirQuerySingleDim get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand);
+
+    void set_single_query_second_dim(uint32_t client_id, const PirQuery &query);
 };
 

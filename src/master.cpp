@@ -53,24 +53,30 @@ void MasterServer::db_to_vec(std::vector<std::vector<std::uint64_t>> &db_unencod
     }
 }
 
-std::vector<seal::Ciphertext> MasterServer::get_expanded_query_first_dim(uint32_t client_id, stringstream
+PirQuerySingleDim MasterServer::get_expanded_query_first_dim_ser(uint32_t client_id, stringstream
                                                           &query_stream) {
     PirQuery query = deserialize_query(query_stream);
 
+    uint64_t dim_to_expand = 0;
+    return get_expanded_query_single_dim(client_id, query, dim_to_expand);
+}
+
+PirQuerySingleDim
+MasterServer::get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand) {
     vector<Ciphertext> expanded_query;
 
-    uint64_t n_i = pir_params_.nvec[0];
+    uint64_t n_i = pir_params_.nvec[dim_to_expand];
     cout << "Server: n_i = " << n_i << endl;
-    cout << "Server: expanding " << query[0].size() << " query ctxts" << endl;
-    for (uint32_t j = 0; j < query[0].size(); j++){
+    cout << "Server: expanding " << query[dim_to_expand].size() << " query ctxts" << endl;
+    for (uint32_t j = 0; j < query[dim_to_expand].size(); j++){
         uint64_t total = enc_params_.poly_modulus_degree();
-        if (j == query[0].size() - 1){
+        if (j == query[dim_to_expand].size() - 1){
             total = n_i % enc_params_.poly_modulus_degree();
         }
         cout << "-- expanding one query ctxt into " << total  << " ctxts "<< endl;
-        vector<Ciphertext> expanded_query_part = expand_query(query[0][j], total, client_id);
-        expanded_query.insert(expanded_query.end(), std::make_move_iterator(expanded_query_part.begin()),
-                              std::make_move_iterator(expanded_query_part.end()));
+        vector<Ciphertext> expanded_query_part = expand_query(query[dim_to_expand][j], total, client_id);
+        expanded_query.insert(expanded_query.end(), make_move_iterator(expanded_query_part.begin()),
+                              make_move_iterator(expanded_query_part.end()));
         expanded_query_part.clear();
     }
     cout << "Server: expansion done " << endl;
@@ -79,13 +85,16 @@ std::vector<seal::Ciphertext> MasterServer::get_expanded_query_first_dim(uint32_
     }
 
     // Transform expanded query to NTT, and ...
-    for (uint32_t jj = 0; jj < expanded_query.size(); jj++) {
-        evaluator_->transform_to_ntt_inplace(expanded_query[jj]);
+    for (auto & jj : expanded_query) {
+        evaluator_->transform_to_ntt_inplace(jj);
     }
 
     return expanded_query;
 }
 
+void MasterServer::set_single_query_second_dim(uint32_t client_id, const PirQuery &query){
+    expanded_query_dim2[client_id] = get_expanded_query_single_dim(client_id, query, 1);
+}
 
 
 
@@ -255,6 +264,11 @@ DistributedGaloisContextBucketSerial MasterServer::get_galois_bucket_ser(uint32_
 void MasterServer::process_reply_at_server_ser(std::stringstream & partial_reply_ser, uint32_t client_id) {
 
     PirReplyShard partial_reply = deserialize_partial_reply(partial_reply_ser);
+    process_reply_at_server(client_id, partial_reply);
+
+}
+
+void MasterServer::process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply) {
     for (auto & i : partial_reply) {
         evaluator_->transform_to_ntt_inplace(i);
     }
@@ -263,11 +277,13 @@ void MasterServer::process_reply_at_server_ser(std::stringstream & partial_reply
         partialReplies_[client_id] = partial_reply;
     }
     else{
-        for(int i=0; i<partialReplies_[client_id].size(); i++){
+        for(int i=0; i < partialReplies_[client_id].size(); i++){
             evaluator_->add_inplace(partialReplies_[client_id][i], partial_reply[i]);
         }
     }
 }
+
+
 
 void MasterServer::processQueriesAtServer(const PirReplyShardBucket& queries) {
     for (auto const& [clientID, partialReply] : queries){

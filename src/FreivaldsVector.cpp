@@ -87,3 +87,18 @@ void FreivaldsVector::multiply_with_query(uint32_t client_id, const std::vector<
     random_vec_mul_db_mul_query[client_id] = result;
 }
 
+bool FreivaldsVector::multiply_with_reply(uint32_t client_id, uint32_t db_shard_id,
+                                                  const std::vector<seal::Ciphertext> &reply) {
+    seal::Ciphertext temp;
+
+    seal::Ciphertext result;
+    evaluator_->multiply_plain(reply[0],random_vec[0] , result);
+    for(int i=0; i<random_vec.size(); i++){
+        evaluator_->multiply_plain(reply[i],random_vec_mul_db[i] , temp);
+        evaluator_->add_inplace(result, temp);
+    }
+//        random_vec_mul_db_mul_query[client_id] - result;
+//@todo fix this so freivalds vector works on full plaintexts
+    return false;
+}
+

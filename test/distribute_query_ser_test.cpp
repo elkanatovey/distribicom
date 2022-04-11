@@ -140,7 +140,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     server.store_query_ser(0, query_string);
     stringstream query_copy;
     query_copy.str(query_string);
-    auto expanded_query = server.get_expanded_query_first_dim(0, query_copy);
+    auto expanded_query = server.get_expanded_query_first_dim_ser(0, query_copy);
 
 
     f.multiply_with_query(0, expanded_query);
