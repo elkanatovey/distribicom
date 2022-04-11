@@ -150,9 +150,11 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     for(int i=0; i< pir_params.nvec[1]; i++) {
         auto row = server.get_db_row_serialized(i);
         auto row_len = server.get_row_len();
+        stringstream temp_db_;
+        temp_db_.str(row);
 
         DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
-        ClientSideServer clientSideServer(enc_params, pir_params, row, i, row_len);
+        ClientSideServer clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
         auto gkeys_ser = server.get_galois_bucket_ser(0);
 
         // add client galois key - needed for expand

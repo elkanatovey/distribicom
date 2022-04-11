@@ -27,7 +27,7 @@ void MasterServer::generate_dbase_partition() {
     stringstream current_stream;
 
     for (uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
-
+//        stringstream current_stream;
         vector<seal::Plaintext> current_row;
         current_row.reserve(num_of_cols);
         current_row.push_back((*cur)[k]);
@@ -40,6 +40,7 @@ void MasterServer::generate_dbase_partition() {
         string row = current_stream.str();
         this->db_rows_serialized_[k] = move(row);
         this->db_rows_[k] = move(current_row);
+        current_stream.str(std::string());
         current_stream.clear();
     }
 }
@@ -96,9 +97,7 @@ void MasterServer::store_query_ser(uint32_t client_id, const string & query)
 {
     uint32_t bucket_id = get_bucket_id(client_id);
 //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
-
     DistributedQueryContextSerial query_context_serial{client_id, query};
-
 
     // no query inserted to bucket yet case
     if (this->query_buckets_serialized_.find(bucket_id) == this->query_buckets_serialized_.end())
@@ -154,12 +153,9 @@ void MasterServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galo
  */
 void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
 {
-    vector<uint64_t> nvec = pir_params_.nvec;
     uint32_t bucket_id = get_bucket_id(client_id);
     //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
     DistributedQueryContext query_context{client_id, query};
-
-    uint32_t count = query[0].size(); //@todo verify this
 
     // no query inserted to bucket yet case
     if (this->query_buckets_.find(bucket_id) == this->query_buckets_.end())
@@ -167,7 +163,6 @@ void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
         vector<DistributedQueryContext> current_bucket;
         current_bucket.push_back(query_context);
         this->query_buckets_[bucket_id] = move(current_bucket);
-
     }
     else{
         this->query_buckets_[bucket_id].push_back(query_context);

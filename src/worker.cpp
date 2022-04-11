@@ -20,17 +20,11 @@ ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params
  *  Note for now: local server for client constructor
  */
 ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams
-&pir_params, std::string db, uint32_t shard_id,uint32_t row_len) :
+&pir_params, std::stringstream &db_stream, uint32_t shard_id,uint32_t row_len) :
 PIRServer(seal_params, pir_params)
 {
-    db_ = make_unique<vector<seal::Plaintext>>();
-    stringstream temp_db_;
-    temp_db_ << db;
-    for (uint32_t j = 0; j < row_len; j++) {
-        Plaintext p;
-        p.load(*context_, temp_db_);
-        db_->push_back(p);
-    }
+    db_ = make_shared<vector<seal::Plaintext>>();
+    deserialize_db(*context_, db_stream, row_len, db_);
 
     is_db_preprocessed_ = false;
     shard_id_ = shard_id;

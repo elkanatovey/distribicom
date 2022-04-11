@@ -39,3 +39,6 @@ struct RegistrationParams {
     uint32_t logt;
     uint32_t d;
 };
+
+void deserialize_db(const seal::SEALContext &context_, std::stringstream &temp_db_, uint32_t row_len,
+                    std::shared_ptr<std::vector<seal::Plaintext>> &db_);
