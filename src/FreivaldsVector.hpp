@@ -10,10 +10,10 @@ class FreivaldsVector {
     std::unique_ptr<seal::BatchEncoder> encoder_;
     std::shared_ptr<seal::SEALContext> context_;
 
-    std::vector<std::vector<std::uint64_t>> random_vec;
+    std::vector<std::uint64_t> random_vec;
     std::vector<seal::Plaintext> random_vec_mul_db;
 
-    std::map<uint32_t, seal::Plaintext> random_vec_mul_db_mul_query;
+    std::map<uint32_t, std::vector<seal::Ciphertext>> random_vec_mul_db_mul_query;
 
 
 public:
@@ -35,11 +35,11 @@ public:
      * multiply A*(B*C)  where A is freivalds vector, B is DB and C is an individual query. (B*C) is the
      * partial reply. Results are compared with random_vec_mul_db_mul_query[client_id]
      */
-    bool multiply_with_reply(uint32_t client_id, uint32_t db_shard_id, const std::vector<seal::Ciphertext> &
+    bool multiply_with_reply(uint32_t query_id, uint32_t db_shard_id, const std::string &
             partial_reply);
 
 private:
-    static void multiply_add(std::vector<uint64_t> &left, std::vector<uint64_t> &right, std::vector<std::uint64_t>
+    static void multiply_add(std::vector<uint64_t> &left, std::uint64_t right, std::vector<std::uint64_t>
             &result);
 };
 

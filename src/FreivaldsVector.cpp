@@ -16,15 +16,9 @@ pir_params_(pir_params){  //generates the freeivalds vec
     seal::Blake2xbPRNGFactory factory;
     auto gen =  factory.create();
 
-    std::vector<std::vector<std::uint64_t>> freivalds_vector;
-    freivalds_vector.reserve(num_of_rows);
+    std::vector<std::uint64_t> freivalds_vector(num_of_rows);
+    generate(freivalds_vector.begin(), freivalds_vector.end(), [&gen](){return gen->generate()%2; });
 
-    for (uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
-
-        std::vector<std::uint64_t> current_plaintext_multiplier(pir_params_.slot_count);
-        generate(current_plaintext_multiplier.begin(), current_plaintext_multiplier.end(), [&gen](){return gen->generate(); });
-        freivalds_vector.push_back(std::move(current_plaintext_multiplier));
-    }
     this->random_vec = std::move(freivalds_vector);
 }
 
@@ -39,9 +33,6 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
         std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree());
         result_vec.push_back(partial_result);
     }
-
-
-
 
 
     for(uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
@@ -65,40 +56,58 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
     random_vec_mul_db = multiplication_result;
 }
 
-void FreivaldsVector::multiply_add(std::vector<std::uint64_t>& left, std::vector<std::uint64_t>& right,
+/**
+ * take vector along with constant and do result+= vector*constant
+ * @param left vector from above
+ * @param right const
+ * @param result place to add to
+ */
+void FreivaldsVector::multiply_add(std::vector<std::uint64_t>& left, std::uint64_t right,
                                std::vector<std::uint64_t>& result){
     for(int i=0;i< left.size(); i++){
-        result[i]+=(left[i] * right[i]);
+        result[i]+=(left[i] * right);
     }
 }
 
+
+/**
+ * execute (freivalds_vec*db)*query with an expanded query
+ * @param client_id
+ * @param query
+ */
 void FreivaldsVector::multiply_with_query(uint32_t client_id, const std::vector<seal::Ciphertext>& query){
-
-    seal::Ciphertext temp;
-
-    seal::Ciphertext result;
-    evaluator_->multiply_plain(query[0],random_vec_mul_db[0] , result);
-
-    for(int i=1; i<random_vec_mul_db.size(); i++){
+    random_vec_mul_db_mul_query[client_id].reserve(random_vec_mul_db.size());
+    for(int i=0; i<random_vec_mul_db.size(); i++){
+        seal::Ciphertext temp;
         evaluator_->multiply_plain(query[i],random_vec_mul_db[i] , temp);
-        evaluator_->add_inplace(result, temp);
+        random_vec_mul_db_mul_query[client_id].push_back(std::move(temp));
     }
-
-    random_vec_mul_db_mul_query[client_id] = result;
 }
 
-bool FreivaldsVector::multiply_with_reply(uint32_t client_id, uint32_t db_shard_id,
-                                                  const std::vector<seal::Ciphertext> &reply) {
-    seal::Ciphertext temp;
+/**
+ * execute freivalds_vec*(db*query) for single db shard. This essentially checks single ciphertext
+ * @param query_id
+ * @param db_shard_id
+ * @param reply
+ * @return
+ */
+bool FreivaldsVector::multiply_with_reply(uint32_t query_id, uint32_t db_shard_id,
+                                                  const std::string &foo) {
+    std:std::stringstream s(foo);
+    seal::Ciphertext reply;
+    reply.load(*context_, s);
 
     seal::Ciphertext result;
-    evaluator_->multiply_plain(reply[0],random_vec[0] , result);
-    for(int i=0; i<random_vec.size(); i++){
-        evaluator_->multiply_plain(reply[i],random_vec_mul_db[i] , temp);
-        evaluator_->add_inplace(result, temp);
+
+    if(random_vec[db_shard_id]==1){ // multiplication with 1 in base case
+        result = reply;
     }
-//        random_vec_mul_db_mul_query[client_id] - result;
-//@todo fix this so freivalds vector works on full plaintexts
+
+    seal::Ciphertext temp;
+    evaluator_->sub(random_vec_mul_db_mul_query[query_id][db_shard_id], result, temp);
+
+    if(temp.is_transparent()){return true;}
+    std::cout<< 11111111111111111<<std::endl;
     return false;
 }
 

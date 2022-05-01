@@ -184,6 +184,11 @@ uint32_t MasterServer::get_bucket_id(uint32_t client_id) {
     return bucket_id;
 }
 
+/**
+ * return the shard id of relevant row based on worker id
+ * @param client_id
+ * @return
+ */
 uint64_t MasterServer::get_row_id(uint32_t client_id)
 {
     vector<uint64_t> nvec = pir_params_.nvec;
@@ -198,36 +203,19 @@ uint64_t MasterServer::get_row_id(uint32_t client_id)
 
 const DatabaseShard& MasterServer::get_db_row(uint32_t client_id)
 {
-    vector<uint64_t> nvec = pir_params_.nvec;
-    auto num_of_rows = nvec[COL];  //if 1d db num of rows is num of ptexts
-    if (nvec.size() > 1) {
-        num_of_rows = nvec[ROW];
-    }
-
-    uint64_t row_id = client_id % num_of_rows;
+    uint64_t row_id = get_row_id(client_id);
     return this->db_rows_[row_id];
 }
 
 std::string MasterServer::get_db_row_serialized(uint32_t client_id)
 {
-    vector<uint64_t> nvec = pir_params_.nvec;
-    auto num_of_rows = nvec[COL];  //if 1d db num of rows is num of ptexts
-    if (nvec.size() > 1) {
-        num_of_rows = nvec[ROW];
-    }
 
-    uint64_t row_id = client_id % num_of_rows; // every cid gets row following that of adjacent cid
+    uint64_t row_id = get_row_id(client_id); // every cid gets row following that of adjacent cid
     return this->db_rows_serialized_[row_id];
 }
 
 uint32_t MasterServer::get_row_len()
 {
-    vector<uint64_t> nvec = pir_params_.nvec;
-    auto num_of_rows = nvec[COL];  //if 1d db num of rows is num of ptexts
-    if (nvec.size() > 1) {
-        num_of_rows = nvec[ROW];
-    }
-
     return this->db_rows_[0].size();
 }
 
