@@ -12,7 +12,7 @@ pir_params_(pir_params){  //generates the freeivalds vec
 
     auto num_of_rows = pir_params_.nvec[ROW];
 
-    std::random_device rd; // @todo this needs to be implemented with a cprng
+//    std::random_device rd; // @todo this needs to be implemented with a cprng
     seal::Blake2xbPRNGFactory factory;
     auto gen =  factory.create();
 
@@ -21,7 +21,10 @@ pir_params_(pir_params){  //generates the freeivalds vec
 
     this->random_vec = std::move(freivalds_vector);
 }
-
+/**
+ * do (random_vector*db) and encode result as plaintext
+ * @param db_unencoded
+ */
 void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> &db_unencoded) {
     auto num_of_rows = pir_params_.nvec[ROW];
     auto num_of_cols = pir_params_.nvec[COL];
@@ -29,18 +32,22 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
     std::vector<std::vector<std::uint64_t>> result_vec;
     result_vec.reserve(num_of_cols);
 
+    // reserve space for multiplication result
     for(uint64_t l = 0; l < num_of_cols; l++){
         std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree());
         result_vec.push_back(partial_result);
     }
 
-
+    //do multiplication
     for(uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
-        multiply_add(db_unencoded[k], random_vec[0], result_vec[0]);
-
+        add_to_sum(db_unencoded[k], result_vec[0]);
         for (uint64_t j = 1; j < num_of_cols; j++) {  // j is column
-            multiply_add(db_unencoded[k + j * num_of_rows], random_vec[j], result_vec[j]);
+            add_to_sum(db_unencoded[k + j * num_of_rows], result_vec[j]);
         }
+    }
+
+    for (uint64_t l = 0; l < num_of_cols; l++) {  // l is column
+        multiply_with_val(random_vec[l], result_vec[l]);
     }
 
     std::vector<seal::Plaintext> multiplication_result;
@@ -58,17 +65,36 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
 
 /**
  * take vector along with constant and do result+= vector*constant
- * @param left vector from above
- * @param right const
+ * @param right vector from above
+ * @param left const
  * @param result place to add to
  */
-void FreivaldsVector::multiply_add(std::vector<std::uint64_t>& left, std::uint64_t right,
-                               std::vector<std::uint64_t>& result){
-    for(int i=0;i< left.size(); i++){
-        result[i]+=(left[i] * right);
+void FreivaldsVector::multiply_add(std::uint64_t left, std::vector<std::uint64_t> &right,
+                                   std::vector<std::uint64_t> &result) {
+    for(int i=0; i < right.size(); i++){
+        result[i]+=(left * right[i]);
     }
 }
 
+
+/**
+ * add vector pointwise into second vector
+ */
+void FreivaldsVector::add_to_sum(std::vector<std::uint64_t> &to_sum,
+                                   std::vector<std::uint64_t> &result) {
+    for(int i=0; i < to_sum.size(); i++){
+        result[i]+=to_sum[i];
+    }
+}
+
+/**
+ * multiply vector with value pointwise
+ */
+void FreivaldsVector::multiply_with_val(std::uint64_t to_mult_with,std::vector<std::uint64_t> &result) {
+    for(int i=0; i < result.size(); i++){
+        result[i]*=to_mult_with;
+    }
+}
 
 /**
  * execute (freivalds_vec*db)*query with an expanded query
@@ -103,11 +129,17 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, uint32_t db_shard_i
         result = reply;
     }
 
+    evaluator_->transform_to_ntt_inplace(result);
+    auto to_compare_with = random_vec_mul_db_mul_query[query_id][db_shard_id];
+    evaluator_->transform_from_ntt_inplace(to_compare_with);
+    evaluator_->mod_switch_to_inplace(to_compare_with, context_->last_parms_id());
+    evaluator_->transform_to_ntt_inplace(to_compare_with);
     seal::Ciphertext temp;
-    evaluator_->sub(random_vec_mul_db_mul_query[query_id][db_shard_id], result, temp);
+    evaluator_->sub(to_compare_with, result, temp);
 
     if(temp.is_transparent()){return true;}
     std::cout<< 11111111111111111<<std::endl;
     return false;
 }
 
+//evaluator_->rescale_to_next_inplace(foobar);

@@ -39,8 +39,12 @@ public:
             partial_reply);
 
 private:
-    static void multiply_add(std::vector<uint64_t> &left, std::uint64_t right, std::vector<std::uint64_t>
-            &result);
+    static void multiply_add(std::uint64_t left, std::vector<std::uint64_t> &right,
+                             std::vector<std::uint64_t> &result);
+
+    static void add_to_sum(std::vector<std::uint64_t> &to_sum, std::vector<std::uint64_t> &result);
+
+    static void multiply_with_val(std::uint64_t to_mult_with,std::vector<std::uint64_t> &result);
 };
 
 
