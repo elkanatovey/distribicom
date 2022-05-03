@@ -72,5 +72,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
     PirQuerySingleDim get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand);
 
     void set_single_query_second_dim(uint32_t client_id, const PirQuery &query);
+
+    PirReply generate_reply_one_dim(PirQuery &query, uint32_t client_id);
 };
 

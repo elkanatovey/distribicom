@@ -20,13 +20,14 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
 int main(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(16, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test(36, 288, 4096, 20, 2) == 0);
 
     // speed check
-    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
+//    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
 
-    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
+//    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
 
+//    assert(distribute_query_ser_test(1 << 16, 1024, 4096, 20,2)==0);
 }
 
 int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
@@ -127,10 +128,6 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     auto answer = server.generate_reply_one_dim(reg_query, 0);
 
     // do computation at each client
-    for(int i=0; i< pir_params.nvec[1]; i++) {
-        stringstream s;
-        answer[i].save(s);
-        f.multiply_with_reply(0, i, s.str());
-    }
+    f.multiply_with_reply(0,  answer);
     return 0;
 }

@@ -57,10 +57,10 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
         pt.set_zero();
         encoder_->encode(result_vec[i], pt);
         evaluator_->transform_to_ntt_inplace(pt, context_->first_parms_id());
-        multiplication_result.push_back(pt);
+        multiplication_result.push_back(std::move(pt));
     }
 
-    random_vec_mul_db = multiplication_result;
+    random_vec_mul_db = std::move(multiplication_result);
 }
 
 /**
@@ -98,16 +98,22 @@ void FreivaldsVector::multiply_with_val(std::uint64_t to_mult_with,std::vector<s
 
 /**
  * execute (freivalds_vec*db)*query with an expanded query
- * @param client_id
+ * @param query_id
  * @param query
  */
-void FreivaldsVector::multiply_with_query(uint32_t client_id, const std::vector<seal::Ciphertext>& query){
-    random_vec_mul_db_mul_query[client_id].reserve(random_vec_mul_db.size());
+void FreivaldsVector::multiply_with_query(uint32_t query_id, const std::vector<seal::Ciphertext>& query){
+
+    std::vector<seal::Ciphertext> temp_storage;
+    temp_storage.reserve(random_vec_mul_db.size());
+
     for(int i=0; i<random_vec_mul_db.size(); i++){
         seal::Ciphertext temp;
         evaluator_->multiply_plain(query[i],random_vec_mul_db[i] , temp);
-        random_vec_mul_db_mul_query[client_id].push_back(std::move(temp));
+        temp_storage.push_back(std::move(temp));
     }
+    seal::Ciphertext result;
+    evaluator_->add_many(temp_storage, result);
+    random_vec_mul_db_mul_query[query_id] = std::move(result);
 }
 
 /**
@@ -117,27 +123,26 @@ void FreivaldsVector::multiply_with_query(uint32_t client_id, const std::vector<
  * @param reply
  * @return
  */
-bool FreivaldsVector::multiply_with_reply(uint32_t query_id, uint32_t db_shard_id,
-                                                  const std::string &foo) {
-    std:std::stringstream s(foo);
-    seal::Ciphertext reply;
-    reply.load(*context_, s);
+bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply) {
+    std::vector<seal::Ciphertext> temp_storage;
+    temp_storage.reserve(reply.size());
+
 
     seal::Ciphertext result;
 
-    if(random_vec[db_shard_id]==1){ // multiplication with 1 in base case
-        result = reply;
+    for(int i=0; i < random_vec.size(); i++){
+        seal::Ciphertext temp;
+        if(random_vec[i]==1){
+            temp = reply[i];
+        }
+        temp_storage.push_back(std::move(temp));
     }
+    evaluator_->add_many(temp_storage, result);
+    seal::Ciphertext difference;
+    std::cout<< 11111111111111111<<std::endl;
+    evaluator_->sub(random_vec_mul_db_mul_query[query_id], result, difference);
 
-    evaluator_->transform_to_ntt_inplace(result);
-    auto to_compare_with = random_vec_mul_db_mul_query[query_id][db_shard_id];
-    evaluator_->transform_from_ntt_inplace(to_compare_with);
-    evaluator_->mod_switch_to_inplace(to_compare_with, context_->last_parms_id());
-    evaluator_->transform_to_ntt_inplace(to_compare_with);
-    seal::Ciphertext temp;
-    evaluator_->sub(to_compare_with, result, temp);
-
-    if(temp.is_transparent()){return true;}
+    if(difference.is_transparent()){return true;}
     std::cout<< 11111111111111111<<std::endl;
     return false;
 }
