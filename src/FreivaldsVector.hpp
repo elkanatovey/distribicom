@@ -35,7 +35,7 @@ public:
      * multiply A*(B*C)  where A is freivalds vector, B is DB and C is an individual query. (B*C) is the
      * partial reply. Results are compared with random_vec_mul_db_mul_query[client_id]
      */
-    bool multiply_with_reply(uint32_t query_id, PirReply &reply);
+    bool multiply_with_reply(uint32_t query_id, PirReply &reply, seal::Ciphertext& response);
 
 private:
     static void multiply_add(std::uint64_t left, std::vector<std::uint64_t> &right,

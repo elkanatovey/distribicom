@@ -34,25 +34,23 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
 
     // reserve space for multiplication result
     for(uint64_t l = 0; l < num_of_cols; l++){
-        std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree());
+        std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree(),0);
         result_vec.push_back(partial_result);
     }
 
-    //do multiplication
-    for(uint64_t k = 0; k < num_of_rows; k++) { // k is smaller than num of rows
-        add_to_sum(db_unencoded[k], result_vec[0]);
-        for (uint64_t j = 1; j < num_of_cols; j++) {  // j is column
-            add_to_sum(db_unencoded[k + j * num_of_rows], result_vec[j]);
+    //do multiplication. k row index j col index
+    for(uint64_t k = 0; k < num_of_cols; k++) {
+        multiply_add(random_vec[0], db_unencoded[k * num_of_rows], result_vec[k]);
+
+        for (uint64_t j = 1; j < num_of_rows; j++) {
+            multiply_add(random_vec[j], db_unencoded[j + k * num_of_rows], result_vec[k]);
         }
     }
 
-    for (uint64_t l = 0; l < num_of_cols; l++) {  // l is column
-        multiply_with_val(random_vec[l], result_vec[l]);
-    }
 
     std::vector<seal::Plaintext> multiplication_result;
-    multiplication_result.reserve(num_of_rows);
-    for(uint64_t i = 0; i < num_of_rows; i++){
+    multiplication_result.reserve(num_of_cols);
+    for(uint64_t i = 0; i < num_of_cols; i++){
         seal::Plaintext pt(enc_params_.poly_modulus_degree());
         pt.set_zero();
         encoder_->encode(result_vec[i], pt);
@@ -123,7 +121,7 @@ void FreivaldsVector::multiply_with_query(uint32_t query_id, const std::vector<s
  * @param reply
  * @return
  */
-bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply) {
+bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply, seal::Ciphertext& response) {
     std::vector<seal::Ciphertext> temp_storage;
     temp_storage.reserve(reply.size());
 
@@ -138,11 +136,11 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply) {
         temp_storage.push_back(std::move(temp));
     }
     evaluator_->add_many(temp_storage, result);
-    seal::Ciphertext difference;
+//    seal::Ciphertext difference;
     std::cout<< 11111111111111111<<std::endl;
-    evaluator_->sub(random_vec_mul_db_mul_query[query_id], result, difference);
-
-    if(difference.is_transparent()){return true;}
+    evaluator_->sub(random_vec_mul_db_mul_query[query_id], result, response);
+    evaluator_->transform_from_ntt_inplace(response);
+    if(response.is_transparent()){return true;}
     std::cout<< 11111111111111111<<std::endl;
     return false;
 }

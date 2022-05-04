@@ -20,7 +20,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
 int main(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(36, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test(1016, 288, 4096, 20, 2) == 0);
 
     // speed check
 //    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
@@ -79,7 +79,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
-            auto val = gen->generate() % 256;
+            auto val = gen->generate() % 5;
             db.get()[(i * size_per_item) + j] = val;
             db_copy.get()[(i * size_per_item) + j] = val;
         }
@@ -126,8 +126,10 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     f.multiply_with_query(0, expanded_query);
 
     auto answer = server.generate_reply_one_dim(reg_query, 0);
-
+    seal::Ciphertext response;
     // do computation at each client
-    f.multiply_with_reply(0,  answer);
+    f.multiply_with_reply(0,  answer, response);
+    auto diff = client.decrypt(response);
+
     return 0;
 }
