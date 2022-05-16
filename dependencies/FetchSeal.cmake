@@ -4,6 +4,9 @@ project(seal_download NONE)
 
 
 include(FetchContent)
+
+set(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT OFF)
+
 FetchContent_Declare(
         com_microsoft_seal
         GIT_REPOSITORY https://github.com/microsoft/SEAL
