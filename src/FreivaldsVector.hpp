@@ -17,7 +17,8 @@ class FreivaldsVector {
 
 
 public:
-    FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& params);
+    FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& params, std::function<uint32_t ()>&
+            gen);
 
     /**
      * vector always multiplies from left

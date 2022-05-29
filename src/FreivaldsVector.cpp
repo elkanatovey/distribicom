@@ -3,7 +3,9 @@
 #define COL 0
 #define ROW 1
 
-FreivaldsVector::FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& pir_params):enc_params_(enc_params),
+FreivaldsVector::FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& pir_params,
+                                 std::function<uint32_t ()>& gen)
+:enc_params_(enc_params),
 pir_params_(pir_params){  //generates the freeivalds vec
 
     context_ = std::make_shared<seal::SEALContext>(enc_params, true);
@@ -12,12 +14,8 @@ pir_params_(pir_params){  //generates the freeivalds vec
 
     auto num_of_rows = pir_params_.nvec[ROW];
 
-//    std::random_device rd; // @todo this needs to be implemented with a cprng
-    seal::Blake2xbPRNGFactory factory;
-    auto gen =  factory.create();
-
     std::vector<std::uint64_t> freivalds_vector(num_of_rows);
-    generate(freivalds_vector.begin(), freivalds_vector.end(), [&gen](){return gen->generate()%2; });
+    generate(freivalds_vector.begin(), freivalds_vector.end(), gen);
 
     this->random_vec = std::move(freivalds_vector);
 }
@@ -53,6 +51,10 @@ void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> 
     for(uint64_t i = 0; i < num_of_cols; i++){
         seal::Plaintext pt(enc_params_.poly_modulus_degree());
         pt.set_zero();
+        for (auto& j: result_vec[i]){
+            j=j%(enc_params_.plain_modulus().value());
+        }
+
         encoder_->encode(result_vec[i], pt);
         evaluator_->transform_to_ntt_inplace(pt, context_->first_parms_id());
         multiplication_result.push_back(std::move(pt));
@@ -126,10 +128,11 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply, se
     temp_storage.reserve(reply.size());
 
 
-    seal::Ciphertext result;
-
+    seal::Ciphertext result(*context_, seal::MemoryManager::GetPool());
+    evaluator_->transform_to_ntt_inplace(result);
     for(int i=0; i < random_vec.size(); i++){
-        seal::Ciphertext temp;
+        seal::Ciphertext temp(*context_, seal::MemoryManager::GetPool());
+        evaluator_->transform_to_ntt_inplace(temp);
         if(random_vec[i]==1){
             temp = reply[i];
         }
@@ -137,11 +140,14 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply, se
     }
     evaluator_->add_many(temp_storage, result);
 //    seal::Ciphertext difference;
-    std::cout<< 11111111111111111<<std::endl;
+    std::cout<< "checking if result is transparent"<<std::endl;
     evaluator_->sub(random_vec_mul_db_mul_query[query_id], result, response);
     evaluator_->transform_from_ntt_inplace(response);
-    if(response.is_transparent()){return true;}
-    std::cout<< 11111111111111111<<std::endl;
+    if(response.is_transparent()){
+        std::cout<< "transparent!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+        return true;
+    }
+    std::cout<< "result is not transparent"<<std::endl;
     return false;
 }
 

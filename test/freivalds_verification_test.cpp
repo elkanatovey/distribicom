@@ -15,22 +15,26 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
-                              uint32_t dim);
+int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
+                              uint32_t dim, bool
+                              random_freivalds_vec);
 
 int main(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(1016, 288, 4096, 20, 2) == 0);
+        assert(freivalds_verification_test(4096*3, 2, 4096, 20, 2, false) == 0);
 
     // speed check
-//    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
+        assert(freivalds_verification_test(1 << 10, 288, 4096, 20, 2, false) == 0);
 
-//    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
+assert(freivalds_verification_test(1 << 12, 288, 4096, 20, 2, false) == 0);
 
-//    assert(distribute_query_ser_test(1 << 16, 1024, 4096, 20,2)==0);
+    assert(freivalds_verification_test(1 << 16, 1024, 4096, 20,2, false)==0);
+
+
 }
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim, bool
+                              random_freivalds_vec){
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -44,7 +48,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     bool use_batching = true; // pack as many elements as possible into a BFV plaintext (recommended)
     bool use_recursive_mod_switching = true;
 
-    EncryptionParameters enc_params(scheme_type::bfv);
+    EncryptionParameters enc_params(scheme_type::bgv);
     PirParams pir_params;
 
     // Generates all parameters
@@ -79,7 +83,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
-            auto val = gen->generate() % 5;
+            auto val = gen->generate() % 255;
             db.get()[(i * size_per_item) + j] = val;
             db_copy.get()[(i * size_per_item) + j] = val;
         }
@@ -117,7 +121,15 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
     server.db_to_vec(db_unencoded);
-    FreivaldsVector f(enc_params, pir_params);
+    function<uint32_t(void)> g;
+    if(random_freivalds_vec){
+         g =[&gen](){return gen->generate() % 2; };
+    }
+    else
+    {
+         g =[](){return 1; };
+    }
+    FreivaldsVector f(enc_params, pir_params, g);
     f.multiply_with_db(db_unencoded);
 
     server.preprocess_database();
