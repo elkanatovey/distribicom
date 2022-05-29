@@ -25,3 +25,7 @@ add_test(NAME distribute_query_test COMMAND distribute_query_test)
 add_executable(associativity_addition_test associativity_addition_test.cpp)
 target_link_libraries(associativity_addition_test distribicom_cpp)
 add_test(NAME associativity_addition_test COMMAND associativity_addition_test)
+
+add_executable(associativity_mult_test associativity_mult_test.cpp)
+target_link_libraries(associativity_mult_test distribicom_cpp)
+add_test(NAME associativity_mult_test COMMAND associativity_mult_test)

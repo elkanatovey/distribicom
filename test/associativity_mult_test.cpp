@@ -47,10 +47,10 @@ int main(int argc, char *argv[]) {
     size_t slot_count = encoder.slot_count();
 
     vector<uint64_t> coefficients(slot_count, 0ULL);
-    vector<uint64_t> coefficients_doubled(slot_count, 0ULL);
+    vector<uint64_t> coefficients_squared(slot_count, 0ULL);
     for (uint32_t i = 0; i < coefficients.size(); i++) {
         coefficients[i] = (rand() % 5);
-        coefficients_doubled[i] = coefficients[i]*2;  //2*pt
+        coefficients_squared[i] = coefficients[i] * coefficients[i];  //pt*pt
     }
 
     Plaintext pt;
@@ -60,31 +60,31 @@ int main(int argc, char *argv[]) {
     std::cout << "Encrypting" << std::endl;
 
     Plaintext pt_doubled;
-    encoder.encode(coefficients_doubled, pt_doubled);
+    encoder.encode(coefficients_squared, pt_doubled);
 
     auto context_data = context.last_context_data();
     auto parms_id = context.last_parms_id();
 
-    Ciphertext x_plus_plain1;
-    Ciphertext x_plus_plain2;
+    Ciphertext x_times_plain1;
+    Ciphertext x_times_plain2;
 
-    evaluator.add_plain(ct, pt, x_plus_plain1);
-    evaluator.add_plain(ct, pt, x_plus_plain2);
+    evaluator.multiply_plain(ct, pt, x_times_plain1);
+    evaluator.multiply_plain(ct, pt, x_times_plain2);
 
-    Ciphertext twox_plus_twoplain1;
+    Ciphertext twox_times_twoplain1;
 
-    evaluator.add(x_plus_plain1, x_plus_plain2, twox_plus_twoplain1);// ((x+p)+(x+p))
+    evaluator.multiply(x_times_plain1, x_times_plain2, twox_times_twoplain1);
 
 
-    Ciphertext x_plus_x;
-    evaluator.add(ct, ct, x_plus_x);
+    Ciphertext x_times_x;
+    evaluator.multiply(ct, ct, x_times_x);
 
-    Ciphertext twox_plus_twoplain2;
+    Ciphertext twox_times_twoplain2;
 
-    evaluator.add_plain(x_plus_x, pt_doubled, twox_plus_twoplain2); //((x+x)+(2*p))
+    evaluator.multiply_plain(x_times_x, pt_doubled, twox_times_twoplain2);
 
     Ciphertext trivial_result;
-    evaluator.sub(twox_plus_twoplain1, twox_plus_twoplain2, trivial_result);
+    evaluator.sub(twox_times_twoplain1, twox_times_twoplain2, trivial_result);
 
 
 
@@ -93,10 +93,10 @@ int main(int argc, char *argv[]) {
     assert(pt2.is_zero());
 
     Plaintext pt3;
-    decryptor.decrypt(twox_plus_twoplain1, pt3);
+    decryptor.decrypt(twox_times_twoplain1, pt3);
 
     Plaintext pt4;
-    decryptor.decrypt(twox_plus_twoplain2, pt4);
+    decryptor.decrypt(twox_times_twoplain2, pt4);
     assert(pt3 == pt4);
 
     assert(trivial_result.is_transparent());
