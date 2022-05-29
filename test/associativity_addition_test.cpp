@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     // Recommended values: (logt, d) = (12, 2) or (8, 1).
     uint32_t logt = 20;
 
-    EncryptionParameters enc_params(scheme_type::bfv);
+    EncryptionParameters enc_params(scheme_type::bgv);
 
     // Generates all parameters
 
@@ -47,31 +47,59 @@ int main(int argc, char *argv[]) {
     size_t slot_count = encoder.slot_count();
 
     vector<uint64_t> coefficients(slot_count, 0ULL);
+    vector<uint64_t> coefficients_doubled(slot_count, 0ULL);
     for (uint32_t i = 0; i < coefficients.size(); i++) {
-        coefficients[i] = rand() % plain_modulus;
+        coefficients[i] = (rand() % 5);
+        coefficients_doubled[i] = coefficients[i]*2;  //2*pt
     }
+
     Plaintext pt;
     encoder.encode(coefficients, pt);
     Ciphertext ct;
     encryptor.encrypt_symmetric(pt, ct);
     std::cout << "Encrypting" << std::endl;
+
+    Plaintext pt_doubled;
+    encoder.encode(coefficients_doubled, pt_doubled);
+
     auto context_data = context.last_context_data();
     auto parms_id = context.last_parms_id();
 
-    evaluator.mod_switch_to_inplace(ct, parms_id);
+    Ciphertext x_plus_plain1;
+    Ciphertext x_plus_plain2;
 
-    EncryptionParameters params = context_data->parms();
-    std::cout << "Encoding" << std::endl;
-    vector<Plaintext> encoded = decompose_to_plaintexts(params, ct);
-    std::cout << "Expansion Factor: " << encoded.size() << std::endl;
-    std::cout << "Decoding" << std::endl;
-    Ciphertext decoded(context, parms_id);
-    compose_to_ciphertext(params, encoded, decoded);
-    std::cout << "Checking" << std::endl;
+    evaluator.add_plain(ct, pt, x_plus_plain1);
+    evaluator.add_plain(ct, pt, x_plus_plain2);
+
+    Ciphertext twox_plus_twoplain1;
+
+    evaluator.add(x_plus_plain1, x_plus_plain2, twox_plus_twoplain1);
+
+
+    Ciphertext x_plus_x;
+    evaluator.add(ct, ct, x_plus_x);
+
+    Ciphertext twox_plus_twoplain2;
+
+    evaluator.add_plain(x_plus_x, pt_doubled, twox_plus_twoplain2);
+
+    Ciphertext trivial_result;
+    evaluator.sub(twox_plus_twoplain1, twox_plus_twoplain2, trivial_result);
+
+
+
     Plaintext pt2;
-    decryptor.decrypt(decoded, pt2);
+    decryptor.decrypt(trivial_result, pt2);
+    assert(pt2.is_zero());
 
-    assert(pt == pt2);
+    Plaintext pt3;
+    decryptor.decrypt(twox_plus_twoplain1, pt3);
+
+    Plaintext pt4;
+    decryptor.decrypt(twox_plus_twoplain2, pt4);
+    assert(pt3 == pt4);
+
+    assert(trivial_result.is_transparent());
 
     std::cout << "Worked" << std::endl;
 
