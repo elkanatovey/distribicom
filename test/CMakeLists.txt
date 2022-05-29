@@ -21,3 +21,7 @@ add_test(NAME distribute_query_ser_test COMMAND distribute_query_ser_test)
 add_executable(distribute_query_test distribute_query_test.cpp)
 target_link_libraries(distribute_query_test distribicom_cpp)
 add_test(NAME distribute_query_test COMMAND distribute_query_test)
+
+add_executable(mathematical_properties_test mathematical_properties_test.cpp)
+target_link_libraries(mathematical_properties_test distribicom_cpp)
+add_test(NAME mathematical_properties_test COMMAND mathematical_properties_test)
