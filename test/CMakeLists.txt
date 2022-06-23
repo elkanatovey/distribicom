@@ -29,3 +29,8 @@ add_test(NAME associativity_addition_test COMMAND associativity_addition_test)
 add_executable(associativity_mult_test associativity_mult_test.cpp)
 target_link_libraries(associativity_mult_test distribicom_cpp)
 add_test(NAME associativity_mult_test COMMAND associativity_mult_test)
+
+
+add_executable(matrix_mult_order_test matrix_mult_order_test.cpp)
+target_link_libraries(matrix_mult_order_test distribicom_cpp)
+add_test(NAME matrix_mult_order_test COMMAND matrix_mult_order_test)
