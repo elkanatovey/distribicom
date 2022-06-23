@@ -1,6 +1,6 @@
 //
 // test that  ([x, y] * [[a, b], [c, d]]) * [e, f]^T = [x, y] * ([[a, b], [c, d]] * [e, f]^T) in the ciphertext space
-// were e, f are both ciphertexts.
+// were e, f are both ciphertexts and x, y are both set to 1.
 //
 // in other words, test that e * (a + c) + f * (b + d) = (a*e + b*f) + (c*e + d*f)
 //
@@ -59,8 +59,6 @@ int main(int argc, char *argv[]) {
     vector<uint64_t> d_arr(slot_count, 0ULL);
     vector<uint64_t> e_arr(slot_count, 0ULL);
     vector<uint64_t> f_arr(slot_count, 0ULL);
-    vector<uint64_t> x_arr(slot_count, 0ULL);
-    vector<uint64_t> y_arr(slot_count, 0ULL);
 
     for (uint32_t i = 0; i < a_arr.size(); i++) {
         a_arr[i] = (rand() % 256);
@@ -69,8 +67,6 @@ int main(int argc, char *argv[]) {
         d_arr[i] = (rand() % 256);
         e_arr[i] = (rand() % 256);
         f_arr[i] = (rand() % 256);
-        x_arr[i] = (rand() % 256);
-        y_arr[i] = (rand() % 256);
     }
 
     Plaintext a;
@@ -79,16 +75,12 @@ int main(int argc, char *argv[]) {
     Plaintext d;
     Plaintext e;
     Plaintext f;
-    Plaintext x;
-    Plaintext y;
     encoder.encode(a_arr, a);
     encoder.encode(b_arr, b);
     encoder.encode(c_arr, c);
     encoder.encode(d_arr, d);
     encoder.encode(e_arr, e);
     encoder.encode(f_arr, f);
-    encoder.encode(x_arr, x);
-    encoder.encode(y_arr, y);
 
     Ciphertext e_encrypted;
     Ciphertext f_encrypted;
