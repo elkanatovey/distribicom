@@ -16,9 +16,14 @@
 #include <random>
 #include <seal/seal.h>
 
+
+
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
+
+void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c,
+                    Plaintext &to_add);
 
 int main(int argc, char *argv[]) {
 
@@ -92,18 +97,13 @@ int main(int argc, char *argv[]) {
 
     std::cout << "calculating e * (a + c) + f * (b + d)"<< std::endl;
 
-    // (a + c) and (b + d)
-    vector<uint64_t> a_plus_c_arr(slot_count, 0ULL);
-    vector<uint64_t> b_plus_d_arr(slot_count, 0ULL);
-    for (uint32_t i = 0; i < a_arr.size(); i++) { //@todo add modulo
-        a_plus_c_arr[i] = a_arr[i] + c_arr[i];
-        b_plus_d_arr[i] = b_arr[i] + d_arr[i];
-    }
 
     Plaintext a_plus_c;
     Plaintext b_plus_d;
-    encoder.encode(a_plus_c_arr, a_plus_c);
-    encoder.encode(b_plus_d_arr, b_plus_d);
+    Plaintext to_add;
+
+    add_plaintexts(enc_params, a, c, a_plus_c, to_add);
+    add_plaintexts(enc_params, b, d, b_plus_d, to_add);
 
     Ciphertext e_times_a_plus_c; // e * (a + c)
     Ciphertext f_times_b_plus_d; // f * (b + d)
@@ -156,5 +156,20 @@ int main(int argc, char *argv[]) {
     std::cout << "Worked" << std::endl;
 
     return 0;
+}
+
+void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c,
+                    Plaintext &to_add) {
+    if(a.coeff_count() > c.coeff_count()){
+        a_plus_c = a;
+        to_add = c;
+    }
+    else{
+        a_plus_c = c;
+        to_add = a;
+    }
+    for(int current_coeff =0; current_coeff < to_add.coeff_count(); current_coeff++){
+        a_plus_c[current_coeff] = (a_plus_c[current_coeff] + to_add[current_coeff])%enc_params.plain_modulus().value();
+    }
 }
 
