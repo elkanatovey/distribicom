@@ -35,6 +35,10 @@ add_executable(matrix_mult_order_test matrix_mult_order_test.cpp)
 target_link_libraries(matrix_mult_order_test distribicom_cpp)
 add_test(NAME matrix_mult_order_test COMMAND matrix_mult_order_test)
 
+add_executable(matrix_mult_order_test_version_2 matrix_mult_order_test_version_2.cpp)
+target_link_libraries(matrix_mult_order_test_version_2 distribicom_cpp)
+add_test(NAME matrix_mult_order_test_version_2 COMMAND matrix_mult_order_test_version_2)
+
 add_executable(matrix_mult_str_test matrix_mult_str_test.cpp)
 target_link_libraries(matrix_mult_str_test distribicom_cpp)
 add_test(NAME matrix_mult_str_test COMMAND matrix_mult_str_test)
