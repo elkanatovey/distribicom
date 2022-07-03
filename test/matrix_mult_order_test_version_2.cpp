@@ -21,7 +21,7 @@ void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, 
 
 int main(int argc, char *argv[]) {
 
-    uint32_t N = 4096;
+    uint32_t N = 8192;
 
     uint32_t logt = 20;
 
@@ -31,8 +31,12 @@ int main(int argc, char *argv[]) {
 
     cout << "Main: Generating SEAL parameters" << endl;
     enc_params.set_poly_modulus_degree(N);
-    enc_params.set_coeff_modulus(CoeffModulus::BFVDefault(N));
-    enc_params.set_plain_modulus(PlainModulus::Batching(N, logt + 1));
+    auto plaimmod = PlainModulus::Batching(N, logt + 1);
+    enc_params.set_plain_modulus(plaimmod);
+
+    auto coeffmod = CoeffModulus::Create(N, plaimmod, {43, 43, 43, 44, 44});
+
+    enc_params.set_coeff_modulus(coeffmod);
 
     SEALContext context(enc_params, true);
     KeyGenerator keygen(context);
@@ -48,8 +52,8 @@ int main(int argc, char *argv[]) {
     cout << "Main: generating matrices" << endl;
 
 
-    std::string poly = "123D7D"; // multiples with/without mod operator: "247AFA" "51AF9"
-    Plaintext a(poly);         // example poly that doesn't work at all:" 1CBB5Bx^3 + A59B8x^2 + 6C3D2x^1 + 123D7D"
+    std::string poly = "144D8Cx^1 + 26B95";
+    Plaintext a(poly);
     Plaintext b(poly);
     Plaintext c(poly);
     Plaintext d(poly);
@@ -110,6 +114,7 @@ int main(int argc, char *argv[]) {
 
     Plaintext decrypted_trivial_result;
     decryptor.decrypt(trivial_result, decrypted_trivial_result);
+    cout<<decryptor.invariant_noise_budget(trivial_result)<<"....................."<<endl;
     assert(decrypted_trivial_result.is_zero());
 
     Plaintext result_way_one;
