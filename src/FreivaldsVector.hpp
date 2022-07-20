@@ -23,7 +23,8 @@ public:
     /**
      * vector always multiplies from left
      */
-    void multiply_with_db( std::vector<std::vector<std::uint64_t>> &db_unencoded);
+    template<class T>
+    void mult_rand_vec_by_db(const std::shared_ptr<T>& db);
 
     /**
      * multiply (A*B)*C where (A*B) where A is freivalds vector, B is DB and C is an individual query. results are
@@ -37,14 +38,6 @@ public:
      * partial reply. Results are compared with random_vec_mul_db_mul_query[client_id]
      */
     bool multiply_with_reply(uint32_t query_id, PirReply &reply, seal::Ciphertext& response);
-
-private:
-    static void multiply_add(std::uint64_t left, std::vector<std::uint64_t> &right,
-                             std::vector<std::uint64_t> &result);
-
-    static void add_to_sum(std::vector<std::uint64_t> &to_sum, std::vector<std::uint64_t> &result);
-
-    static void multiply_with_val(std::uint64_t to_mult_with,std::vector<std::uint64_t> &result);
 };
 
 

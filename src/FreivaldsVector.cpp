@@ -2,7 +2,10 @@
 
 #define COL 0
 #define ROW 1
-
+namespace {
+    void multiply_add(std::uint64_t left, seal::Plaintext &right,
+                      seal::Plaintext &result, uint64_t mod);
+}
 FreivaldsVector::FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& pir_params,
                                  std::function<uint32_t ()>& gen)
 :enc_params_(enc_params),
@@ -19,82 +22,41 @@ pir_params_(pir_params){  //generates the freeivalds vec
 
     this->random_vec = std::move(freivalds_vector);
 }
+
+
 /**
  * do (random_vector*db) and encode result as plaintext
  * @param db_unencoded
  */
-void FreivaldsVector::multiply_with_db( std::vector<std::vector<std::uint64_t>> &db_unencoded) {
+template<>
+void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<Database>& db) {
     auto num_of_rows = pir_params_.nvec[ROW];
     auto num_of_cols = pir_params_.nvec[COL];
 
-    std::vector<std::vector<std::uint64_t>> result_vec;
+    std::vector<seal::Plaintext> result_vec;
     result_vec.reserve(num_of_cols);
 
     // reserve space for multiplication result
     for(uint64_t l = 0; l < num_of_cols; l++){
-        std::vector<std::uint64_t> partial_result(enc_params_.poly_modulus_degree(),0);
+        seal::Plaintext partial_result(enc_params_.poly_modulus_degree());
         result_vec.push_back(partial_result);
     }
 
     //do multiplication. k row index j col index
     for(uint64_t k = 0; k < num_of_cols; k++) {
-        multiply_add(random_vec[0], db_unencoded[k * num_of_rows], result_vec[k]);
-
-        for (uint64_t j = 1; j < num_of_rows; j++) {
-            multiply_add(random_vec[j], db_unencoded[j + k * num_of_rows], result_vec[k]);
+        for (uint64_t j = 0; j < num_of_rows; j++) {
+            multiply_add(random_vec[j], (*(db))[j + k * num_of_rows], result_vec[k], enc_params_.plain_modulus().value());
         }
     }
 
-
-    std::vector<seal::Plaintext> multiplication_result;
-    multiplication_result.reserve(num_of_cols);
     for(uint64_t i = 0; i < num_of_cols; i++){
-        seal::Plaintext pt(enc_params_.poly_modulus_degree());
-        pt.set_zero();
-        for (auto& j: result_vec[i]){
-            j=j%(enc_params_.plain_modulus().value());
-        }
-
-        encoder_->encode(result_vec[i], pt);
-        evaluator_->transform_to_ntt_inplace(pt, context_->first_parms_id());
-        multiplication_result.push_back(std::move(pt));
+        evaluator_->transform_to_ntt_inplace(result_vec[i], context_->first_parms_id());
     }
 
-    random_vec_mul_db = std::move(multiplication_result);
-}
-
-/**
- * take vector along with constant and do result+= vector*constant
- * @param right vector from above
- * @param left const
- * @param result place to add to
- */
-void FreivaldsVector::multiply_add(std::uint64_t left, std::vector<std::uint64_t> &right,
-                                   std::vector<std::uint64_t> &result) {
-    for(int i=0; i < right.size(); i++){
-        result[i]+=(left * right[i]);
-    }
+    random_vec_mul_db = std::move(result_vec);
 }
 
 
-/**
- * add vector pointwise into second vector
- */
-void FreivaldsVector::add_to_sum(std::vector<std::uint64_t> &to_sum,
-                                   std::vector<std::uint64_t> &result) {
-    for(int i=0; i < to_sum.size(); i++){
-        result[i]+=to_sum[i];
-    }
-}
-
-/**
- * multiply vector with value pointwise
- */
-void FreivaldsVector::multiply_with_val(std::uint64_t to_mult_with,std::vector<std::uint64_t> &result) {
-    for(int i=0; i < result.size(); i++){
-        result[i]*=to_mult_with;
-    }
-}
 
 /**
  * execute (freivalds_vec*db)*query with an expanded query
@@ -151,4 +113,25 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply, se
     return false;
 }
 
-//evaluator_->rescale_to_next_inplace(foobar);
+namespace {
+    /**
+     * take vector along with constant and do result+= vector*constant
+     * @param right vector from above
+     * @param left const
+     * @param result place to add to
+     */
+    void multiply_add(std::uint64_t left, seal::Plaintext &right,
+                      seal::Plaintext &result, uint64_t mod) {
+        if(left==0){
+            return;
+        }
+        auto coeff_count = right.coeff_count();
+        for(int current_coeff =0; current_coeff < coeff_count; current_coeff++){
+            result[current_coeff] +=(left * right[current_coeff]);
+            if(result[current_coeff]>=mod){
+                result[current_coeff]-=mod;
+            }
+        }
+
+    }
+}
