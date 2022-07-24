@@ -63,7 +63,6 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
 
-    void db_to_vec(vector<std::vector<std::uint64_t>> &db_unencoded);
 
     PirQuerySingleDim get_expanded_query_first_dim_ser(uint32_t client_id, stringstream &query_stream);
 
@@ -74,5 +73,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
     void set_single_query_second_dim(uint32_t client_id, const PirQuery &query);
 
     PirReply generate_reply_one_dim(PirQuery &query, uint32_t client_id);
+
+    shared_ptr<Database> get_db();
 };
 

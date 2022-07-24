@@ -103,10 +103,10 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     server.set_database(move(db), number_of_items, size_per_item);
     server.generate_dbase_partition(); //@todo pretty this up
 
-    std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
-    server.db_to_vec(db_unencoded);
-    FreivaldsVector f(enc_params, pir_params);
-    f.multiply_with_db(db_unencoded);
+//    std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
+//    server.db_to_vec(db_unencoded);
+//    FreivaldsVector f(enc_params, pir_params);
+//    f.multiply_with_db(db_unencoded);
 
 
 
@@ -143,8 +143,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     auto expanded_query = server.get_expanded_query_first_dim_ser(0, query_copy);
 
 
-    f.multiply_with_query(0, expanded_query);
-
+//    f.multiply_with_query(0, expanded_query);
 
     // do computation at each client
     for(int i=0; i< pir_params.nvec[1]; i++) {
@@ -192,6 +191,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         for(auto & answer : partial_answers){
             partial_reply_stream << answer;
             server.process_reply_at_server_ser(partial_reply_stream, 0);
+//            f.multiply_with_reply(0, server.get_row_id(i), answer);
             partial_reply_stream.clear();
         }
     }

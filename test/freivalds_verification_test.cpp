@@ -119,8 +119,6 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
     auto db_pointer =server.get_db();
 
 
-    std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
-    server.db_to_vec(db_unencoded);
     function<uint32_t(void)> g;
     if(random_freivalds_vec){
          g =[&gen](){return gen->generate() % 2; };

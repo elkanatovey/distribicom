@@ -5,7 +5,11 @@
 namespace {
     void multiply_add(std::uint64_t left, seal::Plaintext &right,
                       seal::Plaintext &result, uint64_t mod);
+
+    void multiply_add(std::uint64_t left, seal::Ciphertext &right,
+                      seal::Ciphertext &result, seal::Evaluator* evaluator);
 }
+
 FreivaldsVector::FreivaldsVector(const seal::EncryptionParameters &enc_params, const PirParams& pir_params,
                                  std::function<uint32_t ()>& gen)
 :enc_params_(enc_params),
@@ -13,7 +17,6 @@ pir_params_(pir_params){  //generates the freeivalds vec
 
     context_ = std::make_shared<seal::SEALContext>(enc_params, true);
     evaluator_ = std::make_unique<seal::Evaluator>(*context_);
-    encoder_ = std::make_unique<seal::BatchEncoder>(*context_);
 
     auto num_of_rows = pir_params_.nvec[ROW];
 
@@ -33,14 +36,7 @@ void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<Database>& db) {
     auto num_of_rows = pir_params_.nvec[ROW];
     auto num_of_cols = pir_params_.nvec[COL];
 
-    std::vector<seal::Plaintext> result_vec;
-    result_vec.reserve(num_of_cols);
-
-    // reserve space for multiplication result
-    for(uint64_t l = 0; l < num_of_cols; l++){
-        seal::Plaintext partial_result(enc_params_.poly_modulus_degree());
-        result_vec.push_back(partial_result);
-    }
+    std::vector<seal::Plaintext> result_vec(num_of_cols, seal::Plaintext(enc_params_.poly_modulus_degree()));
 
     //do multiplication. k row index j col index
     for(uint64_t k = 0; k < num_of_cols; k++) {
@@ -53,9 +49,30 @@ void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<Database>& db) {
         evaluator_->transform_to_ntt_inplace(result_vec[i], context_->first_parms_id());
     }
 
-    random_vec_mul_db = std::move(result_vec);
+    random_vec_mul_db.plain_version = std::move(result_vec);
 }
 
+
+template<>
+void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<std::vector<seal::Ciphertext>>& db) {
+    auto num_of_rows = pir_params_.nvec[ROW];
+    auto num_of_cols = pir_params_.nvec[COL];
+
+    std::vector<seal::Ciphertext> result_vec(num_of_cols, seal::Ciphertext(*context_, seal::MemoryManager::GetPool()));
+
+    //do multiplication. k row index j col index
+    for(uint64_t k = 0; k < num_of_cols; k++) {
+        for (uint64_t j = 0; j < num_of_rows; j++) {
+            multiply_add(random_vec[j], (*(db))[j + k * num_of_rows], result_vec[k], evaluator_.get());
+        }
+    }
+
+    for(uint64_t i = 0; i < num_of_cols; i++){
+        evaluator_->transform_to_ntt_inplace(result_vec[i]);
+    }
+
+    random_vec_mul_db.enc_version = std::move(result_vec);
+}
 
 
 /**
@@ -65,13 +82,16 @@ void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<Database>& db) {
  */
 void FreivaldsVector::multiply_with_query(uint32_t query_id, const std::vector<seal::Ciphertext>& query){
 
-    std::vector<seal::Ciphertext> temp_storage;
-    temp_storage.reserve(random_vec_mul_db.size());
-
-    for(int i=0; i<random_vec_mul_db.size(); i++){
-        seal::Ciphertext temp;
-        evaluator_->multiply_plain(query[i],random_vec_mul_db[i] , temp);
-        temp_storage.push_back(std::move(temp));
+    std::vector<seal::Ciphertext> temp_storage(pir_params_.nvec[COL]);
+    if(!random_vec_mul_db.plain_version.empty()){
+        for(int i=0; i<pir_params_.nvec[COL]; i++){
+            evaluator_->multiply_plain(query[i],random_vec_mul_db.plain_version[i] , temp_storage[i]);
+        }
+    }
+    else{
+        for(int i=0; i<pir_params_.nvec[COL]; i++){
+            evaluator_->multiply(query[i],random_vec_mul_db.enc_version[i] , temp_storage[i]);
+        }
     }
     seal::Ciphertext result;
     evaluator_->add_many(temp_storage, result);
@@ -133,5 +153,16 @@ namespace {
             }
         }
 
+    }
+
+    /*
+     * note this only works when left=0/1
+     */
+    void multiply_add(std::uint64_t left, seal::Ciphertext &right,
+                     seal::Ciphertext &result, seal::Evaluator* evaluator){
+        if(left==0){
+            return;
+        }
+        evaluator->add_inplace(result, right);
     }
 }

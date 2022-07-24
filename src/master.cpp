@@ -45,12 +45,8 @@ void MasterServer::generate_dbase_partition() {
     }
 }
 
-void MasterServer::db_to_vec(std::vector<std::vector<std::uint64_t>> &db_unencoded){
-    auto *db = db_.get();
-
-    for(int i=0; i<db->size();i++){
-        encoder_->decode((*db)[i], db_unencoded[i]);
-    }
+std::shared_ptr<Database> MasterServer::get_db(){
+    return db_;
 }
 
 PirQuerySingleDim MasterServer::get_expanded_query_first_dim_ser(uint32_t client_id, stringstream

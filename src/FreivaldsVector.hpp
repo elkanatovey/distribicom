@@ -3,15 +3,19 @@
 
 #include "distributed_pir.hpp"
 
+struct RandomVecMulDbContainer {
+    std::vector<seal::Plaintext> plain_version {};
+    std::vector<seal::Ciphertext> enc_version {};
+};
+
 class FreivaldsVector {
     PirParams pir_params_;       // PIR parameters
     seal::EncryptionParameters enc_params_; // SEAL parameters
     std::unique_ptr<seal::Evaluator> evaluator_;
-    std::unique_ptr<seal::BatchEncoder> encoder_;
     std::shared_ptr<seal::SEALContext> context_;
 
     std::vector<std::uint64_t> random_vec;
-    std::vector<seal::Plaintext> random_vec_mul_db;
+    RandomVecMulDbContainer random_vec_mul_db;
 
     std::map<uint32_t, seal::Ciphertext> random_vec_mul_db_mul_query;
 
