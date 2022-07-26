@@ -1,5 +1,7 @@
 #pragma once
 #include "pir.hpp"
+#define COL 0
+#define ROW 1
 
 typedef std::vector<seal::Ciphertext> PirQuerySingleDim; // one dimension of a PirQuery
 
