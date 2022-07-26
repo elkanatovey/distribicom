@@ -5,5 +5,8 @@
 namespace multiplication_utils{
     class matrix_multiplier_base {
 
+
     };
+
+    void foo();
 }

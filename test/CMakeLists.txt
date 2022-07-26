@@ -42,3 +42,7 @@ add_test(NAME matrix_mult_order_test_version_2 COMMAND matrix_mult_order_test_ve
 add_executable(matrix_mult_str_test matrix_mult_str_test.cpp)
 target_link_libraries(matrix_mult_str_test distribicom_cpp)
 add_test(NAME matrix_mult_str_test COMMAND matrix_mult_str_test)
+
+add_executable(multiplication_utils_test multiplication_utils_test.cpp)
+target_link_libraries(multiplication_utils_test distribicom_cpp)
+add_test(NAME multiplication_utils_test COMMAND multiplication_utils_test)
