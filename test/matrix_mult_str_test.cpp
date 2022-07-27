@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 
     cout << "Main: SEAL parameters generated" << endl;
 
+
     cout << "Main: generating matrices" << endl;
     vector<uint64_t> a_arr(slot_count, 0ULL);
     vector<uint64_t> b_arr(slot_count, 0ULL);

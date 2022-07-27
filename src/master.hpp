@@ -75,5 +75,9 @@ void store_query(const PirQuery& query, uint32_t client_id);
     PirReply generate_reply_one_dim(PirQuery &query, uint32_t client_id);
 
     shared_ptr<Database> get_db();
+
+    PirReply generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id, std::vector<seal::Ciphertext>* db);
+
+    vector<seal::Ciphertext> get_fake_enc_db(seal::Ciphertext);
 };
 

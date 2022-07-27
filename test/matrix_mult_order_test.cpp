@@ -6,10 +6,7 @@
 //
 
 
-#include "pir.hpp"
-#include "pir_client.hpp"
-#include "pir_server.hpp"
-#include <chrono>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -22,8 +19,7 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c,
-                    Plaintext &to_add);
+void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c);
 
 int main(int argc, char *argv[]) {
 
@@ -37,11 +33,9 @@ int main(int argc, char *argv[]) {
     // Generates all parameters
 
     cout << "Main: Generating SEAL parameters" << endl;
-    gen_encryption_params(N, logt, enc_params);
-
-    cout << "Main: Verifying SEAL parameters" << endl;
-    verify_encryption_params(enc_params);
-    cout << "Main: SEAL parameters are good" << endl;
+    enc_params.set_poly_modulus_degree(N);
+    enc_params.set_coeff_modulus(CoeffModulus::BFVDefault(N));
+    enc_params.set_plain_modulus(PlainModulus::Batching(N, logt + 1));
 
     SEALContext context(enc_params, true);
     KeyGenerator keygen(context);
@@ -66,24 +60,39 @@ int main(int argc, char *argv[]) {
     vector<uint64_t> f_arr(slot_count, 0ULL);
 
     for (uint32_t i = 0; i < a_arr.size(); i++) {
-        a_arr[i] = (rand() % 256);
+        a_arr[i] = 514048;
         b_arr[i] = (rand() % 256);
-        c_arr[i] = (rand() % 256);
+        c_arr[i] = 514050;
         d_arr[i] = (rand() % 256);
         e_arr[i] = (rand() % 256);
         f_arr[i] = (rand() % 256);
     }
 
-    Plaintext a;
-    Plaintext b;
-    Plaintext c;
-    Plaintext d;
-    Plaintext e;
-    Plaintext f;
-    encoder.encode(a_arr, a);
-    encoder.encode(b_arr, b);
-    encoder.encode(c_arr, c);
-    encoder.encode(d_arr, d);
+    std::string poly = "123D7D";
+    std::string polydub = "247AFA";
+//    Plaintext a(poly);
+//    Plaintext b(poly);
+//    Plaintext c(poly);
+//    Plaintext d(poly);
+    Plaintext e(poly);
+    Plaintext f(poly);
+    Plaintext a(4096);
+    Plaintext b(4096);
+    Plaintext c(4096);
+    Plaintext d(4096);
+    for(int current_coeff =0; current_coeff < 4096; current_coeff++){
+        a[current_coeff] = a_arr[current_coeff];
+        b[current_coeff] = b_arr[current_coeff];
+        c[current_coeff] = c_arr[current_coeff];
+        d[current_coeff] = d_arr[current_coeff];
+    }
+
+//    Plaintext e;
+//    Plaintext f;
+//        encoder.encode(a_arr, a);
+//        encoder.encode(b_arr, b);
+//        encoder.encode(c_arr, c);
+//        encoder.encode(d_arr, d);
     encoder.encode(e_arr, e);
     encoder.encode(f_arr, f);
 
@@ -92,19 +101,18 @@ int main(int argc, char *argv[]) {
 
     encryptor.encrypt_symmetric(e, e_encrypted);
     encryptor.encrypt_symmetric(f, f_encrypted);
-    std::cout << "Encrypting e f" << std::endl;//1958182 1860171
+    std::cout << "Encrypting e f" << std::endl;
     std::cout << "Plain Modulus:"<<enc_params.plain_modulus().value() << std::endl;
 
     std::cout << "calculating e * (a + c) + f * (b + d)"<< std::endl;
 
-
     Plaintext a_plus_c;
     Plaintext b_plus_d;
-    Plaintext to_add;
 
-    add_plaintexts(enc_params, a, c, a_plus_c, to_add);
-    add_plaintexts(enc_params, b, d, b_plus_d, to_add);
+    add_plaintexts(enc_params, a, c, a_plus_c);
+    add_plaintexts(enc_params, b, d, b_plus_d);
 
+    std::cout << a_plus_c.to_string()<<" ..........................."<< std::endl;
     Ciphertext e_times_a_plus_c; // e * (a + c)
     Ciphertext f_times_b_plus_d; // f * (b + d)
     evaluator.multiply_plain(e_encrypted, a_plus_c, e_times_a_plus_c);
@@ -158,8 +166,8 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c,
-                    Plaintext &to_add) {
+void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c) {
+    Plaintext to_add;
     if(a.coeff_count() > c.coeff_count()){
         a_plus_c = a;
         to_add = c;

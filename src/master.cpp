@@ -321,6 +321,17 @@ PirReplyShard MasterServer::deserialize_partial_reply(std::stringstream &stream)
     return reply;
 }
 
+vector<Ciphertext> MasterServer::get_fake_enc_db(Ciphertext c) {
+    vector<Plaintext> *cur = db_.get();
+    evaluator_->sub_inplace(c, c);
+    evaluator_->transform_from_ntt_inplace(c);
+    vector<Ciphertext> fake_encrypted_db(cur->size());
+    for(int i=0;i<cur->size();i++){
+        fake_encrypted_db[i] = c;
+        evaluator_->add_plain_inplace(fake_encrypted_db[i], (*cur)[i]);
+    }
+    return move(fake_encrypted_db);
+}
 
 PirReply MasterServer::generate_reply_one_dim(PirQuery &query, uint32_t client_id) {
 
@@ -397,6 +408,78 @@ PirReply MasterServer::generate_reply_one_dim(PirQuery &query, uint32_t client_i
 
             for (uint64_t j = 1; j < n_i; j++) {
                 evaluator_->multiply_plain(expanded_query[j], (*cur)[k + j * product], temp);
+                evaluator_->add_inplace(intermediateCtxts[k], temp); // Adds to first component.
+            }
+        }
+
+
+        return intermediateCtxts;
+        cout << "Server: " << i + 1 << "-th recursion level finished " << endl;
+        cout << endl;
+    }
+    cout << "reply generated!  " << endl;
+    // This should never get here
+    assert(0);
+    vector<Ciphertext> fail(1);
+    return fail;
+}
+
+
+PirReply MasterServer::generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id,
+                                                  std::vector<seal::Ciphertext>* db) {
+
+    vector<uint64_t> nvec = pir_params_.nvec;
+    uint64_t product = 1;
+
+    for (uint32_t i = 0; i < nvec.size(); i++) {
+        product *= nvec[i];
+    }
+
+    vector<Ciphertext> *cur = db;
+
+    auto pool = MemoryManager::GetPool();
+
+
+    int N = enc_params_.poly_modulus_degree();
+
+
+    for (uint32_t i = 0; i < nvec.size(); i++) {
+        cout << "Server: " << i + 1 << "-th recursion level started " << endl;
+
+
+        vector<Ciphertext> expanded_query;
+
+        uint64_t n_i = nvec[i];
+        cout << "Server: n_i = " << n_i << endl;
+        cout << "Server: expanding " << query[i].size() << " query ctxts" << endl;
+        for (uint32_t j = 0; j < query[i].size(); j++){
+            uint64_t total = N;
+            if (j == query[i].size() - 1){
+                total = n_i % N;
+            }
+            cout << "-- expanding one query ctxt into " << total  << " ctxts "<< endl;
+            vector<Ciphertext> expanded_query_part = expand_query(query[i][j], total, client_id);
+            expanded_query.insert(expanded_query.end(), std::make_move_iterator(expanded_query_part.begin()),
+                                  std::make_move_iterator(expanded_query_part.end()));
+            expanded_query_part.clear();
+        }
+        cout << "Server: expansion done " << endl;
+        if (expanded_query.size() != n_i) {
+            cout << " size mismatch!!! " << expanded_query.size() << ", " << n_i << endl;
+        }
+
+
+        product /= n_i;
+
+        vector<Ciphertext> intermediateCtxts(product);
+        Ciphertext temp;
+
+        for (uint64_t k = 0; k < product; k++) {
+
+            evaluator_->multiply(expanded_query[0], (*cur)[k], intermediateCtxts[k]);
+
+            for (uint64_t j = 1; j < n_i; j++) {
+                evaluator_->multiply(expanded_query[j], (*cur)[k + j * product], temp);
                 evaluator_->add_inplace(intermediateCtxts[k], temp); // Adds to first component.
             }
         }

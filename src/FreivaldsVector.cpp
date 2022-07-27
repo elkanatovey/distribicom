@@ -1,7 +1,6 @@
 #include "FreivaldsVector.hpp"
 
-#define COL 0
-#define ROW 1
+
 namespace {
     void multiply_add(std::uint64_t left, seal::Plaintext &right,
                       seal::Plaintext &result, uint64_t mod);
@@ -67,9 +66,9 @@ void FreivaldsVector::mult_rand_vec_by_db(const std::shared_ptr<std::vector<seal
         }
     }
 
-    for(uint64_t i = 0; i < num_of_cols; i++){
-        evaluator_->transform_to_ntt_inplace(result_vec[i]);
-    }
+//    for(uint64_t i = 0; i < num_of_cols; i++){
+//        evaluator_->transform_to_ntt_inplace(result_vec[i]);
+//    }
 
     random_vec_mul_db.enc_version = std::move(result_vec);
 }
@@ -90,7 +89,9 @@ void FreivaldsVector::multiply_with_query(uint32_t query_id, const std::vector<s
     }
     else{
         for(int i=0; i<pir_params_.nvec[COL]; i++){
-            evaluator_->multiply(query[i],random_vec_mul_db.enc_version[i] , temp_storage[i]);
+            seal::Ciphertext temp;
+            evaluator_->transform_from_ntt(query[i], temp);
+            evaluator_->multiply(temp ,random_vec_mul_db.enc_version[i] , temp_storage[i]);
         }
     }
     seal::Ciphertext result;
@@ -124,7 +125,7 @@ bool FreivaldsVector::multiply_with_reply(uint32_t query_id, PirReply &reply, se
 //    seal::Ciphertext difference;
     std::cout<< "checking if result is transparent"<<std::endl;
     evaluator_->sub(random_vec_mul_db_mul_query[query_id], result, response);
-    evaluator_->transform_from_ntt_inplace(response);
+//    evaluator_->transform_from_ntt_inplace(response);
     if(response.is_transparent()){
         std::cout<< "transparent!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
         return true;
