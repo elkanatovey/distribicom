@@ -24,11 +24,11 @@ int main(int argc, char *argv[]) {
         assert(freivalds_verification_test(4096*3, 2, 4096, 20, 2, false) == 0);
 
     // speed check
-//        assert(freivalds_verification_test(1 << 10, 288, 4096, 20, 2, false) == 0);
-//
-//assert(freivalds_verification_test(1 << 12, 288, 4096, 20, 2, false) == 0);
-//
-//    assert(freivalds_verification_test(1 << 16, 1024, 4096, 20,2, false)==0);
+        assert(freivalds_verification_test(1 << 10, 288, 4096, 20, 2, false) == 0);
+
+assert(freivalds_verification_test(1 << 12, 288, 4096, 20, 2, false) == 0);
+
+    assert(freivalds_verification_test(1 << 16, 1024, 4096, 20,2, false)==0);
 
 
 }
@@ -116,8 +116,10 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
 
     //store query for multiple server computation
     auto expanded_query = server.get_expanded_query_single_dim(0, reg_query, 0);
-    auto db_pointer =server.get_db();
+//    auto db_pointer =server.get_db();
 
+    auto db_fake_enc = server.get_fake_enc_db(expanded_query[0]);
+    auto mSharedPtr = std::make_shared<std::vector<seal::Ciphertext> >(std::move(db_fake_enc));
 
     function<uint32_t(void)> g;
     if(random_freivalds_vec){
@@ -128,14 +130,16 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
          g =[](){return 1; };
     }
     FreivaldsVector f(enc_params, pir_params, g);
-    f.mult_rand_vec_by_db(db_pointer);
+//    f.mult_rand_vec_by_db(db_pointer);
+    f.mult_rand_vec_by_db(mSharedPtr);
 
     server.preprocess_database();
     cout << "Main: database pre processed " << endl;
 
     f.multiply_with_query(0, expanded_query);
 
-    auto answer = server.generate_reply_one_dim(reg_query, 0);
+    auto answer = server.generate_reply_one_dim_enc(reg_query, 0, mSharedPtr.get());
+//    auto answer = server.generate_reply_one_dim(reg_query, 0);
     seal::Ciphertext response;
     // do computation at each client
     f.multiply_with_reply(0,  answer, response);
