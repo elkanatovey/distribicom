@@ -85,4 +85,16 @@ namespace TestUtils {
                 .encoder = seal::BatchEncoder(seal::SEALContext(*ctx)),
         };
     }
+
+    SetupConfigs DEFAULT_SETUP_CONFIGS = {
+            .encryption_params_configs = {
+                    .scheme_type = seal::scheme_type::bgv,
+                    .polynomial_degree = 4096,
+                    .log_coefficient_modulus = 20
+            },
+            .rng_configs = {
+                    .rng_type = blake,
+            }
+
+    };
 }

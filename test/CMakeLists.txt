@@ -46,3 +46,7 @@ add_test(NAME matrix_mult_str_test COMMAND matrix_mult_str_test)
 add_executable(multiplication_utils_test multiplication_utils_test.cpp)
 target_link_libraries(multiplication_utils_test multiplication_utils)
 add_test(NAME multiplication_utils_test COMMAND multiplication_utils_test)
+
+add_executable(evaluator_wrapper_test evaluator_wrapper_test.cpp)
+target_link_libraries(evaluator_wrapper_test multiplication_utils)
+add_test(NAME evaluator_wrapper_test COMMAND evaluator_wrapper_test)
