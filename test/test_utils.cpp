@@ -33,11 +33,27 @@ namespace TestUtils {
     };
 
     struct CryptoObjects {
+
+        explicit CryptoObjects(seal::EncryptionParameters encryption_params) :
+                encryption_params(encryption_params),
+                seal_context(encryption_params, true),
+                keygen(seal::SEALContext(seal_context)),
+                secret_key(keygen.secret_key()),
+                evaluator(seal::SEALContext(seal_context)),
+                encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
+                decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
+                encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
+            shared_evaluator = std::make_shared<seal::Evaluator>(seal::SEALContext(seal_context));
+        };
+
         seal::EncryptionParameters encryption_params;
         function<uint32_t(void)> rng;
-        std::shared_ptr<seal::SEALContext> seal_context;
-        std::shared_ptr<seal::KeyGenerator> keygen;
-        std::shared_ptr<seal::Evaluator> evaluator;
+        seal::SEALContext seal_context;
+        seal::KeyGenerator keygen;
+        seal::SecretKey secret_key;
+
+        std::shared_ptr<seal::Evaluator> shared_evaluator;
+        seal::Evaluator evaluator;
 
         seal::Encryptor encryptor;
         seal::Decryptor decryptor;
@@ -60,30 +76,17 @@ namespace TestUtils {
         throw std::runtime_error("unknown rng type");
     }
 
-    CryptoObjects setup(SetupConfigs configs) {
+    std::shared_ptr<CryptoObjects> setup(SetupConfigs configs) {
         seal::EncryptionParameters enc_params(configs.encryption_params_configs.scheme_type);
         set_enc_params(
                 configs.encryption_params_configs.polynomial_degree,
                 configs.encryption_params_configs.log_coefficient_modulus,
                 enc_params
         );
-        auto rng = setup_rng(configs.rng_configs);
 
-        auto ctx = std::make_shared<seal::SEALContext>(enc_params, true);
-        auto evaluator_ = std::make_shared<seal::Evaluator>(seal::SEALContext(*ctx));
-        auto keygen = std::make_shared<seal::KeyGenerator>(seal::SEALContext(*ctx));
-        seal::SecretKey secret_key = keygen->secret_key();
-
-        return CryptoObjects{
-                .encryption_params = enc_params,
-                .rng = rng,
-                .seal_context = ctx,
-                .keygen = keygen,
-                .evaluator = evaluator_,
-                .encryptor = seal::Encryptor(seal::SEALContext(*ctx), secret_key),
-                .decryptor = seal::Decryptor(seal::SEALContext(*ctx), secret_key),
-                .encoder = seal::BatchEncoder(seal::SEALContext(*ctx)),
-        };
+        auto s = std::make_shared<CryptoObjects>(enc_params);
+        s->rng = setup_rng(configs.rng_configs);
+        return s;
     }
 
     SetupConfigs DEFAULT_SETUP_CONFIGS = {
