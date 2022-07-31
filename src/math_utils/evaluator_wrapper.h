@@ -45,8 +45,8 @@ namespace multiplication_utils {
          *  ptx ->  either both are NTT or both aren't NTT.
          */
         void mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-#ifdef DEBUG
-            assert(!a.is_ntt_form() && !b.is_ntt_form())
+#ifdef MY_DEBUG
+            assert(!a.is_ntt_form() && !b.is_ntt_form());
 #endif
 
             evaluator_->multiply(a, b, c);
@@ -60,8 +60,9 @@ namespace multiplication_utils {
          * @param c
          */
         void mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-#ifdef DEBUG
-            assert(a.is_ntt_form() && b.is_ntt_form())
+#ifdef MY_DEBUG
+            assert(a.is_ntt_form());
+            assert(b.is_ntt_form());
 #endif
 
             evaluator_->multiply_plain(b, a, c);
@@ -76,11 +77,11 @@ namespace multiplication_utils {
          * @param c
          */
         void mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-#ifdef DEBUG
-            assert(!a.is_ntt_form() && b.is_ntt_form())
+#ifdef MY_DEBUG
+            assert(!a.is_ntt_form() && b.is_ntt_form());
 #endif
-            seal::Plaintext a1(enc_params_.plain_modulus().value());
-            seal::Plaintext a2(enc_params_.plain_modulus().value());
+            seal::Plaintext a1(enc_params_.poly_modulus_degree());
+            seal::Plaintext a2(enc_params_.poly_modulus_degree());
 
 
             auto threshold = (enc_params_.plain_modulus().value() + 1) >> 1;
