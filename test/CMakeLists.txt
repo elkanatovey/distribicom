@@ -1,3 +1,5 @@
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
+
 include_directories (${SealPIR_SOURCE_DIR}/src)
 include_directories (${distribicom_SOURCE_DIR}/src)
 include_directories (${distribicom_SOURCE_DIR}/src/math_utils)

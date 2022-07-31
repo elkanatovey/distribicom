@@ -1,7 +1,3 @@
-//
-// Created by Jonathan Weiss on 28/07/2022.
-//
-
 #include "matrix_multiplier_base.hpp"
 #include <seal/seal.h>
 
@@ -96,8 +92,8 @@ namespace TestUtils {
                     .log_coefficient_modulus = 20
             },
             .rng_configs = {
+                    .seed = 0,
                     .rng_type = blake,
             }
-
     };
 }
