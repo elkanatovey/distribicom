@@ -3,7 +3,11 @@
 #include "pir.hpp"
 #include "pir_server.hpp"
 
+
 namespace multiplication_utils {
+/***
+ * This class wraps and modifies the behaviour of seal::Evaluator to add wanted multiplication for distribicom.
+ */
     class EvaluatorWrapper {
         std::shared_ptr<seal::Evaluator> evaluator_;
         seal::EncryptionParameters enc_params_; // SEAL parameters
@@ -14,6 +18,9 @@ namespace multiplication_utils {
         EvaluatorWrapper(std::shared_ptr<seal::Evaluator> evaluator,
                          seal::EncryptionParameters enc_params) : evaluator_(evaluator), enc_params_(enc_params) {
             context_ = seal::SEALContext(enc_params, true);
+
+            trivial_zero = seal::Ciphertext(context_);
+            trivial_zero.resize(2);
         }
 
 
@@ -32,6 +39,7 @@ namespace multiplication_utils {
         };
 
         /***
+         * multiplies two ciphertexts using standard ciphertext multiplication
          * Assumes that we are in correct NTT form:
          *  ctx -> both not in ntt.
          *  ptx ->  either both are NTT or both aren't NTT.
@@ -45,6 +53,12 @@ namespace multiplication_utils {
         }
 
         // TODO: Note that plaintext type would be changed into a "modified-ptx" that can be split into two items.
+        /***
+         * multiplies plaintext with a ciphertext using regular seal evaluator.
+         * @param a
+         * @param b
+         * @param c
+         */
         void mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef DEBUG
             assert(a.is_ntt_form() && b.is_ntt_form())
@@ -53,11 +67,14 @@ namespace multiplication_utils {
             evaluator_->multiply_plain(b, a, c);
         }
 
-        void mult_reg(const seal::Ciphertext &a, const seal::Plaintext &b, seal::Ciphertext &c) const {
-            mult_reg(b, a, c);
-        }
-
         // TODO: very in-efficient due to the plain-text type.
+        /***
+         * splits plaintext into two, then mults with ciphertext and then adds the sub results together.
+         * should achieve associative/commutative ptx-ciphertext multiplication.
+         * @param a
+         * @param b
+         * @param c
+         */
         void mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef DEBUG
             assert(!a.is_ntt_form() && b.is_ntt_form())
@@ -92,8 +109,16 @@ namespace multiplication_utils {
             evaluator_->add(c, tmp, c);
         }
 
-        void mult_modified(const seal::Ciphertext &a, const seal::Plaintext &b, seal::Ciphertext &c) const {
-            mult_modified(b, a, c);
+        /***
+         * multiplies plaintext with a ciphertext by encoding the plaintext into a ciphertext and then doing
+         * ciphertext-ciphertext standard multiplication.
+         * @param a
+         * @param b
+         * @param c
+         */
+        void mult_slow(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+            evaluator_->add_plain(trivial_zero, a, c);
+            evaluator_->multiply_inplace(c, b);
         }
 
         /***

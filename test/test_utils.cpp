@@ -40,10 +40,16 @@ namespace TestUtils {
                 decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
                 encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
             shared_evaluator = std::make_shared<seal::Evaluator>(seal::SEALContext(seal_context));
+
+            seal::Blake2xbPRNGFactory factory;
         };
 
         seal::EncryptionParameters encryption_params;
-        function<uint32_t(void)> rng;
+        function<uint32_t(void)> blakerng;
+        function<uint32_t(void)> mod2rng;
+        function<uint32_t(void)> allonerng;
+
+
         seal::SEALContext seal_context;
         seal::KeyGenerator keygen;
         seal::SecretKey secret_key;
@@ -54,23 +60,28 @@ namespace TestUtils {
         seal::Encryptor encryptor;
         seal::Decryptor decryptor;
         seal::BatchEncoder encoder;
+
+        seal::Plaintext random_plaintext();
+
+        seal::Ciphertext random_ciphertext();
     };
 
-    function<uint32_t(void)> setup_rng(RNGConfigs configs) {
-        function<uint32_t(void)> random_val_generator;
-        if (configs.rng_type == blake) {
-            seal::Blake2xbPRNGFactory factory;
-            auto gen = factory.create();
-            return [gen = std::move(gen)]() { return gen->generate() % 2; };
-        }
-        else if (configs.rng_type == sha) {
-            throw std::runtime_error("not implemented");
-        }
-        else if (configs.rng_type == all_ones) {
-            return []() { return 1; };
-        }
-        throw std::runtime_error("unknown rng type");
-    }
+
+//    function<uint32_t(void)> setup_rng(RNGConfigs configs) {
+//        function<uint32_t(void)> random_val_generator;
+//        if (configs.rng_type == blake) {
+//            seal::Blake2xbPRNGFactory factory;
+//            auto gen = factory.create();
+//            return [gen = std::move(gen)]() { return gen->generate() % 2; };
+//        }
+//        else if (configs.rng_type == sha) {
+//            throw std::runtime_error("not implemented");
+//        }
+//        else if (configs.rng_type == all_ones) {
+//            return []() { return 1; };
+//        }
+//        throw std::runtime_error("unknown rng type");
+//    }
 
     std::shared_ptr<CryptoObjects> setup(SetupConfigs configs) {
         seal::EncryptionParameters enc_params(configs.encryption_params_configs.scheme_type);
@@ -81,7 +92,6 @@ namespace TestUtils {
         );
 
         auto s = std::make_shared<CryptoObjects>(enc_params);
-        s->rng = setup_rng(configs.rng_configs);
         return s;
     }
 
@@ -91,9 +101,30 @@ namespace TestUtils {
                     .polynomial_degree = 4096,
                     .log_coefficient_modulus = 20
             },
-            .rng_configs = {
-                    .seed = 0,
-                    .rng_type = blake,
-            }
     };
+
+    seal::Plaintext CryptoObjects::random_plaintext() {
+        seal::Plaintext p(encryption_params.poly_modulus_degree());
+
+        // avoiding encoder usage - to prevent unwanted transformation to the ptx underlying elements
+        std::vector<std::uint64_t> v(encryption_params.poly_modulus_degree(), 0);
+
+        seal::Blake2xbPRNGFactory factory;
+        auto gen = factory.create();
+
+        auto mod = encryption_params.plain_modulus().value();
+        std::generate(v.begin(), v.end(), [gen = std::move(gen), &mod]() { return gen->generate() % (500); });
+
+        for (std::uint64_t i = 0; i < encryption_params.poly_modulus_degree(); ++i) {
+            p[i] = v[i];
+        }
+        return p;
+    }
+
+    seal::Ciphertext CryptoObjects::random_ciphertext() {
+        auto ptx = random_plaintext();
+        seal::Ciphertext ctx;
+        encryptor.encrypt_symmetric(ptx, ctx);
+        return ctx;
+    }
 }
