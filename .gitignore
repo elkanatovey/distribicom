@@ -1,0 +1,6 @@
+cmake-build-debug
+cmake-build-debug-remote-host
+seal_download
+CmakeFiles
+.idea
+.DS_Store
