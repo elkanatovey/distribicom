@@ -4,3 +4,4 @@ seal_download
 CmakeFiles
 .idea
 .DS_Store
+bin

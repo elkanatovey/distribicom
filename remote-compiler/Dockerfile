@@ -1,4 +1,6 @@
 # Remote clion builds:
+# docker build . -t clion/remote-env:1.0
+# docker run -d --cap-add sys_ptrace -p127.0.0.1:2222:22 --name clion/remote-env clion/remote-env:1.0
 FROM ubuntu:latest
 RUN apt-get update
 RUN apt-get install -y ssh
@@ -38,6 +40,3 @@ RUN mkdir -p /home/user/.ssh && \
 
 
 CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
-
-
-
