@@ -87,7 +87,7 @@ namespace multiplication_utils {
             auto threshold = (enc_params_.plain_modulus().value() + 1) >> 1;
 
             auto coeff_count = a.coeff_count();
-            for (int current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+            for (std::uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
                 // plain modulus is odd, thus threshold is an even number.
                 if (a[current_coeff] >= threshold) {
                     // skipping if to perform + 1 in case a[current_coeff] is odd.
@@ -105,7 +105,7 @@ namespace multiplication_utils {
 
             evaluator_->multiply_plain(b, a1, c);
             seal::Ciphertext tmp;
-            evaluator_->multiply_plain(b, a1, tmp);
+            evaluator_->multiply_plain(b, a2, tmp);
 
             evaluator_->add(c, tmp, c);
         }
