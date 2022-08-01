@@ -62,9 +62,6 @@ namespace multiplication_utils {
         // TODO: Note that plaintext type would be changed into a "modified-ptx" that can be split into two items.
         /***
          * multiplies plaintext with a ciphertext using regular seal evaluator.
-         * @param a
-         * @param b
-         * @param c
          */
         void mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef MY_DEBUG
@@ -79,9 +76,6 @@ namespace multiplication_utils {
         /***
          * splits plaintext into two, then mults with ciphertext and then adds the sub results together.
          * should achieve associative/commutative ptx-ciphertext multiplication.
-         * @param a
-         * @param b
-         * @param c
          */
         void mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef MY_DEBUG
@@ -89,12 +83,25 @@ namespace multiplication_utils {
             assert(b.is_ntt_form());
 #endif
             auto split_ptx = split_plaintext(a);
+            mult_modified(split_ptx, b, c);
+        }
 
-
-            evaluator_->multiply_plain(b, split_ptx[0], c);
+        /***
+         * mult_modified receives a split ptx and multiplies it with the ciphertext.
+         * all params are in ntt forms.
+         */
+        void mult_modified(const SplitPlaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+#ifdef MY_DEBUG
+            assert(2 == a.size());
+            for (auto &a_i: a) {
+                assert(a_i.is_ntt_form());
+            }
+            assert(b.is_ntt_form());
+#endif
+            evaluator_->multiply_plain(b, a[0], c);
 
             seal::Ciphertext tmp;
-            evaluator_->multiply_plain(b, split_ptx[1], tmp);
+            evaluator_->multiply_plain(b, a[1], tmp);
 
             evaluator_->add(c, tmp, c);
         }
