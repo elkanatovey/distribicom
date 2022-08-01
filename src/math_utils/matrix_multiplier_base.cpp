@@ -55,8 +55,7 @@ namespace multiplication_utils {
         for (uint64_t k = 0; k < dims[COL]; k++) {
             result[k] = seal::Plaintext(w_evaluator->enc_params.poly_modulus_degree());
             for (uint64_t j = 0; j < dims[ROW]; j++) {
-                multiply_add(left_vec[j], matrix[j + k * dims[ROW]], result[k],
-                             w_evaluator->enc_params.plain_modulus().value());
+                w_evaluator->multiply_add(left_vec[j], matrix[j + k * dims[ROW]], result[k]);
             }
         }
 
@@ -74,11 +73,10 @@ namespace multiplication_utils {
 
         for (uint64_t k = 0; k < dims[COL]; k++) {
             for (uint64_t j = 0; j < dims[ROW]; j++) {
-                multiply_add(
+                w_evaluator->multiply_add(
                         left_vec[j],
                         trivial_encrypted_matrix[j + k * dims[ROW]],
-                        result[k],
-                        w_evaluator->evaluator.get()
+                        result[k]
                 );
             }
         }

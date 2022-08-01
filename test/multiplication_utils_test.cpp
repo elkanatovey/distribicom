@@ -2,7 +2,7 @@
 #include "matrix_multiplier_base.hpp"
 #include "test_utils.cpp"
 
-int main(int argc, char *argv[]) {
+int main() {
     // sanity check
     multiplication_utils::foo();
 

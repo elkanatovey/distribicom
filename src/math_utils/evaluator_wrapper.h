@@ -173,15 +173,10 @@ namespace multiplication_utils {
         }
 
 
-    private:
-
         /***
-        * take vector along with constant and do result+= vector*constant
-        * @param right vector from above
-        * @param left const
-        * @param result place to add to
+        * take vector along with constant and do sum += vector*constant.
         ***/
-        void multiply_add(const std::uint64_t left, const seal::Plaintext &right, seal::Plaintext &result) const {
+        void multiply_add(const std::uint64_t left, const seal::Plaintext &right, seal::Plaintext &sum) const {
             if (left == 0) {
                 return;
             }
@@ -190,18 +185,18 @@ namespace multiplication_utils {
 
             auto coeff_count = right.coeff_count();
             for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
-                result[current_coeff] += (left * right[current_coeff]);
-                if (result[current_coeff] >= ptx_mod) {
-                    result[current_coeff] -= ptx_mod;
+                sum[current_coeff] += (left * right[current_coeff]);
+                if (sum[current_coeff] >= ptx_mod) {
+                    sum[current_coeff] -= ptx_mod;
                 }
             }
         }
 
-        void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &result) const {
+        void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const {
             if (left == 0) {
                 return;
             }
-            evaluator->add_inplace(result, right);
+            evaluator->add_inplace(sum, right);
         }
     };
 }

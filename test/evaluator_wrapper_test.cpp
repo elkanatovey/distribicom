@@ -2,7 +2,7 @@
 #include "test_utils.cpp"
 #include "evaluator_wrapper.h"
 
-int main(int argc, char *argv[]) {
+int main() {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     auto ptx = all->random_plaintext();
