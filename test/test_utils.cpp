@@ -1,5 +1,6 @@
 #include "matrix_multiplier_base.hpp"
 #include <seal/seal.h>
+#include <evaluator_wrapper.h>
 
 namespace TestUtils {
     void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
@@ -35,13 +36,11 @@ namespace TestUtils {
                 seal_context(encryption_params, true),
                 keygen(seal::SEALContext(seal_context)),
                 secret_key(keygen.secret_key()),
-                evaluator(seal::SEALContext(seal_context)),
                 encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
                 decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
                 encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
-            shared_evaluator = std::make_shared<seal::Evaluator>(seal::SEALContext(seal_context));
 
-            seal::Blake2xbPRNGFactory factory;
+            w_evaluator = multiplication_utils::EvaluatorWrapper::Create(encryption_params);
         };
 
         seal::EncryptionParameters encryption_params;
@@ -49,13 +48,11 @@ namespace TestUtils {
         function<uint32_t(void)> mod2rng;
         function<uint32_t(void)> allonerng;
 
-
         seal::SEALContext seal_context;
         seal::KeyGenerator keygen;
         seal::SecretKey secret_key;
+        std::shared_ptr<multiplication_utils::EvaluatorWrapper> w_evaluator;
 
-        std::shared_ptr<seal::Evaluator> shared_evaluator;
-        seal::Evaluator evaluator;
 
         seal::Encryptor encryptor;
         seal::Decryptor decryptor;
@@ -65,23 +62,6 @@ namespace TestUtils {
 
         seal::Ciphertext random_ciphertext();
     };
-
-
-//    function<uint32_t(void)> setup_rng(RNGConfigs configs) {
-//        function<uint32_t(void)> random_val_generator;
-//        if (configs.rng_type == blake) {
-//            seal::Blake2xbPRNGFactory factory;
-//            auto gen = factory.create();
-//            return [gen = std::move(gen)]() { return gen->generate() % 2; };
-//        }
-//        else if (configs.rng_type == sha) {
-//            throw std::runtime_error("not implemented");
-//        }
-//        else if (configs.rng_type == all_ones) {
-//            return []() { return 1; };
-//        }
-//        throw std::runtime_error("unknown rng type");
-//    }
 
     std::shared_ptr<CryptoObjects> setup(SetupConfigs configs) {
         seal::EncryptionParameters enc_params(configs.encryption_params_configs.scheme_type);

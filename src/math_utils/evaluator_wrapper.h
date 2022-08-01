@@ -16,32 +16,31 @@ namespace multiplication_utils {
  * This class wraps and modifies the behaviour of seal::Evaluator to add wanted multiplication for distribicom.
  */
     class EvaluatorWrapper {
-        std::shared_ptr<seal::Evaluator> evaluator_;
-        seal::EncryptionParameters enc_params_; // SEAL parameters
-        seal::SEALContext context_ = seal::SEALContext(seal::EncryptionParameters());
         seal::Ciphertext trivial_zero;
 
+        EvaluatorWrapper(seal::EncryptionParameters enc_params) :
+                enc_params(enc_params),
+                context(enc_params, true) {
 
-        EvaluatorWrapper(std::shared_ptr<seal::Evaluator> evaluator,
-                         seal::EncryptionParameters enc_params) : evaluator_(evaluator), enc_params_(enc_params) {
-            context_ = seal::SEALContext(enc_params, true);
-
-            trivial_zero = seal::Ciphertext(context_);
+            evaluator = std::make_unique<seal::Evaluator>(context);
+            trivial_zero = seal::Ciphertext(context);
             trivial_zero.resize(2);
         }
 
 
     public:
+        seal::EncryptionParameters enc_params; // SEAL parameters
+        seal::SEALContext context;
+        unique_ptr<seal::Evaluator> evaluator;
+
         /***
          * Creates and returns a an initialized matrix_multiplier
          * @param evaluator
          * @param enc_params
          * @return a matrix multiplier
          */
-        static std::shared_ptr<EvaluatorWrapper> Create(std::shared_ptr<seal::Evaluator> evaluator,
-                                                        seal::EncryptionParameters enc_params) {
-
-            auto eval = EvaluatorWrapper(evaluator, enc_params);
+        static std::shared_ptr<EvaluatorWrapper> Create(seal::EncryptionParameters enc_params) {
+            auto eval = EvaluatorWrapper(enc_params);
             return std::make_shared<EvaluatorWrapper>(std::move(eval));
         };
 
@@ -56,7 +55,7 @@ namespace multiplication_utils {
             assert(!a.is_ntt_form() && !b.is_ntt_form());
 #endif
 
-            evaluator_->multiply(a, b, c);
+            evaluator->multiply(a, b, c);
         }
 
         // TODO: Note that plaintext type would be changed into a "modified-ptx" that can be split into two items.
@@ -69,7 +68,7 @@ namespace multiplication_utils {
             assert(b.is_ntt_form());
 #endif
 
-            evaluator_->multiply_plain(b, a, c);
+            evaluator->multiply_plain(b, a, c);
         }
 
         // TODO: very in-efficient due to the plain-text type.
@@ -98,22 +97,22 @@ namespace multiplication_utils {
             }
             assert(b.is_ntt_form());
 #endif
-            evaluator_->multiply_plain(b, a[0], c);
+            evaluator->multiply_plain(b, a[0], c);
 
             seal::Ciphertext tmp;
-            evaluator_->multiply_plain(b, a[1], tmp);
+            evaluator->multiply_plain(b, a[1], tmp);
 
-            evaluator_->add(c, tmp, c);
+            evaluator->add(c, tmp, c);
         }
 
         SplitPlaintext split_plaintext(const seal::Plaintext &a) const {
 #ifdef MY_DEBUG
             assert(!a.is_ntt_form());
 #endif
-            seal::Plaintext a1(enc_params_.poly_modulus_degree());
-            seal::Plaintext a2(enc_params_.poly_modulus_degree());
+            seal::Plaintext a1(enc_params.poly_modulus_degree());
+            seal::Plaintext a2(enc_params.poly_modulus_degree());
 
-            auto threshold = (enc_params_.plain_modulus().value() + 1) >> 1;
+            auto threshold = (enc_params.plain_modulus().value() + 1) >> 1;
 
             auto coeff_count = a.coeff_count();
             for (uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
@@ -129,8 +128,8 @@ namespace multiplication_utils {
                 }
             }
 
-            evaluator_->transform_to_ntt_inplace(a1, context_.first_parms_id());
-            evaluator_->transform_to_ntt_inplace(a2, context_.first_parms_id());
+            evaluator->transform_to_ntt_inplace(a1, context.first_parms_id());
+            evaluator->transform_to_ntt_inplace(a2, context.first_parms_id());
 
             return {
                     std::move(a1),
@@ -146,8 +145,8 @@ namespace multiplication_utils {
          * @param c
          */
         void mult_slow(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-            evaluator_->add_plain(trivial_zero, a, c);
-            evaluator_->multiply_inplace(c, b);
+            evaluator->add_plain(trivial_zero, a, c);
+            evaluator->multiply_inplace(c, b);
         }
 
         /***
@@ -161,7 +160,7 @@ namespace multiplication_utils {
                 return;
             }
 
-            auto ptx_mod = enc_params_.plain_modulus().value();
+            auto ptx_mod = enc_params.plain_modulus().value();
 
             auto coeff_count = right.coeff_count();
             for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
@@ -176,7 +175,7 @@ namespace multiplication_utils {
             if (left == 0) {
                 return;
             }
-            evaluator_->add_inplace(result, right);
+            evaluator->add_inplace(result, right);
         }
     };
 }

@@ -99,11 +99,11 @@ int main(int argc, char *argv[]) {
 
     Ciphertext e_times_a_plus_c; // e * (a + c)
     Ciphertext f_times_b_plus_d; // f * (b + d)
-    all->evaluator.multiply_plain(e_encrypted, a_plus_c, e_times_a_plus_c);
-    all->evaluator.multiply_plain(f_encrypted, b_plus_d, f_times_b_plus_d);
+    all->w_evaluator->evaluator->multiply_plain(e_encrypted, a_plus_c, e_times_a_plus_c);
+    all->w_evaluator->evaluator->multiply_plain(f_encrypted, b_plus_d, f_times_b_plus_d);
 
     Ciphertext e_times_a_plus_c_plus_f_times_b_plus_d; // e * (a + c) + f * (b + d)
-    all->evaluator.add(e_times_a_plus_c, f_times_b_plus_d, e_times_a_plus_c_plus_f_times_b_plus_d);
+    all->w_evaluator->evaluator->add(e_times_a_plus_c, f_times_b_plus_d, e_times_a_plus_c_plus_f_times_b_plus_d);
 
     std::cout << "finished e * (a + c) + f * (b + d)" << std::endl;//1958182 1
 
@@ -113,22 +113,22 @@ int main(int argc, char *argv[]) {
     Ciphertext b_times_f; // b * f
     Ciphertext c_times_e; // c * e
     Ciphertext d_times_f; // d * f
-    all->evaluator.multiply_plain(e_encrypted, a, a_times_e);
-    all->evaluator.multiply_plain(f_encrypted, b, b_times_f);
-    all->evaluator.multiply_plain(e_encrypted, c, c_times_e);
-    all->evaluator.multiply_plain(f_encrypted, d, d_times_f);
+    all->w_evaluator->evaluator->multiply_plain(e_encrypted, a, a_times_e);
+    all->w_evaluator->evaluator->multiply_plain(f_encrypted, b, b_times_f);
+    all->w_evaluator->evaluator->multiply_plain(e_encrypted, c, c_times_e);
+    all->w_evaluator->evaluator->multiply_plain(f_encrypted, d, d_times_f);
 
     Ciphertext ae_plus_bf; // (a*e + b*f)
     Ciphertext ce_plus_df; // (c*e + d*f)
-    all->evaluator.add(a_times_e, b_times_f, ae_plus_bf);
-    all->evaluator.add(c_times_e, d_times_f, ce_plus_df);
+    all->w_evaluator->evaluator->add(a_times_e, b_times_f, ae_plus_bf);
+    all->w_evaluator->evaluator->add(c_times_e, d_times_f, ce_plus_df);
 
     Ciphertext ae_plus_bf_plus_ce_plus_df; // (a*e + b*f) + (c*e + d*f)
-    all->evaluator.add(ae_plus_bf, ce_plus_df, ae_plus_bf_plus_ce_plus_df);
+    all->w_evaluator->evaluator->add(ae_plus_bf, ce_plus_df, ae_plus_bf_plus_ce_plus_df);
     std::cout << "finished (a*e + b*f) + (c*e + d*f)" << std::endl;//1958182 1
 
     Ciphertext trivial_result;
-    all->evaluator.sub(e_times_a_plus_c_plus_f_times_b_plus_d, ae_plus_bf_plus_ce_plus_df, trivial_result);
+    all->w_evaluator->evaluator->sub(e_times_a_plus_c_plus_f_times_b_plus_d, ae_plus_bf_plus_ce_plus_df, trivial_result);
 
 
     Plaintext decrypted_trivial_result;

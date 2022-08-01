@@ -15,13 +15,20 @@ int main(int argc, char *argv[]) {
     std::vector<seal::Plaintext> matrix(rows * cols);
 
     std::vector<std::uint64_t> random_values(all->encryption_params.poly_modulus_degree(), 0ULL);
+
+    function<uint32_t(void)> random_val_generator;
+    seal::Blake2xbPRNGFactory factory;
+    auto gen = factory.create();
+    auto f = [gen = std::move(gen)]() { return gen->generate() % 2; };
     for (auto &elem: matrix) {
-        generate(random_values.begin(), random_values.end(), all->rng);
+        generate(random_values.begin(), random_values.end(), f);
         all->encoder.encode(random_values, elem);
     }
 
+
+    auto shared_eval = std::make_shared<seal::Evaluator>(all->encryption_params);
     auto matrix_multiplier = multiplication_utils::matrix_multiplier::Create(
-            all->shared_evaluator,
+            shared_eval,
             all->encryption_params
     );
 
