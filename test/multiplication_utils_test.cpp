@@ -26,11 +26,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    auto shared_eval = std::make_shared<seal::Evaluator>(all->encryption_params);
-    auto matrix_multiplier = multiplication_utils::matrix_multiplier::Create(
-            shared_eval,
-            all->encryption_params
-    );
+    auto matrix_multiplier = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
 
     std::vector<std::uint64_t> left_vec(rows, 1);
     std::vector<seal::Plaintext> results(cols, seal::Plaintext(all->encryption_params.poly_modulus_degree()));
