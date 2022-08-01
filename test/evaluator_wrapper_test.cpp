@@ -10,21 +10,31 @@ int main(int argc, char *argv[]) {
     auto ctx = all->random_ciphertext();
 
     seal::Ciphertext out1;
-    w_eval->mult_reg(ptx, ctx, out1);
+    auto ptx2 = ptx;
+    auto ctx2 = ctx;
+    all->evaluator.transform_to_ntt_inplace(ctx2);
+    all->evaluator.transform_to_ntt_inplace(ptx2, all->seal_context.first_parms_id());
+    w_eval->mult_reg(ptx2, ctx2, out1);
 
     seal::Ciphertext out2;
     w_eval->mult_slow(ptx, ctx, out2);
+    all->evaluator.transform_to_ntt_inplace(out2); // both results should be in ntt.
+
+    all->evaluator.sub_inplace(out1, out2);
+
+    all->evaluator.transform_from_ntt_inplace(out1);
+    all->decryptor.decrypt(out1, ptx2);
+    assert(ptx2.is_zero() && !out1.is_transparent());
 
     seal::Ciphertext out3;
+    all->evaluator.transform_to_ntt_inplace(ctx); // ntt expected.
     w_eval->mult_modified(ptx, ctx, out3);
+
 
     all->evaluator.sub_inplace(out2, out3);
 
     assert(out2.is_transparent());
-// random ptx;
-// random Enc(ptx2) = ctx;
-// ptx*ctx == w_eval.mult_reg == w_eval mult_modified == w_eval.mult_slow;
-
 // associative test.
+
 // commutative test.
 }

@@ -78,7 +78,8 @@ namespace multiplication_utils {
          */
         void mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef MY_DEBUG
-            assert(!a.is_ntt_form() && b.is_ntt_form());
+            assert(!a.is_ntt_form());
+            assert(b.is_ntt_form());
 #endif
             seal::Plaintext a1(enc_params_.poly_modulus_degree());
             seal::Plaintext a2(enc_params_.poly_modulus_degree());

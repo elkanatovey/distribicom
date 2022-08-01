@@ -113,7 +113,7 @@ namespace TestUtils {
         auto gen = factory.create();
 
         auto mod = encryption_params.plain_modulus().value();
-        std::generate(v.begin(), v.end(), [gen = std::move(gen), &mod]() { return gen->generate() % (500); });
+        std::generate(v.begin(), v.end(), [gen = std::move(gen), &mod]() { return gen->generate() % mod; });
 
         for (std::uint64_t i = 0; i < encryption_params.poly_modulus_degree(); ++i) {
             p[i] = v[i];
