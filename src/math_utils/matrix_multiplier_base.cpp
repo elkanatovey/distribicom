@@ -15,30 +15,11 @@ namespace multiplication_utils {
         }
     };
 
-    /**
- * take vector along with constant and do result+= vector*constant
- * @param right vector from above
- * @param left const
- * @param result place to add to
- */
-    void multiply_add(std::uint64_t left, const seal::Plaintext &right,
-                      seal::Plaintext &result, uint64_t mod) {
-        if (left == 0) {
-            return;
-        }
-        auto coeff_count = right.coeff_count();
-        for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
-            result[current_coeff] += (left * right[current_coeff]);
-            if (result[current_coeff] >= mod) {
-                result[current_coeff] -= mod;
-            }
-        }
-
-    }
 
     /*
      * note this only works when left=0/1
      */
+    // TODO: get rid of this.
     void multiply_add(std::uint64_t left, seal::Ciphertext &right,
                       seal::Ciphertext &result, seal::Evaluator *evaluator) {
         if (left == 0) {
@@ -62,6 +43,7 @@ namespace multiplication_utils {
     }
 
 
+    // this is the slow version of multiplication, needed to set the DB as a ciphertext DB.
     void
     matrix_multiplier::left_multiply(vector<std::uint64_t> &dims, vector<std::uint64_t> &left_vec, Database &matrix,
                                      vector<seal::Ciphertext> &result) {
