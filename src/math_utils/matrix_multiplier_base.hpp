@@ -23,7 +23,7 @@ namespace multiplication_utils {
         /***
          * multiply matrix by integer array using operations on plaintexts
          * @param dims [num_of_cols, num_of_rows] of matrix
-         * @param left_vec integer vector
+         * @param left_vec integer vector (row vector: [1,2,0,4,...])
          * @param matrix plaintext matrix to mult
          * @param result where to place result, not in ntt representation
          */

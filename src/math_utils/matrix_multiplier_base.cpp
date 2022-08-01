@@ -10,7 +10,7 @@ namespace multiplication_utils {
 
     void plaintexts_to_trivial_ciphertexts(vector<seal::Plaintext> &plaintexts, vector<seal::Ciphertext> &result,
                                            seal::Ciphertext &trivial_zero, seal::Evaluator *evaluator) {
-        for (int i = 0; i < plaintexts.size(); i++) {
+        for (std::uint64_t i = 0; i < plaintexts.size(); i++) {
             evaluator->add_plain(trivial_zero, plaintexts[i], result[i]);
         }
     };
@@ -21,13 +21,13 @@ namespace multiplication_utils {
  * @param left const
  * @param result place to add to
  */
-    void multiply_add(std::uint64_t left, seal::Plaintext &right,
+    void multiply_add(std::uint64_t left, const seal::Plaintext &right,
                       seal::Plaintext &result, uint64_t mod) {
         if (left == 0) {
             return;
         }
         auto coeff_count = right.coeff_count();
-        for (int current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+        for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
             result[current_coeff] += (left * right[current_coeff]);
             if (result[current_coeff] >= mod) {
                 result[current_coeff] -= mod;
@@ -44,6 +44,7 @@ namespace multiplication_utils {
         if (left == 0) {
             return;
         }
+        assert(left == 1);
         evaluator->add_inplace(result, right);
     }
 
@@ -52,6 +53,7 @@ namespace multiplication_utils {
                                           vector<std::uint64_t> &left_vec, Database &matrix,
                                           vector<seal::Plaintext> &result) {
         for (uint64_t k = 0; k < dims[COL]; k++) {
+            result[k] = seal::Plaintext(w_evaluator->enc_params.poly_modulus_degree());
             for (uint64_t j = 0; j < dims[ROW]; j++) {
                 multiply_add(left_vec[j], matrix[j + k * dims[ROW]], result[k],
                              w_evaluator->enc_params.plain_modulus().value());

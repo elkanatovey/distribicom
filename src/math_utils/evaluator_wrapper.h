@@ -150,6 +150,32 @@ namespace multiplication_utils {
         }
 
         /***
+         * adds the two plaintexts and adds into the left plaintext (a).
+         */
+        void add_plain_in_place(seal::Plaintext &a, const seal::Plaintext &b) {
+            auto ptx_mod = enc_params.plain_modulus().value();
+
+            auto coeff_count = a.coeff_count();
+            for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+                a[current_coeff] += b[current_coeff];
+                if (a[current_coeff] >= ptx_mod) {
+                    a[current_coeff] -= ptx_mod;
+                }
+            }
+        }
+
+        void add_plain(const seal::Plaintext &a, const seal::Plaintext &b, seal::Plaintext &c) {
+            seal::Plaintext tmp;
+            tmp = a;
+
+            add_plain_in_place(tmp, b);
+            c = tmp;
+        }
+
+
+    private:
+
+        /***
         * take vector along with constant and do result+= vector*constant
         * @param right vector from above
         * @param left const
