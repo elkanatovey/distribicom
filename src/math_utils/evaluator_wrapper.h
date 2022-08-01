@@ -5,6 +5,13 @@
 
 
 namespace multiplication_utils {
+    /***
+     * SplitPlaintext represents a plaintext that was intentionally split into two plaintexts such that their
+     * sum equals the original.
+     * using this type in ptx-ctx multiplication ensures associativity and commutativity hold.
+     */
+    typedef std::vector<seal::Plaintext> SplitPlaintext;
+
 /***
  * This class wraps and modifies the behaviour of seal::Evaluator to add wanted multiplication for distribicom.
  */
@@ -81,14 +88,28 @@ namespace multiplication_utils {
             assert(!a.is_ntt_form());
             assert(b.is_ntt_form());
 #endif
+            auto split_ptx = split_plaintext(a);
+
+
+            evaluator_->multiply_plain(b, split_ptx[0], c);
+
+            seal::Ciphertext tmp;
+            evaluator_->multiply_plain(b, split_ptx[1], tmp);
+
+            evaluator_->add(c, tmp, c);
+        }
+
+        SplitPlaintext split_plaintext(const seal::Plaintext &a) const {
+#ifdef MY_DEBUG
+            assert(!a.is_ntt_form());
+#endif
             seal::Plaintext a1(enc_params_.poly_modulus_degree());
             seal::Plaintext a2(enc_params_.poly_modulus_degree());
-
 
             auto threshold = (enc_params_.plain_modulus().value() + 1) >> 1;
 
             auto coeff_count = a.coeff_count();
-            for (std::uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+            for (uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
                 // plain modulus is odd, thus threshold is an even number.
                 if (a[current_coeff] >= threshold) {
                     // skipping if to perform + 1 in case a[current_coeff] is odd.
@@ -104,11 +125,10 @@ namespace multiplication_utils {
             evaluator_->transform_to_ntt_inplace(a1, context_.first_parms_id());
             evaluator_->transform_to_ntt_inplace(a2, context_.first_parms_id());
 
-            evaluator_->multiply_plain(b, a1, c);
-            seal::Ciphertext tmp;
-            evaluator_->multiply_plain(b, a2, tmp);
-
-            evaluator_->add(c, tmp, c);
+            return {
+                    std::move(a1),
+                    std::move(a2),
+            };
         }
 
         /***
