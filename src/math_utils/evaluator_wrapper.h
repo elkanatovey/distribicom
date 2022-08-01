@@ -137,7 +137,7 @@ namespace multiplication_utils {
             auto ptx_mod = enc_params_.plain_modulus().value();
 
             auto coeff_count = right.coeff_count();
-            for (int current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+            for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
                 result[current_coeff] += (left * right[current_coeff]);
                 if (result[current_coeff] >= ptx_mod) {
                     result[current_coeff] -= ptx_mod;
