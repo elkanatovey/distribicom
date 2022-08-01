@@ -2,7 +2,7 @@
 // Created by Jonathan Weiss on 28/07/2022.
 //
 
-#include "evaluator_wrapper.h"
+#include "evaluator_wrapper.hpp"
 
 namespace multiplication_utils {
 

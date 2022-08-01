@@ -1,6 +1,6 @@
 #include <seal/seal.h>
 #include "test_utils.cpp"
-#include "evaluator_wrapper.h"
+#include "evaluator_wrapper.hpp"
 
 int main() {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);

@@ -2,7 +2,7 @@
 
 #include "pir.hpp"
 #include "pir_server.hpp"
-#include "evaluator_wrapper.h"
+#include "evaluator_wrapper.hpp"
 
 namespace multiplication_utils {
     class matrix_multiplier {

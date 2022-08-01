@@ -1,6 +1,6 @@
 #include "matrix_multiplier_base.hpp"
 #include <seal/seal.h>
-#include <evaluator_wrapper.h>
+#include <evaluator_wrapper.hpp>
 
 namespace TestUtils {
     void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
@@ -25,7 +25,7 @@ namespace TestUtils {
     };
     struct SetupConfigs {
         TestEncryptionParamsConfigs encryption_params_configs;
-        RNGConfigs rng_configs;
+//        RNGConfigs rng_configs;
 
     };
 
