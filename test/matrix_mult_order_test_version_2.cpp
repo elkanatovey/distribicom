@@ -12,37 +12,19 @@
 #include <memory>
 #include <seal/seal.h>
 #include "seal/util/scalingvariant.h"
+#include "test_utils.cpp"
 
 
 using namespace std;
 using namespace seal;
 
-void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c);
+void
+add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c);
 
 int main(int argc, char *argv[]) {
 
-    uint32_t N = 4096;
 
-    uint32_t logt = 20;
-
-    EncryptionParameters enc_params(scheme_type::bgv);
-
-    // Generates all parameters
-
-    cout << "Main: Generating SEAL parameters" << endl;
-    enc_params.set_poly_modulus_degree(N);
-    enc_params.set_coeff_modulus(CoeffModulus::BFVDefault(N));
-    enc_params.set_plain_modulus(PlainModulus::Batching(N, logt + 1));
-
-    SEALContext context(enc_params, true);
-    KeyGenerator keygen(context);
-
-    SecretKey secret_key = keygen.secret_key();
-    Encryptor encryptor(context, secret_key);
-    Decryptor decryptor(context, secret_key);
-    Evaluator evaluator(context);
-
-
+    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
     cout << "Main: SEAL parameters generated" << endl;
 
     cout << "Main: generating matrices" << endl;
@@ -57,28 +39,28 @@ int main(int argc, char *argv[]) {
     //e * (a + c) = (a*e) + (c*e)
 
     Plaintext a;         // example poly that doesn't work at all:" 1CBB5Bx^3 + A59B8x^2 + 6C3D2x^1 + 123D7D"
-    vector<uint64_t> a_arr(N, 0ULL);
-    BatchEncoder encoder(context);
+    vector<uint64_t> a_arr(all->encryption_params.poly_modulus_degree(), 0ULL);
+
     for (uint32_t i = 0; i < a_arr.size(); i++) {
         a_arr[i] = (rand() % 2056190);
     }
-    encoder.encode(a_arr, a);
+    all->encoder.encode(a_arr, a);
 
     Plaintext c;         // example poly that doesn't work at all:" 1CBB5Bx^3 + A59B8x^2 + 6C3D2x^1 + 123D7D"
-    vector<uint64_t> c_arr(N, 0ULL);
+    vector<uint64_t> c_arr(all->encryption_params.poly_modulus_degree(), 0ULL);
 //    BatchEncoder encoder(context);
     for (uint32_t i = 0; i < a_arr.size(); i++) {
         c_arr[i] = (rand() % 2056190);
     }
-    encoder.encode(c_arr, c);
+    all->encoder.encode(c_arr, c);
 
     Plaintext e;         // example poly that doesn't work at all:" 1CBB5Bx^3 + A59B8x^2 + 6C3D2x^1 + 123D7D"
-    vector<uint64_t> e_arr(N, 0ULL);
+    vector<uint64_t> e_arr(all->encryption_params.poly_modulus_degree(), 0ULL);
 //    BatchEncoder encoder(context);
     for (uint32_t i = 0; i < a_arr.size(); i++) {
         e_arr[i] = (rand() % 2056190);
     }
-    encoder.encode(e_arr, e);
+    all->encoder.encode(e_arr, e);
 
 //
 //    Plaintext a(apoly);         // example poly that doesn't work at all:" 1CBB5Bx^3 + A59B8x^2 + 6C3D2x^1 + 123D7D"
@@ -89,26 +71,26 @@ int main(int argc, char *argv[]) {
     Ciphertext c_encrypted;
     Ciphertext e_encrypted;
     Ciphertext res;
-    if(true){
-        encryptor.encrypt_symmetric(a, a_encrypted);
-        encryptor.encrypt_symmetric(c, c_encrypted);
-        encryptor.encrypt_symmetric(e, e_encrypted);
+    if (true) {
+        all->encryptor.encrypt_symmetric(a, a_encrypted);
+        all->encryptor.encrypt_symmetric(c, c_encrypted);
+        all->encryptor.encrypt_symmetric(e, e_encrypted);
 
         Ciphertext a_p_c;
-        evaluator.add(a_encrypted, c_encrypted, a_p_c);
+        all->w_evaluator->evaluator->add(a_encrypted, c_encrypted, a_p_c);
         Ciphertext e_t_apc;
-        evaluator.multiply(e_encrypted, a_p_c, e_t_apc);
+        all->w_evaluator->mult(e_encrypted, a_p_c, e_t_apc);
 
         Ciphertext a_t_e;
-        evaluator.multiply(e_encrypted, a_encrypted,a_t_e);
+        all->w_evaluator->evaluator->multiply(e_encrypted, a_encrypted, a_t_e);
         Ciphertext c_t_e;
-        evaluator.multiply(e_encrypted, c_encrypted,c_t_e);
+        all->w_evaluator->mult(e_encrypted, c_encrypted, c_t_e);
         Ciphertext cte_p_ate;
-        evaluator.add(c_t_e, a_t_e, cte_p_ate);
+        all->w_evaluator->evaluator->add(c_t_e, a_t_e, cte_p_ate);
 
-        evaluator.sub(cte_p_ate, e_t_apc, res);
+        all->w_evaluator->evaluator->sub(cte_p_ate, e_t_apc, res);
         Plaintext ans;
-        decryptor.decrypt(res, ans);
+        all->decryptor.decrypt(res, ans);
         std::cout << ans.to_string() << std::endl;
         assert(res.is_transparent());
     }
@@ -116,38 +98,38 @@ int main(int argc, char *argv[]) {
     std::cout << "Worked" << std::endl;
 
     //e * (a + c) = (a*e) + (c*e)
-    Ciphertext fake_a_encrypted=res;
-    Ciphertext fake_c_encrypted=res;
+    Ciphertext fake_a_encrypted = res;
+    Ciphertext fake_c_encrypted = res;
     Plaintext pp = a;
 //    seal::util::add_plain_without_scaling_variant(pp, *context.first_context_data(), seal::util::RNSIter
 //    (fake_a_encrypted.data(0), N));
-    evaluator.add_plain(res, a, fake_a_encrypted);
-    evaluator.add_plain(res, c, fake_c_encrypted);
+    all->w_evaluator->evaluator->add_plain(res, a, fake_a_encrypted);
+    all->w_evaluator->evaluator->add_plain(res, c, fake_c_encrypted);
 
 //    Plaintext apc;
 //    add_plaintexts(enc_params, a, c,apc);
 
     // server
     Ciphertext fake_a_p_c;
-    evaluator.add(fake_a_encrypted, fake_c_encrypted, fake_a_p_c);
+    all->w_evaluator->evaluator->add(fake_a_encrypted, fake_c_encrypted, fake_a_p_c);
     Ciphertext fake_e_t_apc;
 //    Plaintext fake_a_p_c_dec;
 //    decryptor.decrypt(fake_a_p_c, fake_a_p_c_dec);
-//    evaluator.multiply_plain(e_encrypted, apc, fake_e_t_apc);
-    evaluator.multiply(e_encrypted, fake_a_p_c, fake_e_t_apc);
+//    all->w_evaluator..multiply_plain(e_encrypted, apc, fake_e_t_apc);
+    all->w_evaluator->mult(e_encrypted, fake_a_p_c, fake_e_t_apc);
 
     // worker
     Ciphertext fake_ate;
-    evaluator.multiply(e_encrypted, fake_a_encrypted, fake_ate);
+    all->w_evaluator->mult(e_encrypted, fake_a_encrypted, fake_ate);
 //    evaluator.multiply_plain(e_encrypted, a, fake_ate);
     Ciphertext fake_cte;
 //    evaluator.multiply_plain(e_encrypted, c, fake_cte);
-    evaluator.multiply(e_encrypted, fake_c_encrypted, fake_cte);
+    all->w_evaluator->mult(e_encrypted, fake_c_encrypted, fake_cte);
     Ciphertext fake_ate_p_cte;
-    evaluator.add(fake_ate, fake_cte, fake_ate_p_cte);
+    all->w_evaluator->evaluator->add(fake_ate, fake_cte, fake_ate_p_cte);
 
     Ciphertext fake_res;
-    evaluator.sub(fake_e_t_apc, fake_ate_p_cte, fake_res);
+    all->w_evaluator->evaluator->sub(fake_e_t_apc, fake_ate_p_cte, fake_res);
 
     Plaintext p;
     assert(fake_res.is_transparent());
@@ -156,17 +138,18 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c) {
+void
+add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c) {
     Plaintext to_add;
-    if(a.coeff_count() > c.coeff_count()){
+    if (a.coeff_count() > c.coeff_count()) {
         a_plus_c = a;
         to_add = c;
-    }
-    else{
+    } else {
         a_plus_c = c;
         to_add = a;
     }
-    for(int current_coeff =0; current_coeff < to_add.coeff_count(); current_coeff++){
-        a_plus_c[current_coeff] = (a_plus_c[current_coeff] + to_add[current_coeff])%enc_params.plain_modulus().value();
+    for (int current_coeff = 0; current_coeff < to_add.coeff_count(); current_coeff++) {
+        a_plus_c[current_coeff] =
+                (a_plus_c[current_coeff] + to_add[current_coeff]) % enc_params.plain_modulus().value();
     }
 }
