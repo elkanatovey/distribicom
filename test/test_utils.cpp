@@ -19,14 +19,16 @@ namespace TestUtils {
         blake, sha, all_ones
     };
 
-    struct RNGConfigs {
-        std::uint64_t seed;
-        RNGType rng_type;
+    struct TestPIRParamsConfigs {
+        std::uint64_t number_of_items;
+        std::uint64_t size_per_item;
+        std::uint64_t dimensions;
+        bool use_symmetric, use_batching, use_recursive_mod_switching;
     };
+
     struct SetupConfigs {
         TestEncryptionParamsConfigs encryption_params_configs;
-//        RNGConfigs rng_configs;
-
+        TestPIRParamsConfigs pir_params_configs;
     };
 
     struct CryptoObjects {
@@ -44,6 +46,8 @@ namespace TestUtils {
         };
 
         seal::EncryptionParameters encryption_params;
+        PirParams pir_params;
+
         function<uint32_t(void)> blakerng;
         function<uint32_t(void)> mod2rng;
         function<uint32_t(void)> allonerng;
@@ -72,15 +76,38 @@ namespace TestUtils {
         );
 
         auto s = std::make_shared<CryptoObjects>(enc_params);
+        // initializing pir_parameters.
+        auto pir_configs = configs.pir_params_configs;
+        gen_pir_params(pir_configs.number_of_items,
+                       pir_configs.size_per_item,
+                       pir_configs.dimensions,
+                       s->encryption_params,
+                       s->pir_params,
+                       pir_configs.use_symmetric,
+                       pir_configs.use_batching,
+                       pir_configs.use_recursive_mod_switching
+        );
         return s;
     }
 
+    TestEncryptionParamsConfigs DEFAULT_ENCRYPTION_PARAMS_CONFIGS = {
+            .scheme_type = seal::scheme_type::bgv,
+            .polynomial_degree = 4096,
+            .log_coefficient_modulus = 20
+    };
+
+    TestPIRParamsConfigs DEFAULT_PIR_PARAMS_CONFIGS = {
+            .number_of_items = 100,
+            .size_per_item = 100,
+            .dimensions = 1,
+            .use_symmetric = true,
+            .use_batching = true,
+            .use_recursive_mod_switching = true
+    };
+
     SetupConfigs DEFAULT_SETUP_CONFIGS = {
-            .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bgv,
-                    .polynomial_degree = 4096,
-                    .log_coefficient_modulus = 20
-            },
+            .encryption_params_configs = DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
+            .pir_params_configs = DEFAULT_PIR_PARAMS_CONFIGS,
     };
 
     seal::Plaintext CryptoObjects::random_plaintext() {
