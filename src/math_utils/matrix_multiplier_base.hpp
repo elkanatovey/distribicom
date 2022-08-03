@@ -5,12 +5,23 @@
 #include "evaluator_wrapper.hpp"
 
 namespace multiplication_utils {
+    /***
+     *  represents a matrix made out of SplitPlaintexts as its elements.
+     */
+    typedef std::vector<SplitPlaintext> SplitPlaintextMatrix;
+
     class matrix_multiplier {
     private:
         explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator) {};
     protected:
         std::shared_ptr<EvaluatorWrapper> w_evaluator;
     public:
+
+        /***
+         * receives a plaintext matrix/ vector, and transforms it into a splitPlainTextMatrix.
+         */
+        void transform(std::vector<seal::Plaintext> v, SplitPlaintextMatrix &m) const;
+
 
         /***
          * Creates and returns a an initialized matrix_multiplier
@@ -40,9 +51,17 @@ namespace multiplication_utils {
         virtual void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
                                    Database &matrix, std::vector<seal::Ciphertext> &result);
 
-//        virtual void right_multiply(std::vector<std::uint64_t> &dims, Database& matrix,
-//                                    std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result)=0;
-//
+        /***
+         *
+         * @param dims
+         * @param matrix
+         * @param right_vec
+         * @param result
+         */
+        void right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintext> &matrix,
+                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
+
+// this matches the case where we've done slow multiplication.
 //        virtual void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
 //                                    std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result)=0;
 

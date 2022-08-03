@@ -76,4 +76,14 @@ namespace multiplication_utils {
         return std::make_shared<matrix_multiplier>(std::move(multiplier));
     }
 
+    void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextMatrix &m) const {
+        #ifdef MY_DEBUG
+        assert(m.size() == v.size());
+        #endif
+
+        for (uint64_t i = 0; i < v.size(); i++) {
+            m[i] = w_evaluator->split_plaintext(v[i]);
+        }
+    }
+
 }
