@@ -1,3 +1,9 @@
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
+
 add_executable(left_int_vec_multiply left_int_vec_multiply.cpp)
 target_link_libraries(left_int_vec_multiply multiplication_utils)
 add_test(NAME math_utils/left_int_vec_multiply COMMAND left_int_vec_multiply)
+
+add_executable(right_vec_multiply right_vec_multiply.cpp)
+target_link_libraries(right_vec_multiply multiplication_utils)
+add_test(NAME math_utils/right_vec_multiply COMMAND right_vec_multiply)

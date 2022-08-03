@@ -9,9 +9,9 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
-        #ifdef MY_DEBUG
+//        #ifdef MY_DEBUG
         assert(m.size() == v.size());
-        #endif
+//        #endif
 
         for (uint64_t i = 0; i < v.size(); i++) {
             m[i] = w_evaluator->split_plaintext(v[i]);
@@ -19,9 +19,9 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
-        #ifdef MY_DEBUG
+//        #ifdef MY_DEBUG
         assert(m.size() == v.size());
-        #endif
+//        #endif
 
         for (std::uint64_t i = 0; i < v.size(); i++) {
             w_evaluator->trivial_ciphertext(v[i], m[i]);
@@ -88,12 +88,14 @@ namespace multiplication_utils {
 
     void matrix_multiplier::right_multiply(vector<std::uint64_t> &dims, vector<SplitPlaintextNTTForm> &matrix,
                                            vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result) {
-        #ifdef MY_DEBUG
+//        #ifdef MY_DEBUG
         // everything needs to be in NTT!
-        for (std::uint64_t i = 0; i < matrix.size(); ++i) {
-            assert(matrix[i][0].is_ntt_form());
+        for (auto &ptx: matrix) {
+            assert(ptx[0].is_ntt_form());
         }
-        #endif
+
+        assert(right_vec.size() == dims[COL]);
+//        #endif
 
         seal::Ciphertext tmp;
         for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -114,6 +116,14 @@ namespace multiplication_utils {
 
     void matrix_multiplier::right_multiply(vector<std::uint64_t> &dims, vector<seal::Ciphertext> &matrix,
                                            vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result) {
+//#ifdef MY_DEBUG
+        // everything needs to be in NTT!
+        for (auto & ctx : matrix) {
+            assert(!ctx.is_ntt_form());
+        }
+        assert(right_vec.size() == dims[COL]);
+
+//#endif
         seal::Ciphertext tmp;
         for (uint64_t j = 0; j < dims[ROW]; j++) {
             w_evaluator->mult(matrix[j], right_vec[0], result[j]);
