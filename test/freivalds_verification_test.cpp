@@ -1,29 +1,19 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
-#include "pir_server.hpp"
+
 #include "master.hpp"
-#include "worker.hpp"
-#include <seal/seal.h>
-#include <chrono>
-#include <memory>
-#include <random>
-#include <cstdint>
-#include <cstddef>
 #include "FreivaldsVector.hpp"
+
+#include <seal/seal.h>
 #include "test_utils.cpp"
 
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
-                                uint32_t dim, bool
-                                random_freivalds_vec);
-
 int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec);
 
 int main() {
-    // sanity check
 
     auto test_configs = TestUtils::SetupConfigs{
             .encryption_params_configs = TestUtils::DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
@@ -37,6 +27,7 @@ int main() {
             },
     };
 
+    // sanity check
     assert(freivalds_verification_test(test_configs, false) == 0);
 
     test_configs.pir_params_configs.number_of_items = 1 << 10;
@@ -50,69 +41,30 @@ int main() {
     test_configs.pir_params_configs.number_of_items = 1 << 16;
     test_configs.pir_params_configs.size_per_item = 1024;
     assert(freivalds_verification_test(test_configs, false) == 0);
-
-
 }
 
 int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec) {
-    return freivalds_verification_test(t.pir_params_configs.number_of_items,
-                                       t.pir_params_configs.size_per_item,
-                                       t.encryption_params_configs.polynomial_degree,
-                                       t.encryption_params_configs.log_coefficient_modulus,
-                                       t.pir_params_configs.dimensions,
-                                       random_freivalds_vec);
-
-}
-
-int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim, bool
-random_freivalds_vec) {
-
-    uint64_t number_of_items = num_items;
-    uint64_t size_per_item = item_size; // in bytes
-    uint32_t N = degree;
-
-    // Recommended values: (logt, d) = (12, 2) or (8, 1).
-    uint32_t logt = lt;
-    uint32_t d = dim;
-
-    bool use_symmetric = true; // use symmetric encryption instead of public key (recommended for smaller query)
-    bool use_batching = true; // pack as many elements as possible into a BFV plaintext (recommended)
-    bool use_recursive_mod_switching = false;
-
-    EncryptionParameters enc_params(scheme_type::bgv);
-    PirParams pir_params;
-
-    // Generates all parameters
-    cout << "Main: Generating SEAL parameters" << endl;
-    gen_encryption_params(N, logt, enc_params);
-
-    cout << "Main: Verifying SEAL parameters" << endl;
-    verify_encryption_params(enc_params);
-    cout << "Main: SEAL parameters are good" << endl;
-
-    cout << "Main: Generating PIR parameters" << endl;
-    gen_pir_params(number_of_items, size_per_item, d, enc_params, pir_params, use_symmetric,
-                   use_batching, use_recursive_mod_switching);
+    auto num_items = t.pir_params_configs.number_of_items;
+    auto size_per_item = t.pir_params_configs.size_per_item;
+    auto all = TestUtils::setup(t);
 
 
-
-    //gen_params(number_of_items, size_per_item, N, logt, d, enc_params, pir_params);
-    print_pir_params(pir_params);
+    print_pir_params(all->pir_params);
 
     cout << "Main: Initializing the database (this may take some time) ..." << endl;
 
     // Create test database
-    auto db(make_unique<uint8_t[]>(number_of_items * size_per_item));
+    auto db(make_unique<uint8_t[]>(num_items * size_per_item));
 
     // Copy of the database. We use this at the end to make sure we retrieved
     // the correct element.
-    auto db_copy(make_unique<uint8_t[]>(number_of_items * size_per_item));
+    auto db_copy(make_unique<uint8_t[]>(num_items * size_per_item));
 
 
     seal::Blake2xbPRNGFactory factory;
     auto gen = factory.create();
 
-    for (uint64_t i = 0; i < number_of_items; i++) {
+    for (uint64_t i = 0; i < num_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
             auto val = gen->generate() % 255;
             db.get()[(i * size_per_item) + j] = val;
@@ -122,10 +74,10 @@ random_freivalds_vec) {
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(enc_params, pir_params);
+    MasterServer server(all->encryption_params, all->pir_params);
 
     // Initialize PIR client....
-    PIRClient client(enc_params, pir_params);
+    PIRClient client(all->encryption_params, all->pir_params);
     GaloisKeys galois_keys = client.generate_galois_keys();
 
     // Set galois key for client with id 0
@@ -133,13 +85,13 @@ random_freivalds_vec) {
     server.set_galois_key(0, galois_keys);
 
     // Measure database setup
-    server.set_database(move(db), number_of_items, size_per_item);
+    server.set_database(move(db), num_items, size_per_item);
 
     // Choose an index of an element in the DB
-    uint64_t ele_index = gen->generate() % number_of_items; // element in DB at random position
+    uint64_t ele_index = gen->generate() % num_items; // element in DB at random position
     uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
-    cout << "Main: element index = " << ele_index << " from [0, " << number_of_items - 1 << "]" << endl;
+    cout << "Main: element index = " << ele_index << " from [0, " << num_items - 1 << "]" << endl;
     cout << "Main: FV index = " << index << ", FV offset = " << offset << endl;
 
     auto reg_query = client.generate_query(index);
@@ -159,7 +111,7 @@ random_freivalds_vec) {
     else {
         g = []() { return 1; };
     }
-    FreivaldsVector f(enc_params, pir_params, g);
+    FreivaldsVector f(all->encryption_params, all->pir_params, g);
 //    f.mult_rand_vec_by_db(db_pointer);
     f.mult_rand_vec_by_db(mSharedPtr);
 

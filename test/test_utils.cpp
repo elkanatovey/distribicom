@@ -75,6 +75,8 @@ namespace TestUtils {
                 enc_params
         );
 
+        verify_encryption_params(enc_params);
+
         auto s = std::make_shared<CryptoObjects>(enc_params);
         // initializing pir_parameters.
         auto pir_configs = configs.pir_params_configs;
