@@ -8,7 +8,8 @@ namespace multiplication_utils {
     /***
      *  represents a matrix made out of SplitPlaintexts as its elements.
      */
-    typedef std::vector<SplitPlaintext> SplitPlaintextMatrix;
+    typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
+    typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
     class matrix_multiplier {
     private:
@@ -18,9 +19,12 @@ namespace multiplication_utils {
     public:
 
         /***
-         * receives a plaintext matrix/ vector, and transforms it into a splitPlainTextMatrix.
+         * receives a plaintext matrix/ vector, and transforms it into a
+         * splitPlainTextMatrix which is a vector of SplitPlaintextNTTForm in NTT form.
          */
-        void transform(std::vector<seal::Plaintext> v, SplitPlaintextMatrix &m) const;
+        void transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const;
+
+        void transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const;
 
 
         /***
@@ -41,8 +45,19 @@ namespace multiplication_utils {
         void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec, Database &matrix,
                            std::vector<seal::Plaintext> &result);
 
+
         /***
+         * multiply matrix by integer array using operations on ciphertext.
+         * Note, this should be called on the second side of the freivalds expression.
+         * (r*A)*b - {r*(A*B)}, where A*B is ciphertext.
+         */
+        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                           CiphertextDefaultFormMatrix &matrix, std::vector<seal::Ciphertext> &result);
+
+        /***
+         *
          * multiply matrix by integer array using operations on ciphertexts
+         * Note, left where we have plaintext*ctx done via mult_slow.
          * @param dims [num_of_cols, num_of_rows] of matrix
          * @param left_vec integer vector
          * @param matrix plaintext matrix to mult
@@ -58,25 +73,20 @@ namespace multiplication_utils {
          * @param right_vec
          * @param result
          */
-        void right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintext> &matrix,
+        void right_multiply(std::vector<std::uint64_t> &dims, SplitPlaintextNTTFormMatrix &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
-// this matches the case where we've done slow multiplication.
-//        virtual void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
-//                                    std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result)=0;
+        /***
+         * @param dims
+         * @param matrix
+         * @param right_vec
+         * @param result
+         */
+        void right_multiply(vector<std::uint64_t> &dims, vector<seal::Ciphertext> &matrix,
+                            vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result);
 
 
-        seal::Ciphertext get_trivial_encryption_of_zero() const;
     };
 
     void foo();
-
-    /***
-     * transform plaintexts to trivial (nonsafely encrypted) ciphertexts
-     * @param plaintexts the plaintexts to copy
-     * @param result the ciphertext vector to put the plaintexts in
-     * @param evaluator
-     */
-    void plaintexts_to_trivial_ciphertexts(vector<seal::Plaintext> &plaintexts, vector<seal::Ciphertext> &result,
-                                           seal::Ciphertext &trivial_zero, seal::Evaluator *evaluator);
 }

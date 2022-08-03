@@ -6,11 +6,11 @@
 
 namespace multiplication_utils {
     /***
-     * SplitPlaintext represents a plaintext that was intentionally split into two plaintexts such that their
+     * SplitPlaintextNTTForm represents a plaintext that was intentionally split into two plaintexts such that their
      * sum equals the original.
      * using this type in ptx-ctx multiplication ensures associativity and commutativity hold.
      */
-    typedef std::vector<seal::Plaintext> SplitPlaintext;
+    typedef std::vector<seal::Plaintext> SplitPlaintextNTTForm;
 
 /***
  * This class wraps and modifies the behaviour of seal::Evaluator to add wanted multiplication for distribicom.
@@ -59,9 +59,9 @@ namespace multiplication_utils {
          * mult_modified receives a split ptx and multiplies it with the ciphertext.
          * all params are in ntt forms.
          */
-        void mult_modified(const SplitPlaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+        void mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
 
-        SplitPlaintext split_plaintext(const seal::Plaintext &a) const;
+        SplitPlaintextNTTForm split_plaintext(const seal::Plaintext &a) const;
 
         /***
          * multiplies plaintext with a ciphertext by encoding the plaintext into a ciphertext and then doing
@@ -86,5 +86,9 @@ namespace multiplication_utils {
         void multiply_add(const std::uint64_t left, const seal::Plaintext &right, seal::Plaintext &sum) const;
 
         void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
+
+        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) {
+            evaluator->add_plain(trivial_zero, ptx, result);
+        }
     };
 }

@@ -58,7 +58,10 @@ namespace multiplication_utils {
         evaluator->multiply_inplace(c, b);
     }
 
-    SplitPlaintext EvaluatorWrapper::split_plaintext(const seal::Plaintext &a) const {
+    /**
+     * The resulted SplitPlaintextNTTForm is in NTT.
+     */
+    SplitPlaintextNTTForm EvaluatorWrapper::split_plaintext(const seal::Plaintext &a) const {
         #ifdef MY_DEBUG
         assert(!a.is_ntt_form());
         #endif
@@ -92,7 +95,7 @@ namespace multiplication_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const SplitPlaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+    EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
         #ifdef MY_DEBUG
         assert(2 == a.size());
         for (auto &a_i: a) {
