@@ -10,31 +10,62 @@
 #include <cstdint>
 #include <cstddef>
 #include "FreivaldsVector.hpp"
+#include "test_utils.cpp"
 
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
 int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
-                              uint32_t dim, bool
-                              random_freivalds_vec);
+                                uint32_t dim, bool
+                                random_freivalds_vec);
 
-int main(int argc, char *argv[]) {
+int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec);
+
+int main() {
     // sanity check
-        assert(freivalds_verification_test(4096*3, 2, 4096, 20, 2, false) == 0);
 
+    auto test_configs = TestUtils::SetupConfigs{
+            .encryption_params_configs = TestUtils::DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
+            .pir_params_configs= {
+                    .number_of_items = 4096 * 3,
+                    .size_per_item = 2,
+                    .dimensions = 2,
+                    .use_symmetric = true,
+                    .use_batching = true,
+                    .use_recursive_mod_switching = false,
+            },
+    };
+
+    assert(freivalds_verification_test(test_configs, false) == 0);
+
+    test_configs.pir_params_configs.number_of_items = 1 << 10;
+    test_configs.pir_params_configs.size_per_item = 288;
     // speed check
-        assert(freivalds_verification_test(1 << 10, 288, 4096, 20, 2, false) == 0);
+    assert(freivalds_verification_test(test_configs, false) == 0);
 
-assert(freivalds_verification_test(1 << 12, 288, 4096, 20, 2, false) == 0);
+    test_configs.pir_params_configs.number_of_items = 1 << 12;
+    assert(freivalds_verification_test(test_configs, false) == 0);
 
-    assert(freivalds_verification_test(1 << 16, 1024, 4096, 20,2, false)==0);
+    test_configs.pir_params_configs.number_of_items = 1 << 16;
+    test_configs.pir_params_configs.size_per_item = 1024;
+    assert(freivalds_verification_test(test_configs, false) == 0);
 
 
 }
 
+int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec) {
+    return freivalds_verification_test(t.pir_params_configs.number_of_items,
+                                       t.pir_params_configs.size_per_item,
+                                       t.encryption_params_configs.polynomial_degree,
+                                       t.encryption_params_configs.log_coefficient_modulus,
+                                       t.pir_params_configs.dimensions,
+                                       random_freivalds_vec);
+
+}
+
 int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim, bool
-                              random_freivalds_vec){
+random_freivalds_vec) {
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -79,7 +110,7 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
 
 
     seal::Blake2xbPRNGFactory factory;
-    auto gen =  factory.create();
+    auto gen = factory.create();
 
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
@@ -108,7 +139,7 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
     uint64_t ele_index = gen->generate() % number_of_items; // element in DB at random position
     uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
-    cout << "Main: element index = " << ele_index << " from [0, " << number_of_items -1 << "]" << endl;
+    cout << "Main: element index = " << ele_index << " from [0, " << number_of_items - 1 << "]" << endl;
     cout << "Main: FV index = " << index << ", FV offset = " << offset << endl;
 
     auto reg_query = client.generate_query(index);
@@ -122,12 +153,11 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
     auto mSharedPtr = std::make_shared<std::vector<seal::Ciphertext> >(std::move(db_fake_enc));
 
     function<uint32_t(void)> g;
-    if(random_freivalds_vec){
-         g =[&gen](){return gen->generate() % 2; };
+    if (random_freivalds_vec) {
+        g = [&gen]() { return gen->generate() % 2; };
     }
-    else
-    {
-         g =[](){return 1; };
+    else {
+        g = []() { return 1; };
     }
     FreivaldsVector f(enc_params, pir_params, g);
 //    f.mult_rand_vec_by_db(db_pointer);
@@ -142,7 +172,7 @@ int freivalds_verification_test(uint64_t num_items, uint64_t item_size, uint32_t
 //    auto answer = server.generate_reply_one_dim(reg_query, 0);
     seal::Ciphertext response;
     // do computation at each client
-    f.multiply_with_reply(0,  answer, response);
+    f.multiply_with_reply(0, answer, response);
     auto diff = client.decrypt(response);
 
     return 0;
