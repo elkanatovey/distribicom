@@ -1,6 +1,6 @@
 #include <seal/seal.h>
 #include "matrix_multiplier.hpp"
-#include "test_utils.cpp"
+#include "../test_utils.cpp"
 
 int main() {
     // sanity check

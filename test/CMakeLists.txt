@@ -1,8 +1,11 @@
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
 
-include_directories (${SealPIR_SOURCE_DIR}/src)
-include_directories (${distribicom_SOURCE_DIR}/src)
-include_directories (${distribicom_SOURCE_DIR}/src/math_utils)
+include_directories(${SealPIR_SOURCE_DIR}/src)
+include_directories(${distribicom_SOURCE_DIR}/src)
+include_directories(${distribicom_SOURCE_DIR}/src/math_utils)
+
+add_subdirectory(math_utils)
+
 
 add_executable(db_serialisation_test db_serialisation_test.cpp)
 target_link_libraries(db_serialisation_test distribicom_cpp)
@@ -44,10 +47,6 @@ add_test(NAME matrix_mult_order_test_version_2 COMMAND matrix_mult_order_test_ve
 add_executable(matrix_mult_str_test matrix_mult_str_test.cpp)
 target_link_libraries(matrix_mult_str_test distribicom_cpp)
 add_test(NAME matrix_mult_str_test COMMAND matrix_mult_str_test)
-
-add_executable(multiplication_utils_test multiplication_utils_test.cpp)
-target_link_libraries(multiplication_utils_test multiplication_utils)
-add_test(NAME multiplication_utils_test COMMAND multiplication_utils_test)
 
 add_executable(evaluator_wrapper_test evaluator_wrapper_test.cpp)
 target_link_libraries(evaluator_wrapper_test multiplication_utils)
