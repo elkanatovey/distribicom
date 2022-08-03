@@ -1,4 +1,4 @@
-add_library(multiplication_utils matrix_multiplier_base.hpp matrix_multiplier_base.cpp evaluator_wrapper.hpp evaluator_wrapper.cpp)
+add_library(multiplication_utils matrix_multiplier.hpp matrix_multiplier.cpp evaluator_wrapper.hpp evaluator_wrapper.cpp)
 
 target_include_directories(multiplication_utils PRIVATE ${com_sealpir_SOURCE_DIR}/src)
 target_link_libraries(multiplication_utils sealpir)

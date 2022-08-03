@@ -1,4 +1,4 @@
-#include "matrix_multiplier_base.hpp"
+#include "matrix_multiplier.hpp"
 #include <seal/seal.h>
 #include <evaluator_wrapper.hpp>
 

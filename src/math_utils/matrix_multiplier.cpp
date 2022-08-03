@@ -1,4 +1,4 @@
-#include "matrix_multiplier_base.hpp"
+#include "matrix_multiplier.hpp"
 
 #define COL 0
 #define ROW 1
