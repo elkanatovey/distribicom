@@ -21,7 +21,7 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int main(int argc, char *argv[]) {
+int matrix_mult_str_test(int argc, char *argv[]) {
 
 
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);

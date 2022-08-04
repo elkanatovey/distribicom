@@ -12,7 +12,7 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int main(int argc, char *argv[]) {
+int associativity_mult_test(int argc, char *argv[]) {
 
     uint32_t N = 4096;
 

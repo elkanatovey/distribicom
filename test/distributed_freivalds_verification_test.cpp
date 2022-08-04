@@ -18,7 +18,7 @@ using namespace seal;
 int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
                               uint32_t dim);
 
-int main(int argc, char *argv[]) {
+int distributed_freivalds_verification_test(int argc, char *argv[]) {
 //    // sanity check
 //    assert(distribute_query_ser_test(16, 288, 4096, 20, 2) == 0);
 //
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 //    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
 //
 //    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
-
+    return 0;
 }
 
 //int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){

@@ -20,7 +20,7 @@ using namespace std;
 using namespace seal;
 
 
-int main() {
+int matrix_mult_order_test(int argc, char *argv[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     size_t slot_count = all->encoder.slot_count();

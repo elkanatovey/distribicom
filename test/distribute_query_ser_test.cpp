@@ -15,21 +15,21 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
                            uint32_t dim);
 
-int main(int argc, char *argv[]) {
+int distribute_query_ser_test(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(16, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(16, 288, 4096, 20, 2) == 0);
 
     // speed check
-    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(1 << 10, 288, 4096, 20, 2) == 0);
 
-    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
-
+    assert(distribute_query_ser_test1(1 << 12, 288, 4096, 20, 2) == 0);
+    return 0;
 }
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes

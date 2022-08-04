@@ -12,7 +12,7 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int main(int argc, char *argv[]) {
+int associativity_addition_test(int, char*[]) {
 
     uint64_t number_of_items = 2048;
     uint64_t size_per_item = 288; // in bytes

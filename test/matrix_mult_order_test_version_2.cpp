@@ -21,7 +21,7 @@ using namespace seal;
 void
 add_plaintexts(const EncryptionParameters &enc_params, const Plaintext &a, const Plaintext &c, Plaintext &a_plus_c);
 
-int main(int argc, char *argv[]) {
+int matrix_mult_order_test_version_2(int argc, char *argv[]) {
 
 //
 //    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 //    assert(fake_res.is_transparent());
 //
 //
-//    return 0;
+    return 0;
 }
 
 void

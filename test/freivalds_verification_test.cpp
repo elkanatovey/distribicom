@@ -11,9 +11,9 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec);
+int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivalds_vec);
 
-int main() {
+int freivalds_verification_test(int argc, char *argv[]) {
 
     auto test_configs = TestUtils::SetupConfigs{
             .encryption_params_configs = TestUtils::DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
@@ -28,22 +28,22 @@ int main() {
     };
 
     // sanity check
-    assert(freivalds_verification_test(test_configs, false) == 0);
+    assert(freivalds_verification_test1(test_configs, false) == 0);
 
     test_configs.pir_params_configs.number_of_items = 1 << 10;
     test_configs.pir_params_configs.size_per_item = 288;
     // speed check
-    assert(freivalds_verification_test(test_configs, false) == 0);
+    assert(freivalds_verification_test1(test_configs, false) == 0);
 
     test_configs.pir_params_configs.number_of_items = 1 << 12;
-    assert(freivalds_verification_test(test_configs, false) == 0);
+    assert(freivalds_verification_test1(test_configs, false) == 0);
 
     test_configs.pir_params_configs.number_of_items = 1 << 16;
     test_configs.pir_params_configs.size_per_item = 1024;
-    assert(freivalds_verification_test(test_configs, false) == 0);
+    assert(freivalds_verification_test1(test_configs, false) == 0);
 }
 
-int freivalds_verification_test(TestUtils::SetupConfigs t, bool random_freivalds_vec) {
+int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivalds_vec) {
     auto num_items = t.pir_params_configs.number_of_items;
     auto size_per_item = t.pir_params_configs.size_per_item;
     auto all = TestUtils::setup(t);

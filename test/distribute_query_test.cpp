@@ -15,9 +15,9 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_test(TestUtils::SetupConfigs);
+int distribute_query_test1(TestUtils::SetupConfigs);
 
-int main() {
+int distribute_query_test(int argc, char *argv[]) {
     auto test_configs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
                     .scheme_type = seal::scheme_type::bgv,
@@ -34,18 +34,18 @@ int main() {
             },
     };
     // sanity check
-    assert(distribute_query_test(test_configs) == 0);
+    assert(distribute_query_test1(test_configs) == 0);
 
     // speed check
     test_configs.pir_params_configs.number_of_items = 1 << 10;
-    assert(distribute_query_test(test_configs) == 0);
+    assert(distribute_query_test1(test_configs) == 0);
 
     test_configs.pir_params_configs.number_of_items = 1 << 12;
-    assert(distribute_query_test(test_configs) == 0);
-
+    assert(distribute_query_test1(test_configs) == 0);
+    return 0;
 }
 
-int distribute_query_test(TestUtils::SetupConfigs t) {
+int distribute_query_test1(TestUtils::SetupConfigs t) {
     auto all = TestUtils::setup(t);
 
     print_pir_params(all->pir_params);
