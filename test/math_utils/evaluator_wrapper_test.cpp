@@ -1,8 +1,6 @@
-#include <seal/seal.h>
-#include "test_utils.cpp"
-#include "evaluator_wrapper.hpp"
+#include "../test_utils.hpp"
 
-int main() {
+int evaluator_wrapper_test(int, char*[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     auto ptx = all->random_plaintext();
@@ -33,6 +31,7 @@ int main() {
     all->w_evaluator->evaluator->sub_inplace(out2, out3);
 
     assert(out2.is_transparent());
+    return 0;
 // associative test.
 
 // commutative test.

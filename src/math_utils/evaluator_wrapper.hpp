@@ -87,8 +87,6 @@ namespace multiplication_utils {
 
         void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
-        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) {
-            evaluator->add_plain(trivial_zero, ptx, result);
-        }
+        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result);
     };
 }

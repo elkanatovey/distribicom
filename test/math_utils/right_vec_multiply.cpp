@@ -1,8 +1,6 @@
-#include <seal/seal.h>
-#include "matrix_multiplier.hpp"
-#include "../test_utils.cpp"
+#include "../test_utils.hpp"
 
-int main() {
+int right_vec_multiply(int, char*[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     cout << "Main: generating matrices" << endl;
@@ -47,4 +45,5 @@ int main() {
         all->w_evaluator->evaluator->sub_inplace(splitdb_results[i], ciphertext_db_results[i]);
         assert(splitdb_results[i].is_transparent());
     }
+    return 0;
 }

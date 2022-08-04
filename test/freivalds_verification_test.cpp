@@ -5,7 +5,7 @@
 #include "FreivaldsVector.hpp"
 
 #include <seal/seal.h>
-#include "test_utils.cpp"
+#include "test_utils.hpp"
 
 using namespace std::chrono;
 using namespace std;

@@ -1,8 +1,6 @@
-#include <seal/seal.h>
-#include "matrix_multiplier.hpp"
-#include "../test_utils.cpp"
+#include "../test_utils.hpp"
 
-int main() {
+int left_int_vec_multiply(int, char*[]) {
     // sanity check
     multiplication_utils::foo();
 
@@ -47,5 +45,6 @@ int main() {
 
     r1 = matrix[3];
     assert(r1.to_string() == result[1].to_string());
+    return 0;
 }
 

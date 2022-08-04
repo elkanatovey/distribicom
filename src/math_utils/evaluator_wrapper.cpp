@@ -152,4 +152,8 @@ namespace multiplication_utils {
         trivial_zero.resize(2);
     }
 
+    void EvaluatorWrapper::trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) {
+        evaluator->add_plain(trivial_zero, ptx, result);
+    }
+
 }

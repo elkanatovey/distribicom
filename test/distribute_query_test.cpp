@@ -9,7 +9,7 @@
 #include <random>
 #include <cstdint>
 #include <cstddef>
-#include "test_utils.cpp"
+#include "test_utils.hpp"
 
 using namespace std::chrono;
 using namespace std;
