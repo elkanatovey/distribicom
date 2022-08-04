@@ -12,7 +12,7 @@ using namespace seal::util;
  * create row partition of db for distributing work - both serialised version and not serialsed
  * version
  */
-void MasterServer::generate_dbase_partition() {
+void Master::generate_dbase_partition() {
     vector<uint64_t> nvec = pir_params_.nvec;
 
     unsigned long num_of_cols = 1;
@@ -45,11 +45,11 @@ void MasterServer::generate_dbase_partition() {
     }
 }
 
-std::shared_ptr<Database> MasterServer::get_db(){
+std::shared_ptr<Database> Master::get_db(){
     return db_;
 }
 
-PirQuerySingleDim MasterServer::get_expanded_query_first_dim_ser(uint32_t client_id, stringstream
+PirQuerySingleDim Master::get_expanded_query_first_dim_ser(uint32_t client_id, stringstream
                                                           &query_stream) {
     PirQuery query = deserialize_query(query_stream);
 
@@ -58,7 +58,7 @@ PirQuerySingleDim MasterServer::get_expanded_query_first_dim_ser(uint32_t client
 }
 
 PirQuerySingleDim
-MasterServer::get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand) {
+Master::get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand) {
     vector<Ciphertext> expanded_query;
 
     uint64_t n_i = pir_params_.nvec[dim_to_expand];
@@ -88,7 +88,7 @@ MasterServer::get_expanded_query_single_dim(uint32_t client_id, const PirQuery &
     return expanded_query;
 }
 
-void MasterServer::set_single_query_second_dim(uint32_t client_id, const PirQuery &query){
+void Master::set_single_query_second_dim(uint32_t client_id, const PirQuery &query){
     expanded_query_dim2[client_id] = get_expanded_query_single_dim(client_id, query, 1);
 }
 
@@ -98,7 +98,7 @@ void MasterServer::set_single_query_second_dim(uint32_t client_id, const PirQuer
 /**
  *  store queries for redistribution to clients for sharded calculation. Assumes that galois key has been set
  */
-void MasterServer::store_query_ser(uint32_t client_id, const string & query)
+void Master::store_query_ser(uint32_t client_id, const string & query)
 {
     uint32_t bucket_id = get_bucket_id(client_id);
 //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
@@ -121,7 +121,7 @@ void MasterServer::store_query_ser(uint32_t client_id, const string & query)
  *  store galois_stream keys for redistribution to clients for sharded calculation and for local calculation.
  *  also saves usable version main server side
  */
-void MasterServer::store_galois_key_ser(uint32_t client_id, std::stringstream & galois_stream)
+void Master::store_galois_key_ser(uint32_t client_id, std::stringstream & galois_stream)
 {
     uint32_t bucket_id = get_bucket_id(client_id);
     //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
@@ -147,7 +147,7 @@ void MasterServer::store_galois_key_ser(uint32_t client_id, std::stringstream & 
  * @param client_id
  * @param galois_stream
  */
-void MasterServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
+void Master::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
     GaloisKeys gkey;
     gkey.load(*context_, galois_stream);
     set_galois_key(client_id, gkey);
@@ -156,7 +156,7 @@ void MasterServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galo
 /**
  *  store queries for redistribution to clients for sharded calculation. Assumes that galois key has been set
  */
-void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
+void Master::store_query(const PirQuery& query, uint32_t client_id)
 {
     uint32_t bucket_id = get_bucket_id(client_id);
     //    std::cout <<"Store Bucket: ....................................." << bucket_id<< std::endl;
@@ -174,7 +174,7 @@ void MasterServer::store_query(const PirQuery& query, uint32_t client_id)
     }
 }
 
-uint32_t MasterServer::get_bucket_id(uint32_t client_id) {
+uint32_t Master::get_bucket_id(uint32_t client_id) {
     auto num_of_rows = getNumberOfPartitions();
     uint32_t bucket_id = client_id / num_of_rows; // first sqrt(n) clients get bucket 0
     return bucket_id;
@@ -185,7 +185,7 @@ uint32_t MasterServer::get_bucket_id(uint32_t client_id) {
  * @param client_id
  * @return
  */
-uint64_t MasterServer::get_row_id(uint32_t client_id)
+uint64_t Master::get_row_id(uint32_t client_id)
 {
     vector<uint64_t> nvec = pir_params_.nvec;
     auto num_of_rows = nvec[COL];  //if 1d db num of rows is num of ptexts
@@ -197,20 +197,20 @@ uint64_t MasterServer::get_row_id(uint32_t client_id)
     return row_id;
 }
 
-const DatabaseShard& MasterServer::get_db_row(uint32_t client_id)
+const DatabaseShard& Master::get_db_row(uint32_t client_id)
 {
     uint64_t row_id = get_row_id(client_id);
     return this->db_rows_[row_id];
 }
 
-std::string MasterServer::get_db_row_serialized(uint32_t client_id)
+std::string Master::get_db_row_serialized(uint32_t client_id)
 {
 
     uint64_t row_id = get_row_id(client_id); // every cid gets row following that of adjacent cid
     return this->db_rows_serialized_[row_id];
 }
 
-uint32_t MasterServer::get_row_len()
+uint32_t Master::get_row_len()
 {
     return this->db_rows_[0].size();
 }
@@ -222,13 +222,13 @@ uint32_t MasterServer::get_row_len()
 /**
  *  get from server bucket of queries for client to process based on client's ID
  */
-DistributedQueryContextBucket MasterServer::get_query_bucket_to_compute(uint32_t client_id)
+DistributedQueryContextBucket Master::get_query_bucket_to_compute(uint32_t client_id)
 {
     uint64_t bucket_id = get_bucket_id(client_id);  // first sqrt(n) clients get bucket 0
     return this->query_buckets_[bucket_id];
 }
 
-DistributedQueryContextBucketSerial MasterServer::get_query_bucket_to_compute_serialized(uint32_t client_id)
+DistributedQueryContextBucketSerial Master::get_query_bucket_to_compute_serialized(uint32_t client_id)
 {
     uint32_t bucket_id = get_bucket_id(client_id);
 //    std::cout <<"Query Bucket: ....................................." << bucket_id<< std::endl;
@@ -238,21 +238,21 @@ DistributedQueryContextBucketSerial MasterServer::get_query_bucket_to_compute_se
 /**
  *  get from server bucket of queries for client to process based on client's ID
  */
-DistributedGaloisContextBucketSerial MasterServer::get_galois_bucket_ser(uint32_t client_id)
+DistributedGaloisContextBucketSerial Master::get_galois_bucket_ser(uint32_t client_id)
 {
     uint64_t bucket_id = get_bucket_id(client_id);  // first sqrt(n) clients get bucket 0
     return this->galois_buckets_serialized_[bucket_id];
 }
 
 
-void MasterServer::process_reply_at_server_ser(std::stringstream & partial_reply_ser, uint32_t client_id) {
+void Master::process_reply_at_server_ser(std::stringstream & partial_reply_ser, uint32_t client_id) {
 
     PirReplyShard partial_reply = deserialize_partial_reply(partial_reply_ser);
     process_reply_at_server(client_id, partial_reply);
 
 }
 
-void MasterServer::process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply) {
+void Master::process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply) {
     for (auto & i : partial_reply) {
         evaluator_->transform_to_ntt_inplace(i);
     }
@@ -269,7 +269,7 @@ void MasterServer::process_reply_at_server(uint32_t client_id, PirReplyShard &pa
 
 
 
-void MasterServer::processQueriesAtServer(const PirReplyShardBucket& queries) {
+void Master::processQueriesAtServer(const PirReplyShardBucket& queries) {
     for (auto const& [clientID, partialReply] : queries){
         if (partialReplies_.find(clientID) == partialReplies_.end()){
             partialReplies_[clientID] = partialReply;
@@ -282,12 +282,12 @@ void MasterServer::processQueriesAtServer(const PirReplyShardBucket& queries) {
     }
 }
 
-PirReply MasterServer::generateFinalReply(std::uint32_t client_id){
+PirReply Master::generateFinalReply(std::uint32_t client_id){
     auto reply = partialReplies_[client_id];
 
     return reply;
 }
-int MasterServer::generate_final_reply_ser(std::uint32_t client_id , std::stringstream &stream){
+int Master::generate_final_reply_ser(std::uint32_t client_id , std::stringstream &stream){
     PirReply reply = generateFinalReply(client_id);
     for (auto & jj : reply) {
         evaluator_->transform_from_ntt_inplace(jj);
@@ -297,7 +297,7 @@ int MasterServer::generate_final_reply_ser(std::uint32_t client_id , std::string
 
    return serialize_reply(reply, stream);
 }
-std::uint64_t MasterServer::getNumberOfPartitions(){
+std::uint64_t Master::getNumberOfPartitions(){
     vector<uint64_t> nvec = pir_params_.nvec;
     auto num_of_rows = nvec[COL];  //if 1d db num of rows is num of ptexts
     if (nvec.size() > 1) {
@@ -311,7 +311,7 @@ std::uint64_t MasterServer::getNumberOfPartitions(){
  * This function assumes that the only thing in the buffer is the partial reply.
  * @todo possibly change later
  */
-PirReplyShard MasterServer::deserialize_partial_reply(std::stringstream &stream) {
+PirReplyShard Master::deserialize_partial_reply(std::stringstream &stream) {
     std::vector< seal::Ciphertext> reply;
     while (stream.rdbuf()->in_avail()) {
         seal::Ciphertext c;
@@ -321,19 +321,8 @@ PirReplyShard MasterServer::deserialize_partial_reply(std::stringstream &stream)
     return reply;
 }
 
-vector<Ciphertext> MasterServer::get_fake_enc_db(Ciphertext c) {
-    vector<Plaintext> *cur = db_.get();
-    evaluator_->sub_inplace(c, c);
-    evaluator_->transform_from_ntt_inplace(c);
-    vector<Ciphertext> fake_encrypted_db(cur->size());
-    for(int i=0;i<cur->size();i++){
-        fake_encrypted_db[i] = c;
-        evaluator_->add_plain_inplace(fake_encrypted_db[i], (*cur)[i]);
-    }
-    return move(fake_encrypted_db);
-}
 
-PirReply MasterServer::generate_reply_one_dim(PirQuery &query, uint32_t client_id) {
+PirReply Master::generate_reply_one_dim(PirQuery &query, uint32_t client_id) {
 
     vector<uint64_t> nvec = pir_params_.nvec;
     uint64_t product = 1;
@@ -425,8 +414,8 @@ PirReply MasterServer::generate_reply_one_dim(PirQuery &query, uint32_t client_i
 }
 
 
-PirReply MasterServer::generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id,
-                                                  std::vector<seal::Ciphertext>* db) {
+PirReply Master::generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id,
+                                            std::vector<seal::Ciphertext>* db) {
 
     vector<uint64_t> nvec = pir_params_.nvec;
     uint64_t product = 1;
@@ -496,4 +485,4 @@ PirReply MasterServer::generate_reply_one_dim_enc(PirQuery &query, uint32_t clie
     return fail;
 }
 
-MasterServer::MasterServer(const seal::EncryptionParameters& parameters, const PirParams& params): PIRServer(parameters, params) {}
+Master::Master(const seal::EncryptionParameters& parameters, const PirParams& params): PIRServer(parameters, params) {}

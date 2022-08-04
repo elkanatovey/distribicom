@@ -4,7 +4,7 @@
 #include "pir_server.hpp"
 #include "distributed_pir.hpp"
 
-class MasterServer : public PIRServer {
+class Master : public PIRServer {
 
     std::map<std::uint64_t, DatabaseShard> db_rows_;
     std::map<std::uint64_t, std::string> db_rows_serialized_;
@@ -20,7 +20,7 @@ class MasterServer : public PIRServer {
 
 
 public:
-    MasterServer(const seal::EncryptionParameters& parameters, const PirParams& params);
+    Master(const seal::EncryptionParameters& parameters, const PirParams& params);
 
 // distributed pir functions server side
 void store_query(const PirQuery& query, uint32_t client_id);
@@ -78,6 +78,5 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     PirReply generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id, std::vector<seal::Ciphertext>* db);
 
-    vector<seal::Ciphertext> get_fake_enc_db(seal::Ciphertext);
 };
 

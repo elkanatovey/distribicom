@@ -4,7 +4,7 @@
 #include "pir_server.hpp"
 #include "distributed_pir.hpp"
 
-class ClientSideServer : public PIRServer {
+class Worker : public PIRServer {
 
     std::uint32_t shard_id_;
 
@@ -13,10 +13,10 @@ PirReplyShard processQueryAtClient(PirQuery query, uint32_t client_id, bool do_s
 
 public:
 // constructor for client side server
-ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams &pir_params,
-                 unique_ptr<vector<seal::Plaintext>>db, uint32_t shard_id);
-ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams& pir_params,
-                 std::stringstream &db_stream, uint32_t shard_id,uint32_t row_len);
+Worker(const seal::EncryptionParameters &seal_params, const PirParams &pir_params,
+       unique_ptr<vector<seal::Plaintext>>db, uint32_t shard_id);
+Worker(const seal::EncryptionParameters &seal_params, const PirParams& pir_params,
+       std::stringstream &db_stream, uint32_t shard_id, uint32_t row_len);
 
 // distributed pir functions client side
 PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket queries);

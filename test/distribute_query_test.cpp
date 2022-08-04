@@ -75,7 +75,7 @@ int distribute_query_test1(TestUtils::SetupConfigs t) {
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(all->encryption_params, all->pir_params);
+    Master server(all->encryption_params, all->pir_params);
 
     // Initialize PIR client....
     PIRClient client(all->encryption_params, all->pir_params);
@@ -119,22 +119,22 @@ int distribute_query_test1(TestUtils::SetupConfigs t) {
     server.store_query(query, 0);
 
     // do computation at each client
-    for (int i = 0; i < all->pir_params.nvec[1]; i++) {
+    for (std::uint64_t i = 0; i < all->pir_params.nvec[1]; i++) {
         DistributedQueryContextBucket bucket = server.get_query_bucket_to_compute(0);
         auto row = server.get_db_row(i);
         auto dbShard = make_unique<vector<seal::Plaintext>>();
         dbShard->reserve(row.size());
-        for (auto &i: row) {
-            dbShard->push_back(move(i));
+        for (auto &element: row) {
+            dbShard->push_back(move(element));
         }
-        ClientSideServer clientSideServer(all->encryption_params, all->pir_params, std::move(dbShard), i);
+        Worker clientSideServer(all->encryption_params, all->pir_params, std::move(dbShard), i);
         clientSideServer.set_galois_key(0, galois_keys);
         //measure individual client calculation time
         auto time_client_s = high_resolution_clock::now();
         auto clientReplies = clientSideServer.processQueryBucketAtClient(bucket);
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
-        cout << "Main: ClientSideServer " << i << " reply generation time: " << time_client_us / 1000
+        cout << "Main: Worker " << i << " reply generation time: " << time_client_us / 1000
              << " ms ............................."
              << endl;
         server.processQueriesAtServer(clientReplies);

@@ -86,7 +86,7 @@ int distributed_freivalds_verification_test(int argc, char *argv[]) {
 //
 //    // Initialize PIR Server
 //    cout << "Main: Initializing server and client" << endl;
-//    MasterServer server(enc_params, pir_params);
+//    Master server(enc_params, pir_params);
 //
 //    // Initialize PIR client....
 //    PIRClient client(enc_params, pir_params);
@@ -146,7 +146,7 @@ int distributed_freivalds_verification_test(int argc, char *argv[]) {
 //        temp_db_.str(row);
 //
 //        DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
-//        ClientSideServer clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
+//        Worker clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
 //        auto gkeys_ser = server.get_galois_bucket_ser(0);
 //
 //        // add client galois key - needed for expand
@@ -178,7 +178,7 @@ int distributed_freivalds_verification_test(int argc, char *argv[]) {
 //
 //        auto time_client_e = high_resolution_clock::now();
 //        auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
-//        cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
+//        cout << "Main: Worker "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
 //        << endl;
 //
 //        stringstream partial_reply_stream;

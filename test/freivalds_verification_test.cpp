@@ -48,7 +48,7 @@ int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivald
     auto num_items = t.pir_params_configs.number_of_items;
     auto size_per_item = t.pir_params_configs.size_per_item;
     auto all = TestUtils::setup(t);
-
+    auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
 
     print_pir_params(all->pir_params);
 
@@ -75,7 +75,7 @@ int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivald
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(all->encryption_params, all->pir_params);
+    Master server(all->encryption_params, all->pir_params);
 
     // Initialize PIR client....
     PIRClient client(all->encryption_params, all->pir_params);
@@ -100,9 +100,11 @@ int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivald
 
     //store query for multiple server computation
     auto expanded_query = server.get_expanded_query_single_dim(0, reg_query, 0);
-//    auto db_pointer =server.get_db();
+    auto db_pointer =server.get_db();
+    multiplication_utils::CiphertextDefaultFormMatrix db_fake_enc(db_pointer->size());
+    matops->transform(*db_pointer, db_fake_enc);
 
-    auto db_fake_enc = server.get_fake_enc_db(expanded_query[0]);
+//    auto db_fake_enc = server.get_fake_enc_db(expanded_query[0]);
     auto mSharedPtr = std::make_shared<std::vector<seal::Ciphertext> >(std::move(db_fake_enc));
 
     function<uint32_t(void)> g;
