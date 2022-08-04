@@ -41,6 +41,7 @@ int freivalds_verification_test(int argc, char *argv[]) {
     test_configs.pir_params_configs.number_of_items = 1 << 16;
     test_configs.pir_params_configs.size_per_item = 1024;
     assert(freivalds_verification_test1(test_configs, false) == 0);
+    return 0;
 }
 
 int freivalds_verification_test1(TestUtils::SetupConfigs t, bool random_freivalds_vec) {
