@@ -7,12 +7,8 @@
 //e * (a + c) = (a*e) + (c*e)
 
 
-#include <cassert>
-#include <cstdint>
-#include <memory>
 #include <seal/seal.h>
 #include "seal/util/scalingvariant.h"
-#include "test_utils.hpp"
 
 
 using namespace std;

@@ -7,15 +7,12 @@
 
 
 #include "pir.hpp"
-#include "pir_client.hpp"
-#include "pir_server.hpp"
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <random>
 #include <seal/seal.h>
-#include "test_utils.hpp"
+#include "../test_utils.hpp"
 
 using namespace std::chrono;
 using namespace std;

@@ -1,7 +1,4 @@
 #include "pir.hpp"
-#include "pir_client.hpp"
-#include "pir_server.hpp"
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -12,11 +9,9 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int associativity_addition_test(int, char*[]) {
+int associativity_mult_test(int argc, char *argv[]) {
 
-    uint64_t number_of_items = 2048;
-    uint64_t size_per_item = 288; // in bytes
-    uint32_t N = 8192;
+    uint32_t N = 4096;
 
     // Recommended values: (logt, d) = (12, 2) or (8, 1).
     uint32_t logt = 20;
@@ -40,51 +35,53 @@ int associativity_addition_test(int, char*[]) {
     Decryptor decryptor(context, secret_key);
     Evaluator evaluator(context);
     BatchEncoder encoder(context);
-    logt = floor(log2(enc_params.plain_modulus().value()));
-
-    uint32_t plain_modulus = enc_params.plain_modulus().value();
 
     size_t slot_count = encoder.slot_count();
 
     vector<uint64_t> coefficients(slot_count, 0ULL);
-    vector<uint64_t> coefficients_doubled(slot_count, 0ULL);
+    vector<uint64_t> coefficients_squared(slot_count, 0ULL);
     for (uint32_t i = 0; i < coefficients.size(); i++) {
-        coefficients[i] = (rand() % 5);
-        coefficients_doubled[i] = coefficients[i]*2;  //2*pt
+        coefficients[i] = (rand() % 256);
+        coefficients_squared[i] = coefficients[i] * 2;  //pt*pt
     }
 
     Plaintext pt;
     encoder.encode(coefficients, pt);
     Ciphertext ct;
     encryptor.encrypt_symmetric(pt, ct);
-    std::cout << "Encrypting" << std::endl;
+    std::cout << "Encrypting" << std::endl;//1958182 1860171
+    std::cout << enc_params.plain_modulus().value() << std::endl;//1958182 1
+
 
     Plaintext pt_doubled;
-    encoder.encode(coefficients_doubled, pt_doubled);
+    encoder.encode(coefficients_squared, pt_doubled);
 
     auto context_data = context.last_context_data();
     auto parms_id = context.last_parms_id();
 
-    Ciphertext x_plus_plain1;
-    Ciphertext x_plus_plain2;
+    Ciphertext x_times_plain1;
+    Ciphertext x_times_plain2;
 
-    evaluator.add_plain(ct, pt, x_plus_plain1);
-    evaluator.add_plain(ct, pt, x_plus_plain2);
+    evaluator.multiply_plain(ct, pt, x_times_plain1);
+    evaluator.multiply_plain(ct, pt, x_times_plain2);
 
-    Ciphertext twox_plus_twoplain1;
+    Ciphertext twox_times_twoplain1;
 
-    evaluator.add(x_plus_plain1, x_plus_plain2, twox_plus_twoplain1);// ((x+p)+(x+p))
+    //(ct*pt) + (ct*pt)
+    evaluator.add(x_times_plain1, x_times_plain2, twox_times_twoplain1);
 
 
-    Ciphertext x_plus_x;
-    evaluator.add(ct, ct, x_plus_x);
+    Ciphertext x_times_x;
 
-    Ciphertext twox_plus_twoplain2;
+    Ciphertext ct_plus_ct;
+    evaluator.add(ct, ct, ct_plus_ct);
 
-    evaluator.add_plain(x_plus_x, pt_doubled, twox_plus_twoplain2); //((x+x)+(2*p))
+    //pt*(ct+ct)
+    evaluator.multiply_plain(ct_plus_ct, pt, x_times_x);
+
 
     Ciphertext trivial_result;
-    evaluator.sub(twox_plus_twoplain1, twox_plus_twoplain2, trivial_result);
+    evaluator.sub(x_times_x, twox_times_twoplain1, trivial_result);
 
 
 
@@ -93,12 +90,12 @@ int associativity_addition_test(int, char*[]) {
     assert(pt2.is_zero());
 
     Plaintext pt3;
-    decryptor.decrypt(twox_plus_twoplain1, pt3);
+    decryptor.decrypt(twox_times_twoplain1, pt3);
 
     Plaintext pt4;
-    decryptor.decrypt(twox_plus_twoplain2, pt4);
+    decryptor.decrypt(x_times_x, pt4);
     assert(pt3 == pt4);
-
+    std::cout <<trivial_result.coeff_modulus_size()<<std::endl;
     assert(trivial_result.is_transparent());
 
     std::cout << "Worked" << std::endl;
