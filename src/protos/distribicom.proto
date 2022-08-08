@@ -7,9 +7,9 @@ message TODO{}
 
 // all services assumes configs: (DistribicomConfigs)
 service Worker {// anyone who wishes to work.
-  rpc SendDB(TODO) returns (stream TODO);
+  rpc SendDB(stream TODO) returns (TODO);
 
-  rpc SendQueries(TODO) returns (stream TODO);
+  rpc SendQueries(stream TODO) returns (TODO);
 }
 
 service Client{// anyone who owns a query can run this.
@@ -32,12 +32,14 @@ service Server {// masterServer runs this service.
   // Can be called at the start of an epoch. otherwise, dismissed / dropped.
   // StoreQuery serves as registration of a query and a client for multiple epochs.
   // ensure no client can write to anothers query position.
-  // send in the metadata:
+
+  // might be compromised of:
   // client credentials
   // uint32 client_id = 2;
-  // bytes galois_key = 3;
-  // uint32 num_ctexts = 4; (What i plan to send) THE SERVER SHOULD KNOW.
-  rpc StoreQuery(stream Ciphertext) returns (Ack){};
+  // bytes galois_key = 3; todo: about 3.5mb?
+  // uint32 num_ctexts = 4;
+  // repeated bytes ctxs = 5;
+  rpc StoreQuery(TODO) returns (Ack){}; // TODO: note that these are fairly small messages.
 
   // in metadata:
   // attempt to send dbpart info in the context
