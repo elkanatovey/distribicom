@@ -1,0 +1,73 @@
+syntax = "proto3";
+// Namespace
+package distribicom;
+
+
+message TODO{}
+
+// all services assumes configs: (DistribicomConfigs)
+service Worker {// anyone who wishes to work.
+  rpc SendDB(TODO) returns (stream TODO);
+
+  rpc SendQueries(TODO) returns (stream TODO);
+}
+
+service Client{// anyone who owns a query can run this.
+  rpc Answer(TODO) returns (stream TODO);
+  rpc RegAnswer(TODO) returns (stream TODO);
+}
+
+// facing workers, pub/sub of work that should be done.
+service Manager {// masterServer runs this service.
+
+  // PartialWorkStream i save this on my server map.
+  rpc RegisterAsWorker(TODO) returns (TODO){};
+
+  // a worker should send its work, along with credentials of what it sent.
+  rpc ReturnLocalWork(stream TODO) returns (TODO){};
+}
+
+// facing clients, allowing them to read and write to the server.
+service Server {// masterServer runs this service.
+  // Can be called at the start of an epoch. otherwise, dismissed / dropped.
+  // StoreQuery serves as registration of a query and a client for multiple epochs.
+  // ensure no client can write to anothers query position.
+  // send in the metadata:
+  // client credentials
+  // uint32 client_id = 2;
+  // bytes galois_key = 3;
+  // uint32 num_ctexts = 4; (What i plan to send) THE SERVER SHOULD KNOW.
+  rpc StoreQuery(stream Ciphertext) returns (Ack){};
+
+  // in metadata:
+  // attempt to send dbpart info in the context
+  rpc WriteToDB(WriteRequest) returns (Ack){};
+}
+
+
+message Ack{}
+
+// small:
+message WriteRequest{
+  int64 ptxnumber = 1;
+  int32 whereinptx = 2;
+  bytes data = 3; // 288 bytes?
+};
+
+message DBPartRequest {
+  int32 round = 1;
+}
+
+message Ciphertext{bytes data = 1;}
+
+message Plaintext{bytes data = 1;}
+
+message RegistrationReply{
+  uint32 client_id = 1;
+  uint32 shard_id = 2;
+};
+
+message WorkInfo{
+  uint32 event = 1;
+};
+
