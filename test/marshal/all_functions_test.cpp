@@ -58,16 +58,15 @@ int all_functions_test(int, char *[]) {
 
     seal::GaloisKeys newgkey;
     m->unmarshal_seal_object<seal::GaloisKeys>(tmp_gkey, newgkey);
-//    assert(newgkey.data()==g_key.data());
+    assert(seal::is_valid_for(newgkey,all->seal_context));
 
-    // check ctext marshal
-//    seal::Ciphertext unmarshaled_m_ctx;
-//    std::vector<seal::seal_byte> m_ctx(ctx.save_size());
-//    m->marshal_seal_object(ctx, m_ctx);
-//
-//    m->unmarshal_seal_object<seal::Ciphertext>(m_ctx, unmarshaled_m_ctx);
-//    all->w_evaluator->evaluator->sub_inplace(unmarshaled_m_ctx, ctx);
-//    assert(unmarshaled_m_ctx.is_transparent());
+    //check gkey marshal
+    seal::GaloisKeys unmarshaled_m_gkey;
+    std::vector<seal::seal_byte> m_gkey(g_key.save_size());
+    m->marshal_seal_object(g_key, m_gkey);
+
+    m->unmarshal_seal_object<seal::GaloisKeys>(m_gkey, unmarshaled_m_gkey);
+    assert(seal::is_valid_for(unmarshaled_m_gkey,all->seal_context));
 
 
     return 0;
