@@ -3,7 +3,7 @@
 int right_vec_multiply(int, char*[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
-    cout << "Main: generating matrices" << endl;
+    std::cout << "Main: generating matrices" << std::endl;
 
     std::uint64_t rows = 30;
     std::uint64_t cols = 35;

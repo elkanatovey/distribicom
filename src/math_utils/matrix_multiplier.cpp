@@ -44,8 +44,8 @@ namespace multiplication_utils {
 
 
     void matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims,
-                                          vector<std::uint64_t> &left_vec, Database &matrix,
-                                          vector<seal::Plaintext> &result) {
+                                          std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
+                                          std::vector<seal::Plaintext> &result) {
         for (uint64_t k = 0; k < dims[COL]; k++) {
             result[k] = seal::Plaintext(w_evaluator->enc_params.poly_modulus_degree());
             for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -57,8 +57,9 @@ namespace multiplication_utils {
 
     // this is the slow version of multiplication, needed to set the DB as a ciphertext DB.
     void
-    matrix_multiplier::left_multiply(vector<std::uint64_t> &dims, vector<std::uint64_t> &left_vec, Database &matrix,
-                                     vector<seal::Ciphertext> &result) {
+    matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                                     PlaintextDefaultFormMatrix &matrix,
+                                     std::vector<seal::Ciphertext> &result) {
         std::vector<seal::Ciphertext> trivial_encrypted_matrix(matrix.size(), seal::Ciphertext(w_evaluator->context));
         transform(matrix, trivial_encrypted_matrix);
 
@@ -66,8 +67,9 @@ namespace multiplication_utils {
         left_multiply(dims, left_vec, trivial_encrypted_matrix, result);
     }
 
-    void matrix_multiplier::left_multiply(vector<std::uint64_t> &dims, vector<std::uint64_t> &left_vec,
-                                          vector<seal::Ciphertext> &matrix, vector<seal::Ciphertext> &result) {
+    void matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                                          std::vector<seal::Ciphertext> &matrix, std::vector<seal::Ciphertext>
+                                                  &result) {
 
         for (uint64_t k = 0; k < dims[COL]; k++) {
             for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -86,8 +88,9 @@ namespace multiplication_utils {
         return std::make_shared<matrix_multiplier>(std::move(multiplier));
     }
 
-    void matrix_multiplier::right_multiply(vector<std::uint64_t> &dims, vector<SplitPlaintextNTTForm> &matrix,
-                                           vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result) {
+    void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
+                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
+                                                   &result) {
 //        #ifdef MY_DEBUG
         // everything needs to be in NTT!
         for (auto &ptx: matrix) {
@@ -114,8 +117,9 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::right_multiply(vector<std::uint64_t> &dims, vector<seal::Ciphertext> &matrix,
-                                           vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result) {
+    void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
+                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
+                                                   &result) {
 //#ifdef MY_DEBUG
         // everything needs to be in NTT!
         for (auto & ctx : matrix) {

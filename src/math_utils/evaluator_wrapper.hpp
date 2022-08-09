@@ -1,8 +1,7 @@
 #pragma once
 
-#include "pir.hpp"
-#include "pir_server.hpp"
-
+#include "seal/seal.h"
+#include <cassert>
 
 namespace multiplication_utils {
     /***
@@ -24,7 +23,7 @@ namespace multiplication_utils {
     public:
         seal::EncryptionParameters enc_params; // SEAL parameters
         seal::SEALContext context;
-        unique_ptr<seal::Evaluator> evaluator;
+        std::unique_ptr<seal::Evaluator> evaluator;
 
         /***
          * Creates and returns a an initialized matrix_multiplier

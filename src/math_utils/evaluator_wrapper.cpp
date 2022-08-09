@@ -134,7 +134,7 @@ namespace multiplication_utils {
         evaluator->multiply(a, b, c);
     }
 
-    shared_ptr<EvaluatorWrapper> EvaluatorWrapper::Create(seal::EncryptionParameters enc_params) {
+    std::shared_ptr<EvaluatorWrapper> EvaluatorWrapper::Create(seal::EncryptionParameters enc_params) {
         auto eval = EvaluatorWrapper(enc_params);
         return std::make_shared<EvaluatorWrapper>(std::move(eval));
     }

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "pir.hpp"
-#include "pir_server.hpp"
 #include "evaluator_wrapper.hpp"
 
 namespace multiplication_utils {
     /***
      *  represents a matrix made out of SplitPlaintexts as its elements.
      */
+
+    typedef std::vector<seal::Plaintext> PlaintextDefaultFormMatrix;
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
@@ -42,7 +42,7 @@ namespace multiplication_utils {
          * @param matrix plaintext matrix to mult
          * @param result where to place result, not in ntt representation
          */
-        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec, Database &matrix,
+        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
                            std::vector<seal::Plaintext> &result);
 
 
@@ -64,7 +64,7 @@ namespace multiplication_utils {
          * @param result where to place result, not in ntt representation
          */
         virtual void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                                   Database &matrix, std::vector<seal::Ciphertext> &result);
+                                   PlaintextDefaultFormMatrix &matrix, std::vector<seal::Ciphertext> &result);
 
         /***
          *
@@ -82,8 +82,8 @@ namespace multiplication_utils {
          * @param right_vec
          * @param result
          */
-        void right_multiply(vector<std::uint64_t> &dims, vector<seal::Ciphertext> &matrix,
-                            vector<seal::Ciphertext> &right_vec, vector<seal::Ciphertext> &result);
+        void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
+                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
 
     };

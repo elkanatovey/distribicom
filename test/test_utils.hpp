@@ -3,6 +3,7 @@
 #include "matrix_multiplier.hpp"
 #include <seal/seal.h>
 #include <evaluator_wrapper.hpp>
+#include <pir.hpp>
 
 namespace TestUtils {
     void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params);
@@ -35,9 +36,9 @@ namespace TestUtils {
         seal::EncryptionParameters encryption_params;
         PirParams pir_params;
 
-        function<uint32_t(void)> blakerng;
-        function<uint32_t(void)> mod2rng;
-        function<uint32_t(void)> allonerng;
+        std::function<uint32_t(void)> blakerng;
+        std::function<uint32_t(void)> mod2rng;
+        std::function<uint32_t(void)> allonerng;
 
         seal::SEALContext seal_context;
         seal::KeyGenerator keygen;

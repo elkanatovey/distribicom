@@ -1,7 +1,7 @@
 #include "test_utils.hpp"
 namespace TestUtils {
     void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
-        cout << "Main: Generating SEAL parameters" << endl;
+        std::cout << "Main: Generating SEAL parameters" << std::endl;
         enc_params.set_poly_modulus_degree(N);
         enc_params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(N));
         enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));

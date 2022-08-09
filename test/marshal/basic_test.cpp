@@ -8,7 +8,7 @@ int basic_test(int, char *[]) {
 
 
     auto ptx = all->random_plaintext();
-    vector<seal::seal_byte> tmp(ptx.save_size(), static_cast<const byte>('a'));
+    std::vector<seal::seal_byte> tmp(ptx.save_size(), static_cast<const std::byte>('a'));
     ptx.save((seal::seal_byte *) &tmp[0], tmp.size());
 
     seal::Plaintext newptx;
@@ -17,7 +17,7 @@ int basic_test(int, char *[]) {
 
     // checking ctx marshalling:
     auto ctx = all->random_ciphertext();
-    vector<seal::seal_byte> tmpctx(ctx.save_size(), static_cast<const byte>('a'));
+    std::vector<seal::seal_byte> tmpctx(ctx.save_size(), static_cast<const std::byte>('a'));
     ctx.save((seal::seal_byte *) &tmpctx[0], tmpctx.size());
 
     seal::Ciphertext newctx;
