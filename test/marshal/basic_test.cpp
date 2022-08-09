@@ -4,7 +4,7 @@
 int basic_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
-    Marshaller m(all->encryption_params);
+   auto m = marshal::Marshaller::Create(all->encryption_params);
 
 
     auto ptx = all->random_plaintext();
@@ -12,7 +12,7 @@ int basic_test(int, char *[]) {
     ptx.save((seal::seal_byte *) &tmp[0], tmp.size());
 
     seal::Plaintext newptx;
-    m.unmarshal_seal_object<seal::Plaintext>(tmp, newptx);
+    m->unmarshal_seal_object<seal::Plaintext>(tmp, newptx);
     assert(newptx.to_string() == ptx.to_string());
 
     // checking ctx marshalling:
@@ -21,7 +21,7 @@ int basic_test(int, char *[]) {
     ctx.save((seal::seal_byte *) &tmpctx[0], tmpctx.size());
 
     seal::Ciphertext newctx;
-    m.unmarshal_seal_object<seal::Ciphertext>(tmpctx, newctx);
+    m->unmarshal_seal_object<seal::Ciphertext>(tmpctx, newctx);
     all->w_evaluator->evaluator->sub_inplace(newctx, ctx);
     assert(newctx.is_transparent());
 
