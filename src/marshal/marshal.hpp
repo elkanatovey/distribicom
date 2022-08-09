@@ -46,6 +46,7 @@ namespace marshal {
 
         template<typename T>
         void prepare_seal_marshal_object(std::vector<marshaled_seal_object> &in, const std::vector<T> &seal_object) {
+            in.resize(seal_object.size());
             for (std::uint64_t i = 0; i < in.size(); ++i) {
                 prepare_seal_marshal_object(in[i], seal_object[i]);
             }
