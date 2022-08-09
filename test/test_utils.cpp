@@ -1,13 +1,13 @@
 #include "test_utils.hpp"
 namespace TestUtils {
-    void TestUtils::set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
+    void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
         cout << "Main: Generating SEAL parameters" << endl;
         enc_params.set_poly_modulus_degree(N);
         enc_params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(N));
         enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));
     }
 
-    std::shared_ptr<CryptoObjects> TestUtils::setup(TestUtils::SetupConfigs configs) {
+    std::shared_ptr<CryptoObjects> setup(TestUtils::SetupConfigs configs) {
         seal::EncryptionParameters enc_params(configs.encryption_params_configs.scheme_type);
         set_enc_params(
                 configs.encryption_params_configs.polynomial_degree,
