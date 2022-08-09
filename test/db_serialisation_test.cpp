@@ -112,7 +112,7 @@ int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degr
         }
 
         // compare
-        for (int k = 0; k < db_shard_nonserialized->size(); k++) {
+        for (std::uint64_t k = 0; k < db_shard_nonserialized->size(); k++) {
             std::cout << "plaintext number " << k << std::endl;
             assert((*db_shard_nonserialized)[k].to_string() == (*db_)[k].to_string());
         }
