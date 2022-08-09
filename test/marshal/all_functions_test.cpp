@@ -50,6 +50,25 @@ int all_functions_test(int, char *[]) {
     plaintext_check(all, m);
     ciphertext_check(all, m);
 
+    auto g_key = all->generate_galois_keys();
+
+    //check gkey unmarshal
+    std::vector<seal::seal_byte> tmp_gkey(g_key.save_size());
+    g_key.save((seal::seal_byte *) &tmp_gkey[0], tmp_gkey.size());
+
+    seal::GaloisKeys newgkey;
+    m->unmarshal_seal_object<seal::GaloisKeys>(tmp_gkey, newgkey);
+//    assert(newgkey.data()==g_key.data());
+
+    // check ctext marshal
+//    seal::Ciphertext unmarshaled_m_ctx;
+//    std::vector<seal::seal_byte> m_ctx(ctx.save_size());
+//    m->marshal_seal_object(ctx, m_ctx);
+//
+//    m->unmarshal_seal_object<seal::Ciphertext>(m_ctx, unmarshaled_m_ctx);
+//    all->w_evaluator->evaluator->sub_inplace(unmarshaled_m_ctx, ctx);
+//    assert(unmarshaled_m_ctx.is_transparent());
+
 
     return 0;
 }
