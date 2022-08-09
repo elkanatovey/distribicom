@@ -1,48 +1,40 @@
-include_directories (${SealPIR_SOURCE_DIR}/src)
-include_directories (${distribicom_SOURCE_DIR}/src)
-include_directories (${distribicom_SOURCE_DIR}/src/math_utils)
-
-add_executable(db_serialisation_test db_serialisation_test.cpp)
-target_link_libraries(db_serialisation_test distribicom_cpp)
-add_test(NAME db_serialisation_test COMMAND db_serialisation_test)
-
-add_executable(distributed_freivalds_verification_test distributed_freivalds_verification_test.cpp)
-target_link_libraries(distributed_freivalds_verification_test distribicom_cpp)
-add_test(NAME distributed_freivalds_verification_test COMMAND distributed_freivalds_verification_test)
-
-add_executable(freivalds_verification_test freivalds_verification_test.cpp)
-target_link_libraries(freivalds_verification_test distribicom_cpp)
-add_test(NAME freivalds_verification_test COMMAND freivalds_verification_test)
-
-add_executable(distribute_query_ser_test distribute_query_ser_test.cpp)
-target_link_libraries(distribute_query_ser_test distribicom_cpp)
-add_test(NAME distribute_query_ser_test COMMAND distribute_query_ser_test)
-
-add_executable(distribute_query_test distribute_query_test.cpp)
-target_link_libraries(distribute_query_test distribicom_cpp)
-add_test(NAME distribute_query_test COMMAND distribute_query_test)
-
-add_executable(associativity_addition_test associativity_addition_test.cpp)
-target_link_libraries(associativity_addition_test distribicom_cpp)
-add_test(NAME associativity_addition_test COMMAND associativity_addition_test)
-
-add_executable(associativity_mult_test associativity_mult_test.cpp)
-target_link_libraries(associativity_mult_test distribicom_cpp)
-add_test(NAME associativity_mult_test COMMAND associativity_mult_test)
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
 
 
-add_executable(matrix_mult_order_test matrix_mult_order_test.cpp)
-target_link_libraries(matrix_mult_order_test distribicom_cpp)
-add_test(NAME matrix_mult_order_test COMMAND matrix_mult_order_test)
+add_library(test_utils test_utils.hpp test_utils.cpp)
 
-add_executable(matrix_mult_order_test_version_2 matrix_mult_order_test_version_2.cpp)
-target_link_libraries(matrix_mult_order_test_version_2 distribicom_cpp)
-add_test(NAME matrix_mult_order_test_version_2 COMMAND matrix_mult_order_test_version_2)
+target_include_directories(test_utils PUBLIC ${SealPIR_SOURCE_DIR}/src)
+target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src)
+target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/math_utils)
+target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/marshal)
 
-add_executable(matrix_mult_str_test matrix_mult_str_test.cpp)
-target_link_libraries(matrix_mult_str_test distribicom_cpp)
-add_test(NAME matrix_mult_str_test COMMAND matrix_mult_str_test)
+target_link_libraries(test_utils sealpir multiplication_utils marshal_package)
 
-add_executable(multiplication_utils_test multiplication_utils_test.cpp)
-target_link_libraries(multiplication_utils_test multiplication_utils)
-add_test(NAME multiplication_utils_test COMMAND multiplication_utils_test)
+add_subdirectory(general_tests)
+add_subdirectory(math_utils)
+add_subdirectory(marshal)
+
+# create the testing file and list of tests
+create_test_sourcelist(Tests
+        CommonTests.cpp
+        db_serialisation_test.cpp
+        distributed_freivalds_verification_test.cpp
+        freivalds_verification_test.cpp
+        distribute_query_ser_test.cpp
+        distribute_query_test.cpp
+        )
+
+# add the executable
+add_executable(CommonTests ${Tests})
+target_link_libraries(CommonTests distribicom_cpp test_utils)
+
+# remove the test driver source file
+set(TestsToRun ${Tests})
+remove(TestsToRun CommonTests.cpp)
+
+# Add all the ADD_TEST for each test
+foreach (test ${TestsToRun})
+    get_filename_component(TName ${test} NAME_WE)
+    add_test(NAME ${TName} COMMAND CommonTests ${TName})
+endforeach ()
+

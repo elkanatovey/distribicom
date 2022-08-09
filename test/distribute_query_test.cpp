@@ -9,57 +9,49 @@
 #include <random>
 #include <cstdint>
 #include <cstddef>
+#include "test_utils.hpp"
 
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim);
+int distribute_query_test1(TestUtils::SetupConfigs);
 
-int main(int argc, char *argv[]) {
+int distribute_query_test(int argc, char *argv[]) {
+    auto test_configs = TestUtils::SetupConfigs{
+            .encryption_params_configs = {
+                    .scheme_type = seal::scheme_type::bgv,
+                    .polynomial_degree = 4096,
+                    .log_coefficient_modulus = 20
+            },
+            .pir_params_configs= {
+                    .number_of_items = 16,
+                    .size_per_item = 288,
+                    .dimensions = 2,
+                    .use_symmetric = true,
+                    .use_batching = true,
+                    .use_recursive_mod_switching = true,
+            },
+    };
     // sanity check
-    assert(distribute_query_test(16, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_test1(test_configs) == 0);
 
     // speed check
-    assert(distribute_query_test(1 << 10, 288, 4096, 20, 2) == 0);
+    test_configs.pir_params_configs.number_of_items = 1 << 10;
+    assert(distribute_query_test1(test_configs) == 0);
 
-    assert(distribute_query_test(1 << 12, 288, 4096, 20, 2) == 0);
-
+    test_configs.pir_params_configs.number_of_items = 1 << 12;
+    assert(distribute_query_test1(test_configs) == 0);
+    return 0;
 }
 
-int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int distribute_query_test1(TestUtils::SetupConfigs t) {
+    auto all = TestUtils::setup(t);
 
-    uint64_t number_of_items = num_items;
-    uint64_t size_per_item = item_size; // in bytes
-    uint32_t N = degree;
+    print_pir_params(all->pir_params);
 
-    // Recommended values: (logt, d) = (12, 2) or (8, 1).
-    uint32_t logt = lt;
-    uint32_t d = dim;
-
-    bool use_symmetric = true; // use symmetric encryption instead of public key (recommended for smaller query)
-    bool use_batching = true; // pack as many elements as possible into a BFV plaintext (recommended)
-    bool use_recursive_mod_switching = true;
-
-    EncryptionParameters enc_params(scheme_type::bfv);
-    PirParams pir_params;
-
-    // Generates all parameters
-    cout << "Main: Generating SEAL parameters" << endl;
-    gen_encryption_params(N, logt, enc_params);
-
-    cout << "Main: Verifying SEAL parameters" << endl;
-    verify_encryption_params(enc_params);
-    cout << "Main: SEAL parameters are good" << endl;
-
-    cout << "Main: Generating PIR parameters" << endl;
-    gen_pir_params(number_of_items, size_per_item, d, enc_params, pir_params, use_symmetric,
-                   use_batching, use_recursive_mod_switching);
-
-
-
-    //gen_params(number_of_items, size_per_item, N, logt, d, enc_params, pir_params);
-    print_pir_params(pir_params);
+    auto number_of_items = t.pir_params_configs.number_of_items;
+    auto size_per_item = t.pir_params_configs.size_per_item;
 
     cout << "Main: Initializing the database (this may take some time) ..." << endl;
 
@@ -71,7 +63,7 @@ int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degre
     auto db_copy(make_unique<uint8_t[]>(number_of_items * size_per_item));
 
     seal::Blake2xbPRNGFactory factory;
-    auto gen =  factory.create();
+    auto gen = factory.create();
 
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
@@ -83,10 +75,10 @@ int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degre
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(enc_params, pir_params);
+    Master server(all->encryption_params, all->pir_params);
 
     // Initialize PIR client....
-    PIRClient client(enc_params, pir_params);
+    PIRClient client(all->encryption_params, all->pir_params);
     GaloisKeys galois_keys = client.generate_galois_keys();
 
     // Set galois key for client with id 0
@@ -110,7 +102,7 @@ int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degre
     uint64_t ele_index = gen->generate() % number_of_items; // element in DB at random position
     uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
-    cout << "Main: element index = " << ele_index << " from [0, " << number_of_items -1 << "]" << endl;
+    cout << "Main: element index = " << ele_index << " from [0, " << number_of_items - 1 << "]" << endl;
     cout << "Main: FV index = " << index << ", FV offset = " << offset << endl;
 
     // Measure query generation
@@ -124,25 +116,26 @@ int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degre
     //PirQuery query2 = deserialize_query(d, 1, query_ser, CIPHER_SIZE
 
     //store query for multiple server computation
-    server.store_query(query,0);
+    server.store_query(query, 0);
 
     // do computation at each client
-    for(int i=0; i< pir_params.nvec[1]; i++) {
+    for (std::uint64_t i = 0; i < all->pir_params.nvec[1]; i++) {
         DistributedQueryContextBucket bucket = server.get_query_bucket_to_compute(0);
         auto row = server.get_db_row(i);
         auto dbShard = make_unique<vector<seal::Plaintext>>();
         dbShard->reserve(row.size());
-        for (auto &i: row) {
-            dbShard->push_back(move(i));
+        for (auto &element: row) {
+            dbShard->push_back(move(element));
         }
-        ClientSideServer clientSideServer(enc_params, pir_params, std::move(dbShard), i);
+        Worker clientSideServer(all->encryption_params, all->pir_params, std::move(dbShard), i);
         clientSideServer.set_galois_key(0, galois_keys);
         //measure individual client calculation time
         auto time_client_s = high_resolution_clock::now();
         auto clientReplies = clientSideServer.processQueryBucketAtClient(bucket);
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
-        cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
+        cout << "Main: Worker " << i << " reply generation time: " << time_client_us / 1000
+             << " ms ............................."
              << endl;
         server.processQueriesAtServer(clientReplies);
     }
@@ -170,13 +163,13 @@ int distribute_query_test(uint64_t num_items, uint64_t item_size, uint32_t degre
     // Check that we retrieved the correct element
     for (uint32_t i = 0; i < size_per_item; i++) {
         if (elems[i] != db_copy.get()[(ele_index * size_per_item) + i]) {
-            cout << "Main: elems " << (int)elems[i] << ", db "
+            cout << "Main: elems " << (int) elems[i] << ", db "
                  << (int) db_copy.get()[(ele_index * size_per_item) + i] << endl;
-            cout << "Main: PIR result wrong at " << i <<  endl;
+            cout << "Main: PIR result wrong at " << i << endl;
             failed = true;
         }
     }
-    if(failed){
+    if (failed) {
         return -1;
     }
 

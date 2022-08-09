@@ -15,21 +15,21 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
                            uint32_t dim);
 
-int main(int argc, char *argv[]) {
+int distribute_query_ser_test(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(16, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(16, 288, 4096, 20, 2) == 0);
 
     // speed check
-    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(1 << 10, 288, 4096, 20, 2) == 0);
 
-    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
-
+    assert(distribute_query_ser_test1(1 << 12, 288, 4096, 20, 2) == 0);
+    return 0;
 }
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -86,7 +86,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(enc_params, pir_params);
+    Master server(enc_params, pir_params);
 
     // Initialize PIR client....
     PIRClient client(enc_params, pir_params);
@@ -146,19 +146,19 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 //    f.multiply_with_query(0, expanded_query);
 
     // do computation at each client
-    for(int i=0; i< pir_params.nvec[1]; i++) {
+    for(std::uint64_t i=0; i< pir_params.nvec[1]; i++) {
         auto row = server.get_db_row_serialized(i);
         auto row_len = server.get_row_len();
         stringstream temp_db_;
         temp_db_.str(row);
 
         DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
-        ClientSideServer clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
+        Worker clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
         auto gkeys_ser = server.get_galois_bucket_ser(0);
 
         // add client galois key - needed for expand
         stringstream galois_str;
-        for(int j=0;j<gkeys_ser.size();j++){
+        for(std::uint64_t j=0;j<gkeys_ser.size();j++){
             galois_str.str(gkeys_ser[j].galois);
             clientSideServer.set_one_galois_key_ser(gkeys_ser[j].client_id, galois_str);
             galois_str.clear();
@@ -184,7 +184,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
-        cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
+        cout << "Main: Worker "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
              << endl;
 
         stringstream partial_reply_stream;

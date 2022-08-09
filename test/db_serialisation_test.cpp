@@ -14,21 +14,22 @@ using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int db_serialisation_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
+int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
                               uint32_t dim);
 
-int main(int argc, char *argv[]) {
+int db_serialisation_test(int argc, char *argv[]) {
     // sanity check
-    //    assert(db_serialisation_test(16, 288, 4096, 20, 2) == 0);
+    //    assert(db_serialisation_test1(16, 288, 4096, 20, 2) == 0);
 
     // speed check
-    assert(db_serialisation_test(1 << 10, 288, 4096, 20, 2) == 0);
+    assert(db_serialisation_test1(1 << 10, 288, 4096, 20, 2) == 0);
 
-    assert(db_serialisation_test(1 << 12, 288, 4096, 20, 2) == 0);
+    assert(db_serialisation_test1(1 << 12, 288, 4096, 20, 2) == 0);
+    return 0;
 
 }
 
-int db_serialisation_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -84,7 +85,7 @@ int db_serialisation_test(uint64_t num_items, uint64_t item_size, uint32_t degre
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(enc_params, pir_params);
+    Master server(enc_params, pir_params);
 
     server.set_database(move(db), number_of_items, size_per_item);
     server.generate_dbase_partition();
