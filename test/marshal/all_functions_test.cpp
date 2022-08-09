@@ -69,6 +69,43 @@ void galois_keys_check(std::shared_ptr<TestUtils::CryptoObjects> &all, const std
     assert_galois_keys_equals(all, g_key, newgkey);
 }
 
+void plaintext_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                            std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random plaintexts
+    std::vector<seal::Plaintext> ptxs(100);
+    for (auto &ptx: ptxs) {
+        ptx = all->random_plaintext();
+    }
+    std::vector<marshal::marshaled_seal_object> marshaled(ptxs.size());
+    m->marshal_seal_vector(ptxs, marshaled);
+
+    std::vector<seal::Plaintext> unmarshaled_ptxs(marshaled.size());
+    m->unmarshal_seal_vector(marshaled, unmarshaled_ptxs);
+
+    for (std::uint64_t i = 0; i < unmarshaled_ptxs.size(); ++i) {
+        assert(unmarshaled_ptxs[i].to_string() == ptxs[i].to_string());
+    }
+}
+
+void ciphertext_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                             std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random ciphertexts
+    std::vector<seal::Ciphertext> ctxs(100);
+    for (auto &ctx: ctxs) {
+        ctx = all->random_ciphertext();
+    }
+    std::vector<marshal::marshaled_seal_object> marshaled(ctxs.size());
+    m->marshal_seal_vector(ctxs, marshaled);
+
+    std::vector<seal::Ciphertext> unmarshaled_ctxs(marshaled.size());
+    m->unmarshal_seal_vector(marshaled, unmarshaled_ctxs);
+
+    for (std::uint64_t i = 0; i < unmarshaled_ctxs.size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(unmarshaled_ctxs[i], ctxs[i]);
+        assert(unmarshaled_ctxs[i].is_transparent());
+    }
+}
+
 int all_functions_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
@@ -76,7 +113,9 @@ int all_functions_test(int, char *[]) {
 
     plaintext_check(all, m);
     ciphertext_check(all, m);
-    galois_keys_check(all, m);
+//    galois_keys_check(all, m);
 
+    plaintext_vector_check(all, m);
+    ciphertext_vector_check(all, m);
     return 0;
 }
