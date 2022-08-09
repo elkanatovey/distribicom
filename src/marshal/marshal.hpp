@@ -17,12 +17,15 @@ namespace marshal {
 
         template<typename T>
         void marshal_seal_object(const T &in, marshaled_seal_object &out) {
+            out.resize(in.save_size(context));
             in.save(&out[0], out.size());
         }
 
         template<typename T>
-        void marshal_seal_vector(const T &in, marshaled_seal_object &out) {
-            in.save(&out[0], out.size());
+        void marshal_seal_vector(const std::vector<T> &in, std::vector<marshaled_seal_object> &out) {
+            for (std::uint64_t i = 0; i < in.size(); ++i) {
+                marshal_seal_object(in[i], out[i]);
+            }
         }
 
         template<typename T>
@@ -37,21 +40,6 @@ namespace marshal {
         void unmarshal_seal_object(const marshaled_seal_object &in, T &out) {
             out.load(context, &in[0], in.size());
         }
-
-
-        template<typename T>
-        void prepare_seal_marshal_object(marshaled_seal_object &in, const T &seal_object) {
-            in.resize(seal_object.save_size(context));
-        }
-
-        template<typename T>
-        void prepare_seal_marshal_object(std::vector<marshaled_seal_object> &in, const std::vector<T> &seal_object) {
-            in.resize(seal_object.size());
-            for (std::uint64_t i = 0; i < in.size(); ++i) {
-                prepare_seal_marshal_object(in[i], seal_object[i]);
-            }
-        }
-
 
     };
 
