@@ -2,9 +2,9 @@ name: CMake
 
 on:
   push:
-    branches: [ master, frievaldsBranch ]
+    branches: [ "master", "frievaldsBranch" ]
   pull_request:
-    branches: [ master, frievaldsBranch ]
+    branches: [ "master", "frievaldsBranch" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
