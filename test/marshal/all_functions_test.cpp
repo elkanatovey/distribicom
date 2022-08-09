@@ -42,14 +42,12 @@ void ciphertext_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
     assert(unmarshaled_m_ctx.is_transparent());
 }
 
-int all_functions_test(int, char *[]) {
-    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
+void assert_galois_keys_equals(const std::shared_ptr<TestUtils::CryptoObjects> &all, const seal::GaloisKeys &g_key,
+                               const seal::GaloisKeys &newgkey) {
+    assert(false); // unable to compare.
+}
 
-    auto m = marshal::Marshaller::Create(all->encryption_params);
-
-    plaintext_check(all, m);
-    ciphertext_check(all, m);
-
+void galois_keys_check(std::shared_ptr<TestUtils::CryptoObjects> &all, const std::shared_ptr<marshal::Marshaller> &m) {
     auto g_key = all->generate_galois_keys();
 
     //check gkey unmarshal
@@ -58,7 +56,7 @@ int all_functions_test(int, char *[]) {
 
     seal::GaloisKeys newgkey;
     m->unmarshal_seal_object<seal::GaloisKeys>(tmp_gkey, newgkey);
-    assert(seal::is_valid_for(newgkey,all->seal_context));
+    assert(seal::is_valid_for(newgkey, all->seal_context));
 
     //check gkey marshal
     seal::GaloisKeys unmarshaled_m_gkey;
@@ -66,8 +64,19 @@ int all_functions_test(int, char *[]) {
     m->marshal_seal_object(g_key, m_gkey);
 
     m->unmarshal_seal_object<seal::GaloisKeys>(m_gkey, unmarshaled_m_gkey);
-    assert(seal::is_valid_for(unmarshaled_m_gkey,all->seal_context));
+    assert(seal::is_valid_for(unmarshaled_m_gkey, all->seal_context));
 
+    assert_galois_keys_equals(all, g_key, newgkey);
+}
+
+int all_functions_test(int, char *[]) {
+    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
+
+    auto m = marshal::Marshaller::Create(all->encryption_params);
+
+    plaintext_check(all, m);
+    ciphertext_check(all, m);
+    galois_keys_check(all, m);
 
     return 0;
 }
