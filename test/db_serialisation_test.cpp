@@ -15,7 +15,7 @@ using namespace std;
 using namespace seal;
 
 int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
-                              uint32_t dim);
+                           uint32_t dim);
 
 int db_serialisation_test(int argc, char *argv[]) {
     // sanity check
@@ -29,7 +29,7 @@ int db_serialisation_test(int argc, char *argv[]) {
 
 }
 
-int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim) {
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -73,7 +73,7 @@ int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degr
 
 
     seal::Blake2xbPRNGFactory factory;
-    auto gen =  factory.create();
+    auto gen = factory.create();
 
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
@@ -93,7 +93,7 @@ int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degr
 
 
     // do computation at each client
-    for(int i=1; i< pir_params.nvec[1]; i++) {
+    for (int i = 1; i < pir_params.nvec[1]; i++) {
         //get serialized partition
         auto row_serialised = server.get_db_row_serialized(i);
         auto row_len = server.get_row_len();
@@ -112,8 +112,8 @@ int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degr
         }
 
         // compare
-        for(int k=0; k < db_shard_nonserialized->size(); k++){
-            std::cout << "plaintext number "<<k << std::endl;
+        for (int k = 0; k < db_shard_nonserialized->size(); k++) {
+            std::cout << "plaintext number " << k << std::endl;
             assert((*db_shard_nonserialized)[k].to_string() == (*db_)[k].to_string());
         }
 
@@ -121,7 +121,7 @@ int db_serialisation_test1(uint64_t num_items, uint64_t item_size, uint32_t degr
 
     bool failed = false;
 
-    if(failed){
+    if (failed) {
         return -1;
     }
 
