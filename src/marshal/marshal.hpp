@@ -16,20 +16,20 @@ namespace marshal {
         static std::shared_ptr<Marshaller> Create(seal::EncryptionParameters enc_params);
 
         template<typename T>
-        void marshal_seal_object(const T &in, marshaled_seal_object &out) {
-            out.resize(in.save_size(context));
+        void marshal_seal_object(const T &in, marshaled_seal_object &out) const{
+            out.resize(in.save_size());
             in.save(&out[0], out.size());
         }
 
         template<typename T>
-        void marshal_seal_vector(const std::vector<T> &in, std::vector<marshaled_seal_object> &out) {
+        void marshal_seal_vector(const std::vector<T> &in, std::vector<marshaled_seal_object> &out) const{
             for (std::uint64_t i = 0; i < in.size(); ++i) {
                 marshal_seal_object(in[i], out[i]);
             }
         }
 
         template<typename T>
-        void unmarshal_seal_vector(const std::vector<marshaled_seal_object> &in, std::vector<T> &out) {
+        void unmarshal_seal_vector(const std::vector<marshaled_seal_object> &in, std::vector<T> &out) const{
             for (std::uint64_t i = 0; i < in.size(); i++) {
                 unmarshal_seal_object(in[i], out[i]);
             }
@@ -37,7 +37,7 @@ namespace marshal {
 
 
         template<typename T>
-        void unmarshal_seal_object(const marshaled_seal_object &in, T &out) {
+        void unmarshal_seal_object(const marshaled_seal_object &in, T &out) const{
             out.load(context, &in[0], in.size());
         }
 

@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
 create_test_sourcelist(Tests
         marshal_tests.cpp
         basic_test.cpp
+        all_functions_test.cpp
         )
 
 # add the executable
