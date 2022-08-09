@@ -53,6 +53,7 @@ namespace TestUtils {
         seal::Plaintext random_plaintext();
 
         seal::Ciphertext random_ciphertext();
+        seal::GaloisKeys generate_galois_keys();
     };
 
     std::shared_ptr<CryptoObjects> setup(SetupConfigs configs);

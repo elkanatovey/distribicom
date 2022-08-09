@@ -70,6 +70,25 @@ namespace TestUtils {
         w_evaluator = multiplication_utils::EvaluatorWrapper::Create(encryption_params);
     }
 
+    seal::GaloisKeys CryptoObjects::generate_galois_keys() {
+        // Generate the Galois keys needed for coeff_select.
+        std::vector<uint32_t> galois_elts;
+        std::uint64_t N = encryption_params.poly_modulus_degree();
+        std::uint64_t logN = seal::util::get_power_of_two(N);
+
+        // cout << "printing galois elements...";
+        for (std::uint64_t i = 0; i < logN; i++) {
+            galois_elts.push_back((N + seal::util::exponentiate_uint(2, i)) /
+            seal::util::exponentiate_uint(2, i));
+            //#ifdef DEBUG
+            // cout << galois_elts.back() << ", ";
+            //#endif
+        }
+        seal::GaloisKeys gal_keys;
+        keygen.create_galois_keys(galois_elts, gal_keys);
+        return gal_keys;
+    }
+
     TestEncryptionParamsConfigs DEFAULT_ENCRYPTION_PARAMS_CONFIGS = {
             .scheme_type = seal::scheme_type::bgv,
             .polynomial_degree = 4096,
