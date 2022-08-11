@@ -4,7 +4,7 @@
 #include "pir_server.hpp"
 #include "distributed_pir.hpp"
 
-class MasterServer : public PIRServer {
+class Master : public PIRServer {
 
     std::map<std::uint64_t, DatabaseShard> db_rows_;
     std::map<std::uint64_t, std::string> db_rows_serialized_;
@@ -14,11 +14,13 @@ class MasterServer : public PIRServer {
 
     std::map<std::uint64_t, DistributedGaloisContextBucketSerial> galois_buckets_serialized_;
     std::map<ClientID , PirReplyShard> partialReplies_;
+
+    std::map<ClientID , PirQuerySingleDim> expanded_query_dim2;  //expanded dim 2 of query
     uint64_t ptext_len_;
 
 
 public:
-    MasterServer(const seal::EncryptionParameters& parameters, const PirParams& params);
+    Master(const seal::EncryptionParameters& parameters, const PirParams& params);
 
 // distributed pir functions server side
 void store_query(const PirQuery& query, uint32_t client_id);
@@ -60,5 +62,21 @@ void store_query(const PirQuery& query, uint32_t client_id);
     DistributedGaloisContextBucketSerial get_galois_bucket_ser(uint32_t client_id);
 
     void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
+
+
+    PirQuerySingleDim get_expanded_query_first_dim_ser(uint32_t client_id, stringstream &query_stream);
+
+    void process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply);
+
+    PirQuerySingleDim get_expanded_query_single_dim(uint32_t client_id, const PirQuery &query, uint64_t dim_to_expand);
+
+    void set_single_query_second_dim(uint32_t client_id, const PirQuery &query);
+
+    PirReply generate_reply_one_dim(PirQuery &query, uint32_t client_id);
+
+    shared_ptr<Database> get_db();
+
+    PirReply generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id, std::vector<seal::Ciphertext>* db);
+
 };
 

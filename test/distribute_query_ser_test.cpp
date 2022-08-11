@@ -9,26 +9,27 @@
 #include <random>
 #include <cstdint>
 #include <cstddef>
+#include "FreivaldsVector.hpp"
 
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt,
                            uint32_t dim);
 
-int main(int argc, char *argv[]) {
+int distribute_query_ser_test(int argc, char *argv[]) {
     // sanity check
-    assert(distribute_query_ser_test(16, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(16, 288, 4096, 20, 2) == 0);
 
     // speed check
-    assert(distribute_query_ser_test(1 << 10, 288, 4096, 20, 2) == 0);
+    assert(distribute_query_ser_test1(1 << 10, 288, 4096, 20, 2) == 0);
 
-    assert(distribute_query_ser_test(1 << 12, 288, 4096, 20, 2) == 0);
-
+    assert(distribute_query_ser_test1(1 << 12, 288, 4096, 20, 2) == 0);
+    return 0;
 }
 
-int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
+int distribute_query_ser_test1(uint64_t num_items, uint64_t item_size, uint32_t degree, uint32_t lt, uint32_t dim){
 
     uint64_t number_of_items = num_items;
     uint64_t size_per_item = item_size; // in bytes
@@ -71,10 +72,13 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     // the correct element.
     auto db_copy(make_unique<uint8_t[]>(number_of_items * size_per_item));
 
-    random_device rd;
+
+    seal::Blake2xbPRNGFactory factory;
+    auto gen =  factory.create();
+
     for (uint64_t i = 0; i < number_of_items; i++) {
         for (uint64_t j = 0; j < size_per_item; j++) {
-            auto val = rd() % 256;
+            auto val = gen->generate() % 256;
             db.get()[(i * size_per_item) + j] = val;
             db_copy.get()[(i * size_per_item) + j] = val;
         }
@@ -82,7 +86,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // Initialize PIR Server
     cout << "Main: Initializing server and client" << endl;
-    MasterServer server(enc_params, pir_params);
+    Master server(enc_params, pir_params);
 
     // Initialize PIR client....
     PIRClient client(enc_params, pir_params);
@@ -98,6 +102,15 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     auto time_pre_s = high_resolution_clock::now();
     server.set_database(move(db), number_of_items, size_per_item);
     server.generate_dbase_partition(); //@todo pretty this up
+
+//    std::vector<std::vector<std::uint64_t>> db_unencoded(pir_params.nvec[0]*pir_params.nvec[1]);
+//    server.db_to_vec(db_unencoded);
+//    FreivaldsVector f(enc_params, pir_params);
+//    f.multiply_with_db(db_unencoded);
+
+
+
+
     server.preprocess_database();
     cout << "Main: database pre processed " << endl;
     auto time_pre_e = high_resolution_clock::now();
@@ -108,7 +121,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 //    auto z1 =  server.get_db_row(0);
 
     // Choose an index of an element in the DB
-    uint64_t ele_index = rd() % number_of_items; // element in DB at random position
+    uint64_t ele_index = gen->generate() % number_of_items; // element in DB at random position
     uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
     cout << "Main: element index = " << ele_index << " from [0, " << number_of_items -1 << "]" << endl;
@@ -123,19 +136,29 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
     cout << "Main: query generated" << endl;
 
     //store query for multiple server computation
-    server.store_query_ser(0, query.str());
+    auto query_string = query.str();
+    server.store_query_ser(0, query_string);
+    stringstream query_copy;
+    query_copy.str(query_string);
+    auto expanded_query = server.get_expanded_query_first_dim_ser(0, query_copy);
+
+
+//    f.multiply_with_query(0, expanded_query);
 
     // do computation at each client
-    for(int i=0; i< pir_params.nvec[1]; i++) {
+    for(std::uint64_t i=0; i< pir_params.nvec[1]; i++) {
         auto row = server.get_db_row_serialized(i);
         auto row_len = server.get_row_len();
+        stringstream temp_db_;
+        temp_db_.str(row);
 
         DistributedQueryContextBucketSerial bucket = server.get_query_bucket_to_compute_serialized(0);
-        ClientSideServer clientSideServer(enc_params, pir_params, row, i, row_len);
+        Worker clientSideServer(enc_params, pir_params, temp_db_, i, row_len);
         auto gkeys_ser = server.get_galois_bucket_ser(0);
 
+        // add client galois key - needed for expand
         stringstream galois_str;
-        for(int j=0;j<gkeys_ser.size();j++){
+        for(std::uint64_t j=0;j<gkeys_ser.size();j++){
             galois_str.str(gkeys_ser[j].galois);
             clientSideServer.set_one_galois_key_ser(gkeys_ser[j].client_id, galois_str);
             galois_str.clear();
@@ -146,12 +169,13 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
         stringstream worker_query_stream;
         stringstream worker_reply_stream;
 
+        // calculate partial reply
         // for storing individual answers of single client in the test - dont need totrack id here as only client 0
         // answers being given
         vector<std::string> partial_answers;
         for(auto & query_context : bucket){
             worker_query_stream.str(query_context.query);
-            clientSideServer.process_query_at_client_ser(worker_query_stream, worker_reply_stream, query_context.client_id);
+            clientSideServer.process_query_at_client_ser(worker_query_stream, worker_reply_stream, query_context.client_id, true);
             worker_query_stream.clear();
             partial_answers.push_back(worker_reply_stream.str());
             worker_reply_stream.clear();
@@ -160,13 +184,14 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
         auto time_client_e = high_resolution_clock::now();
         auto time_client_us = duration_cast<microseconds>(time_client_e - time_client_s).count();
-        cout << "Main: ClientSideServer "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
+        cout << "Main: Worker "<< i<<" reply generation time: " << time_client_us / 1000 << " ms ............................."
              << endl;
 
         stringstream partial_reply_stream;
         for(auto & answer : partial_answers){
             partial_reply_stream << answer;
             server.process_reply_at_server_ser(partial_reply_stream, 0);
+//            f.multiply_with_reply(0, server.get_row_id(i), answer);
             partial_reply_stream.clear();
         }
     }
@@ -185,7 +210,7 @@ int distribute_query_ser_test(uint64_t num_items, uint64_t item_size, uint32_t d
 
     // Measure response extraction
     auto time_decode_s = chrono::high_resolution_clock::now();
-    repl1y = client.deserialize_reply(reply_server_individual);
+    repl1y = client.deserialize_reply(reply_stream);
     vector<uint8_t> elems = client.decode_reply(repl1y, offset);
     auto time_decode_e = chrono::high_resolution_clock::now();
     auto time_decode_us = duration_cast<microseconds>(time_decode_e - time_decode_s).count();

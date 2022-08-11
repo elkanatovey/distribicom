@@ -7,7 +7,7 @@ using namespace seal::util;
 /**
  *  Note for now: local server for client constructor
  */
-ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams &pir_params, unique_ptr<vector<seal::Plaintext>> db, uint32_t shard_id ) :
+Worker::Worker(const seal::EncryptionParameters &seal_params, const PirParams &pir_params, unique_ptr<vector<seal::Plaintext>> db, uint32_t shard_id ) :
         PIRServer(seal_params, pir_params)
 {
     db_ = move(db);
@@ -19,25 +19,19 @@ ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params
 /**
  *  Note for now: local server for client constructor
  */
-ClientSideServer::ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams
-&pir_params, std::string db, uint32_t shard_id,uint32_t row_len) :
+Worker::Worker(const seal::EncryptionParameters &seal_params, const PirParams
+&pir_params, std::stringstream &db_stream, uint32_t shard_id, uint32_t row_len) :
 PIRServer(seal_params, pir_params)
 {
-    db_ = make_unique<vector<seal::Plaintext>>();
-    stringstream temp_db_;
-    temp_db_ << db;
-    for (uint32_t j = 0; j < row_len; j++) {
-        Plaintext p;
-        p.load(*context_, temp_db_);
-        db_->push_back(p);
-    }
+    db_ = make_shared<vector<seal::Plaintext>>();
+    deserialize_db(*context_, db_stream, row_len, db_);
 
     is_db_preprocessed_ = false;
     shard_id_ = shard_id;
 }
 
 
-void ClientSideServer::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
+void Worker::set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream) {
     GaloisKeys gkey;
     gkey.load(*context_, galois_stream);
     set_galois_key(client_id, gkey);
@@ -46,7 +40,7 @@ void ClientSideServer::set_one_galois_key_ser(uint32_t client_id, stringstream &
 /**
  *  get partial answers from a bucket
  */
-PirReplyShardBucket ClientSideServer::processQueryBucketAtClient(DistributedQueryContextBucket
+PirReplyShardBucket Worker::processQueryBucketAtClient(DistributedQueryContextBucket
 queries){ // @todo parallelize
     PirReplyShardBucket answers;
     for(const auto& query_context: queries){
@@ -59,7 +53,7 @@ queries){ // @todo parallelize
 /**
  *  get partial answers from a bucket
  */
-PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
+PirReplyShardBucketSerial Worker::process_query_bucket_at_client_ser_
 (DistributedQueryContextBucketSerial queries){ // @todo parallelize
     PirReplyShardBucketSerial answers;
     stringstream query_stream;
@@ -75,11 +69,11 @@ PirReplyShardBucketSerial ClientSideServer::process_query_bucket_at_client_ser_
     return answers;
 }
 
-int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, stringstream&
-                                                                  reply_stream,uint32_t client_id){
+int Worker::process_query_at_client_ser(stringstream &query_stream, stringstream&
+                                                                  reply_stream, uint32_t client_id, bool do_second_level){
     PirQuery current_query = deserialize_query(query_stream);
     query_stream.clear();
-    PirReplyShard reply = processQueryAtClient(current_query, client_id);
+    PirReplyShard reply = processQueryAtClient(current_query, client_id, do_second_level);
     auto num_bytes = serialize_reply(reply, reply_stream);
     return num_bytes;
 }
@@ -87,7 +81,7 @@ int ClientSideServer::process_query_at_client_ser(stringstream &query_stream, st
 /**
  *  do matrix multiplication with local shard, returns local part of answer  --assumes db is 2dim and galois key inserted
  */
-PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t client_id) {
+PirReplyShard Worker::processQueryAtClient(PirQuery query, uint32_t client_id, bool do_second_level) {
 
     vector<uint64_t> nvec = pir_params_.nvec;
     uint64_t product = nvec[0]; //don't count rows in calculation, as only one row in shard @todo check the math of this
@@ -145,6 +139,9 @@ PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t cl
             // print intermediate ctxts?
             //cout << "const term of ctxt " << jj << " = " << intermediateCtxts[jj][0] << endl;
         }
+        if (!do_second_level){
+            return intermediateCtxts;
+        }
 
         if (i == nvec.size() - 1) {
             return intermediateCtxts;
@@ -163,7 +160,7 @@ PirReplyShard ClientSideServer::processQueryAtClient(PirQuery query, uint32_t cl
     return fail;
 }
 
-inline void ClientSideServer::expand_query_single_dim(vector<Ciphertext> &expanded_query, uint64_t n_i,  // n_i
+inline void Worker::expand_query_single_dim(vector<Ciphertext> &expanded_query, uint64_t n_i,  // n_i
                                        // is current dim
                                                const PirQuerySingleDim& query, uint32_t client_id){
     auto N = enc_params_.poly_modulus_degree();
@@ -194,9 +191,9 @@ inline void ClientSideServer::expand_query_single_dim(vector<Ciphertext> &expand
 /**
  *  do the multiplication of the query by db for current dimension
  */
-inline void ClientSideServer::doPirMultiplication(uint64_t product, const vector<Plaintext> *cur, const
+inline void Worker::doPirMultiplication(uint64_t product, const vector<Plaintext> *cur, const
 vector<Ciphertext> &expanded_query,
-                                           uint64_t n_i, vector<Ciphertext> &intermediateCtxts, Ciphertext &temp) {
+                                        uint64_t n_i, vector<Ciphertext> &intermediateCtxts, Ciphertext &temp) {
     for (uint64_t k = 0; k < product; k++) { // k is row in db
 
         // multiply query[0] by first column
@@ -213,9 +210,9 @@ vector<Ciphertext> &expanded_query,
  *  map intermediateCtxts to vector of plaintexts (intermediate_plain), and update curr (the db pointer) to point
  *  to intermediate_plain. This will be treated as the current db in the next iteration of multiplications
  */
-inline void ClientSideServer::turn_intermediateCtexts_to_db_format( vector<Plaintext>
+inline void Worker::turn_intermediateCtexts_to_db_format(vector<Plaintext>
         &intermediate_plain, vector<Ciphertext> &intermediateCtxts,
-                                                            uint64_t &product, vector<Plaintext> *&cur) {
+                                                         uint64_t &product, vector<Plaintext> *&cur) {
     intermediate_plain.clear();
     intermediate_plain.reserve(pir_params_.expansion_ratio * product);
     cur = &intermediate_plain;

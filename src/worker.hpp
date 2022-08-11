@@ -4,19 +4,19 @@
 #include "pir_server.hpp"
 #include "distributed_pir.hpp"
 
-class ClientSideServer : public PIRServer {
+class Worker : public PIRServer {
 
     std::uint32_t shard_id_;
 
 // client side pir computations
-PirReplyShard processQueryAtClient(PirQuery query, uint32_t client_id);
+PirReplyShard processQueryAtClient(PirQuery query, uint32_t client_id, bool do_second_level=true);
 
 public:
 // constructor for client side server
-ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams &pir_params,
-                 unique_ptr<vector<seal::Plaintext>>db, uint32_t shard_id);
-ClientSideServer(const seal::EncryptionParameters &seal_params, const PirParams& pir_params,
-                 std::string db, uint32_t shard_id,uint32_t row_len);
+Worker(const seal::EncryptionParameters &seal_params, const PirParams &pir_params,
+       unique_ptr<vector<seal::Plaintext>>db, uint32_t shard_id);
+Worker(const seal::EncryptionParameters &seal_params, const PirParams& pir_params,
+       std::stringstream &db_stream, uint32_t shard_id, uint32_t row_len);
 
 // distributed pir functions client side
 PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket queries);
@@ -24,7 +24,10 @@ PirReplyShardBucket processQueryBucketAtClient(DistributedQueryContextBucket que
 PirReplyShardBucketSerial process_query_bucket_at_client_ser_(DistributedQueryContextBucketSerial
 queries);
 
-int process_query_at_client_ser(stringstream &query_stream, stringstream &reply_stream, uint32_t client_id);
+/**
+ *  do_second_level decides if worker does partial pir also on second level of recursion
+ */
+int process_query_at_client_ser(stringstream &query_stream, stringstream &reply_stream, uint32_t client_id, bool do_second_level=true);
 
 void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
 
