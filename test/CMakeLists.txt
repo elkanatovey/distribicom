@@ -1,5 +1,3 @@
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
-
 
 add_library(test_utils test_utils.hpp test_utils.cpp)
 

@@ -2,6 +2,7 @@
 
 #include "seal/seal.h"
 #include <cassert>
+#include "defines.h"
 
 namespace multiplication_utils {
     /***

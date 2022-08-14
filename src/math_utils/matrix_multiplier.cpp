@@ -1,7 +1,5 @@
 #include "matrix_multiplier.hpp"
-
-#define COL 0
-#define ROW 1
+#include "defines.h"
 
 namespace multiplication_utils {
     void foo() {
@@ -19,7 +17,7 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
-//        #ifdef MY_DEBUG
+//        #ifdef DISTRIBICOM_DEBUG
         assert(m.size() == v.size());
 //        #endif
 
@@ -91,7 +89,7 @@ namespace multiplication_utils {
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
                                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
                                                    &result) {
-//        #ifdef MY_DEBUG
+//        #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
         for (auto &ptx: matrix) {
             assert(ptx[0].is_ntt_form());
@@ -120,7 +118,7 @@ namespace multiplication_utils {
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
                                                    &result) {
-//#ifdef MY_DEBUG
+//#ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
         for (auto & ctx : matrix) {
             assert(!ctx.is_ntt_form());

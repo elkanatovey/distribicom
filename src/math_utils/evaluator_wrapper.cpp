@@ -58,7 +58,7 @@ namespace multiplication_utils {
      * The resulted SplitPlaintextNTTForm is in NTT.
      */
     SplitPlaintextNTTForm EvaluatorWrapper::split_plaintext(const seal::Plaintext &a) const {
-        #ifdef MY_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
         #endif
 
@@ -92,7 +92,7 @@ namespace multiplication_utils {
 
     void
     EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(2 == a.size());
         for (auto &a_i: a) {
             assert(a_i.is_ntt_form());
@@ -109,7 +109,7 @@ namespace multiplication_utils {
 
     void
     EvaluatorWrapper::mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
         assert(b.is_ntt_form());
         #endif
@@ -118,7 +118,7 @@ namespace multiplication_utils {
     }
 
     void EvaluatorWrapper::mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(a.is_ntt_form());
         assert(b.is_ntt_form());
         #endif
@@ -127,7 +127,7 @@ namespace multiplication_utils {
     }
 
     void EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form() && !b.is_ntt_form());
         #endif
 

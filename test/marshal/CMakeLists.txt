@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
+
 
 
 # create the testing file and list of tests
