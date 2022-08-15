@@ -29,3 +29,5 @@ message("seal dir is ${SEAL_DIR}")
 set(SEAL_DIR ${SEAL_DIR} CACHE STRING "" FORCE)
 # get sealpir
 include(dependencies/FetchSealPIR.cmake)
+
+include(dependencies/FetchGRPC.cmake)
