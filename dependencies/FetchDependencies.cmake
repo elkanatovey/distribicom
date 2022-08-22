@@ -1,3 +1,8 @@
+# Store the old value of the 'CMAKE_RUNTIME_OUTPUT_DIRECTORY'
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_OLD ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+# Make subproject to use 'BUILD_SHARED_LIBS=ON' setting.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/deps CACHE INTERNAL "send deps binaries off")
+
 
 message("seal dir is ${SEAL_DIR}")
 # get seal if no seal_dir
@@ -33,3 +38,5 @@ set(SEAL_DIR ${SEAL_DIR} CACHE STRING "" FORCE)
 include(dependencies/FetchSealPIR.cmake)
 
 include(dependencies/FetchGRPC.cmake)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_OLD} CACHE PATH "send deps binaries off done" FORCE)

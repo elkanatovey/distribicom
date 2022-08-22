@@ -1,4 +1,4 @@
-find_package(SEAL 4.0.0 REQUIRED)
+
 
 add_subdirectory(math_utils)
 add_subdirectory(marshal)
@@ -12,5 +12,10 @@ target_link_libraries(distribicom_cpp marshal_package multiplication_utils sealp
 
 
 add_executable(main1 main.cpp)
+set_target_properties(
+        main1
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples
+)
 #target_include_directories(main1 PUBLIC ${com_sealpir_SOURCE_DIR}/src)
 target_link_libraries(main1 distribicom_cpp)

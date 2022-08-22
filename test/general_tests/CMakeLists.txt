@@ -12,6 +12,11 @@ create_test_sourcelist (Tests
 
 # add the executable
 add_executable (general_tests ${Tests})
+set_target_properties(
+        general_tests
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
+)
 target_link_libraries(general_tests multiplication_utils test_utils)
 
 # remove the test driver source file
