@@ -1,20 +1,8 @@
-
-set(_PROTOBUF_LIBPROTOBUF libprotobuf)
-set(_REFLECTION grpc++_reflection)
-set(_PROTOBUF_PROTOC $<TARGET_FILE:protoc>)
-set(_GRPC_GRPCPP grpc++)
-if(CMAKE_CROSSCOMPILING)
-    find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
-else()
-    set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
-endif()
-
 set(proto_names boot distribicom)
 foreach(proto_name ${proto_names})
     # Get proto files
     get_filename_component(proto "./protos/${proto_name}.proto" ABSOLUTE)
     get_filename_component(proto_dir "${proto}" DIRECTORY)
-
     # Generate source files
     set(proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/${proto_name}.pb.cc")
     set(proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/${proto_name}.pb.h")
@@ -30,6 +18,22 @@ foreach(proto_name ${proto_names})
             "${proto}"
             DEPENDS "${proto}"
     )
-#    set(targets "${proto_name}_server" "${proto_name}_client")
+
+    # hw_grpc_proto
+    add_library(${proto_name}_grpc
+            ${grpc_srcs}
+            ${grpc_hdrs}
+            ${proto_srcs}
+            ${proto_hdrs}
+            "${proto}")
+
+    # Include generated *.pb.h files
+    target_include_directories(${proto_name}_grpc PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+    target_link_libraries(${proto_name}_grpc
+            ${_REFLECTION}
+            ${_GRPC_GRPCPP}
+            ${_PROTOBUF_LIBPROTOBUF})
+
 
 endforeach()
+
