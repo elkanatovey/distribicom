@@ -2,7 +2,6 @@
 
 #include "query_expander.hpp"
 #include "seal/seal.h"
-#include <pir.hpp>
 #include <vector>
 #include <cmath>
 #include <stdexcept>
@@ -10,14 +9,14 @@
 namespace multiplication_utils {
 
     /***
-     * ExpandQuery takes a part of multi-dimensional query and expand one part of.
+     * expand_query takes a part of multi-dimensional query and expand one part of.
      *  in sealPIR, this is consider a part out of a full query that should be expanded.
      * @param query_i the query_i to be expanded in dimension i
      * @param n_i - number of elements in dimension i
      * @return
      */
-    void QueryExpander::ExpandQuery(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey,
-                                    std::vector<seal::Ciphertext> &expanded_query) {
+    void QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey,
+                                     std::vector<seal::Ciphertext> &expanded_query) {
         auto N = enc_params_.poly_modulus_degree();
 
         auto pool = seal::MemoryManager::GetPool();
@@ -31,7 +30,7 @@ namespace multiplication_utils {
                 total = n_i % N; // how much more should i expand.
             }
             std::cout << "-- expanding one query_i ctxt into " << total << " ctxts " << std::endl;
-            std::vector<seal::Ciphertext> expanded_query_part = expand_query(query_i[j], total, galkey);
+            std::vector<seal::Ciphertext> expanded_query_part = __expand_query(query_i[j], total, galkey);
             expanded_query.insert(
                     expanded_query.end(),
                     std::make_move_iterator(expanded_query_part.begin()),
@@ -49,9 +48,9 @@ namespace multiplication_utils {
 
 
     inline std::vector<seal::Ciphertext>
-    QueryExpander::expand_query(const seal::Ciphertext &encrypted,
-                                uint32_t m,
-                                seal::GaloisKeys &galkey) {
+    QueryExpander::__expand_query(const seal::Ciphertext &encrypted,
+                                  uint32_t m,
+                                  seal::GaloisKeys &galkey) {
 
 
         // Assume that m is a power of 2. If not, round it to the next power of 2.
@@ -136,8 +135,8 @@ namespace multiplication_utils {
             }
         }
 
-        auto first = newtemp.begin();
-        auto last = newtemp.begin() + m;
+        std::vector<seal::Ciphertext>::const_iterator first = newtemp.begin();
+        std::vector<seal::Ciphertext>::const_iterator last = newtemp.begin() + m;
         std::vector<seal::Ciphertext> newVec(first, last);
 
         return newVec;
