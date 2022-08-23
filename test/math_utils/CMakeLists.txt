@@ -6,6 +6,7 @@ create_test_sourcelist (Tests
         left_int_vec_multiply.cpp
         right_vec_multiply.cpp
         evaluator_wrapper_test.cpp
+        query_expander_test.cpp
         )
 
 # add the executable

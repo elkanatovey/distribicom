@@ -17,9 +17,8 @@ namespace multiplication_utils {
      * @return
      */
     void QueryExpander::ExpandQuery(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey,
-                                    std::vector<seal::Ciphertext> expanded_query) {
+                                    std::vector<seal::Ciphertext> &expanded_query) {
         auto N = enc_params_.poly_modulus_degree();
-        auto coeff_count = enc_params_.poly_modulus_degree();
 
         auto pool = seal::MemoryManager::GetPool();
 

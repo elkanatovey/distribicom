@@ -18,7 +18,7 @@ namespace multiplication_utils {
         static std::shared_ptr<QueryExpander> Create(const seal::EncryptionParameters enc_params);
 
         void ExpandQuery(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey,
-                         std::vector<seal::Ciphertext> expanded_query);
+                         std::vector<seal::Ciphertext> &expanded_query);
 
     private:
         explicit QueryExpander(const seal::EncryptionParameters enc_params);
