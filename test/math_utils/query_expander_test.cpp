@@ -4,14 +4,11 @@
 #include "../test_utils.hpp"
 
 // Throws on failure:
-void correct_expansion_test();
+void correct_expansion_test(TestUtils::SetupConfigs);
+
+void expanding_full_dimension_query(TestUtils::SetupConfigs);
 
 int query_expander_test(int, char *[]) {
-    correct_expansion_test();
-    return 0;
-}
-
-void correct_expansion_test() {
     auto dcfs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
                     .scheme_type = seal::scheme_type::bgv,
@@ -27,7 +24,11 @@ void correct_expansion_test() {
                     .use_recursive_mod_switching = true,
             },
     };
+    correct_expansion_test(dcfs);
+    return 0;
+}
 
+void correct_expansion_test(TestUtils::SetupConfigs dcfs) {
     auto all = TestUtils::setup(dcfs);
 
     // Initialize PIR client....
@@ -42,7 +43,7 @@ void correct_expansion_test() {
         uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
         uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
         std::cout << "Main: element index = " << ele_index << " from [0, "
-             << all->pir_params.ele_num - 1 << "]" << std::endl;
+                  << all->pir_params.ele_num - 1 << "]" << std::endl;
         std::cout << "Main: FV index = " << index << ", FV offset = " << offset << std::endl;
 
         // Measure query generation
@@ -83,4 +84,11 @@ void correct_expansion_test() {
             }
         }
     }
+}
+
+void expanding_full_dimension_query(TestUtils::SetupConfigs) {
+// need to expand a single query, and multiply it with some DB.
+// basically mult once from left and once from the right.
+// and expect a specific element.
+
 }
