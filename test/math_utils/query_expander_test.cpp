@@ -136,7 +136,7 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
     to_ntt(all, expanded_query_dim_0);
     matops->right_multiply(dims, splittx_db, expanded_query_dim_0, matXv0);
 
-    dims = {dim0_size, 1};
+
     from_ntt(all, matXv0);
     for (int i = 0; i < matXv0.size(); ++i) {
         assert(client.decrypt(matXv0[i]).to_string() == db_ptr->at(i).to_string()); // assert row was taken.
@@ -148,6 +148,7 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
 
     // because the expanded vector has a single element that is not 0, i'd expect the result to contain one element from the db
     std::vector<seal::Ciphertext> reduced_result(1);
+    dims = {dim0_size, 1};
     matops->right_multiply(dims, matXv0, expanded_query_dim_1, reduced_result);
     auto out_string = client.decrypt(reduced_result.at(0)).to_string();
     for (int i = 0; i < db_ptr->size(); ++i) {
