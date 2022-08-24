@@ -9,7 +9,7 @@ void correct_expansion_test(TestUtils::SetupConfigs);
 void expanding_full_dimension_query(TestUtils::SetupConfigs);
 
 int query_expander_test(int, char *[]) {
-    auto dcfs = TestUtils::SetupConfigs{
+    auto cnfgs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
                     .scheme_type = seal::scheme_type::bgv,
                     .polynomial_degree = 4096,
@@ -18,40 +18,36 @@ int query_expander_test(int, char *[]) {
             .pir_params_configs = {
                     .number_of_items = 2048,
                     .size_per_item = 288,
-                    .dimensions= 1,
+                    .dimensions= 2,
                     .use_symmetric = false,
                     .use_batching = true,
                     .use_recursive_mod_switching = true,
             },
     };
-    correct_expansion_test(dcfs);
+    expanding_full_dimension_query(cnfgs);
+    cnfgs.pir_params_configs.dimensions = 1;
+    correct_expansion_test(cnfgs);
     return 0;
 }
 
-void correct_expansion_test(TestUtils::SetupConfigs dcfs) {
-    auto all = TestUtils::setup(dcfs);
+void correct_expansion_test(TestUtils::SetupConfigs cnfgs) {
+    auto all = TestUtils::setup(cnfgs);
 
     // Initialize PIR client....
     PIRClient client(all->encryption_params, all->pir_params);
     seal::GaloisKeys galois_keys = client.generate_galois_keys();
 
-
+    std::uint64_t n_i = all->pir_params.nvec[0];
     auto expander = multiplication_utils::QueryExpander::Create(all->encryption_params);
-    for (std::uint64_t k = 0; k < all->pir_params.ele_num; ++k) {
-        uint64_t ele_index = k;
 
-        uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
-        uint64_t offset = client.get_fv_offset(ele_index); // offset in FV plaintext
+    for (std::uint64_t k = 0; k < all->pir_params.ele_num; ++k) {
+        std::uint64_t ele_index = k;
+        std::uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
         std::cout << "Main: element index = " << ele_index << " from [0, "
                   << all->pir_params.ele_num - 1 << "]" << std::endl;
-        std::cout << "Main: FV index = " << index << ", FV offset = " << offset << std::endl;
-
-        // Measure query generation
-
         PirQuery query = client.generate_query(index);
         std::cout << "Main: query generated" << std::endl;
 
-        uint64_t n_i = all->pir_params.nvec[0];
         std::vector<seal::Ciphertext> expanded_query = expander->__expand_query(query[0][0], n_i, galois_keys);
         std::cout << "Main: query expanded" << std::endl;
 
@@ -86,9 +82,27 @@ void correct_expansion_test(TestUtils::SetupConfigs dcfs) {
     }
 }
 
-void expanding_full_dimension_query(TestUtils::SetupConfigs) {
-// need to expand a single query, and multiply it with some DB.
-// basically mult once from left and once from the right.
-// and expect a specific element.
+void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
+    cnfgs.pir_params_configs.dimensions = 2;
+    // need to expand a single query, and multiply it with some DB.
+    // basically mult once from left and once from the right.
+    // and expect a specific element.
+    auto all = TestUtils::setup(cnfgs);
 
+    PIRClient client(all->encryption_params, all->pir_params);
+    seal::GaloisKeys galois_keys = client.generate_galois_keys();
+    std::uint64_t n_0 = all->pir_params.nvec[0];
+    std::uint64_t n_1 = all->pir_params.nvec[1];
+
+    std::uint64_t ele_index = 0;
+    std::uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
+    std::cout << "Main: element index = " << ele_index << " from [0, "
+              << all->pir_params.ele_num - 1 << "]" << std::endl;
+    PirQuery query = client.generate_query(index);
+
+    auto expander = multiplication_utils::QueryExpander::Create(all->encryption_params);
+
+    auto expanded_query_dim_0 = expander->expand_query(query[0], n_0, galois_keys);
+    auto expanded_query_dim_1 = expander->expand_query(query[1], n_1, galois_keys);
+    // mult it.
 }

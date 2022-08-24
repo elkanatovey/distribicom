@@ -15,8 +15,9 @@ namespace multiplication_utils {
      * @param n_i - number of elements in dimension i
      * @return
      */
-    void QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey,
-                                     std::vector<seal::Ciphertext> &expanded_query) {
+    std::vector<seal::Ciphertext>
+    QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey) {
+        std::vector<seal::Ciphertext> expanded_query;
         auto N = enc_params_.poly_modulus_degree();
 
         auto pool = seal::MemoryManager::GetPool();
@@ -44,6 +45,8 @@ namespace multiplication_utils {
             o << " size mismatch!!! " << expanded_query.size() << ", " << n_i;
             throw std::runtime_error(o.str());
         }
+
+        return expanded_query;
     }
 
 

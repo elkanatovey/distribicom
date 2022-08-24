@@ -17,8 +17,7 @@ namespace multiplication_utils {
     public:
         static std::shared_ptr<QueryExpander> Create(const seal::EncryptionParameters enc_params);
 
-        void expand_query(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey,
-                          std::vector<seal::Ciphertext> &expanded_query);
+        std::vector<seal::Ciphertext> expand_query(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey);
 
         // TODO: how to make it public in tests only? only? not public?
         std::vector<seal::Ciphertext> __expand_query(const seal::Ciphertext &encrypted,
