@@ -1,6 +1,8 @@
 #pragma once
 
 #include "evaluator_wrapper.hpp"
+#include <pir_client.hpp>
+
 
 namespace multiplication_utils {
     /***
@@ -43,7 +45,8 @@ namespace multiplication_utils {
          * @param matrix plaintext matrix to mult
          * @param result where to place result, not in ntt representation
          */
-        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
+        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                           PlaintextDefaultFormMatrix &matrix,
                            std::vector<seal::Plaintext> &result);
 
 
@@ -86,7 +89,9 @@ namespace multiplication_utils {
         void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
-
+        void right_multiply_debug(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
+                                  std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result,
+                                  PIRClient &client);
     };
 
     void foo();
