@@ -17,7 +17,7 @@ set_target_properties(
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
 )
 
-target_link_libraries(math_utils_tests multiplication_utils test_utils)
+target_link_libraries(math_utils_tests multiplication_utils distribicom_cpp test_utils)
 
 # remove the test driver source file
 set (TestsToRun ${Tests})

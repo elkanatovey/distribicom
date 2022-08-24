@@ -11,6 +11,7 @@ namespace multiplication_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
+    // TODO: this is not a class name style. and maybe change it to MatrixOperations
     class matrix_multiplier {
     private:
         explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator) {};
