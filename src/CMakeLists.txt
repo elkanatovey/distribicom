@@ -2,7 +2,7 @@
 
 add_subdirectory(math_utils)
 add_subdirectory(marshal)
-add_subdirectory(network_layer)
+add_subdirectory(internals)
 
 add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp master.hpp master.cpp worker.hpp worker.cpp
         FreivaldsVector.hpp FreivaldsVector.cpp)
