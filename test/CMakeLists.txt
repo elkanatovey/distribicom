@@ -23,14 +23,14 @@ create_test_sourcelist(Tests
         )
 
 # add the executable
-add_executable(CommonTests ${Tests})
+add_executable(distribicom_CommonTests ${Tests})
 set_target_properties(
-        CommonTests
+        distribicom_CommonTests
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
 )
 
-target_link_libraries(CommonTests distribicom_cpp test_utils)
+target_link_libraries(distribicom_CommonTests distribicom_cpp test_utils)
 
 # remove the test driver source file
 set(TestsToRun ${Tests})
@@ -39,6 +39,6 @@ remove(TestsToRun CommonTests.cpp)
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
     get_filename_component(TName ${test} NAME_WE)
-    add_test(NAME ${TName} COMMAND CommonTests ${TName})
+    add_test(NAME ${TName} COMMAND distribicom_CommonTests ${TName})
 endforeach ()
 

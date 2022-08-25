@@ -10,14 +10,14 @@ create_test_sourcelist (Tests
         )
 
 # add the executable
-add_executable (math_utils_tests ${Tests})
+add_executable (distribicom_math_utils_tests ${Tests})
 set_target_properties(
-        math_utils_tests
+        distribicom_math_utils_tests
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
 )
 
-target_link_libraries(math_utils_tests multiplication_utils distribicom_cpp test_utils)
+target_link_libraries(distribicom_math_utils_tests multiplication_utils distribicom_cpp test_utils)
 
 # remove the test driver source file
 set (TestsToRun ${Tests})
@@ -26,5 +26,5 @@ remove (TestsToRun math_utils_tests.cpp)
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
     get_filename_component (TName ${test} NAME_WE)
-    add_test (NAME "math_utils/${TName}" COMMAND math_utils_tests ${TName})
+    add_test (NAME "math_utils/${TName}" COMMAND distribicom_math_utils_tests ${TName})
 endforeach ()
