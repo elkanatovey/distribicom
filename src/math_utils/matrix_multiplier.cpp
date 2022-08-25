@@ -143,36 +143,4 @@ namespace multiplication_utils {
         }
     }
 
-    void
-    matrix_multiplier::right_multiply_debug(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
-                                            std::vector<seal::Ciphertext> &right_vec,
-                                            std::vector<seal::Ciphertext> &result, PIRClient &client) {
-//#ifdef DISTRIBICOM_DEBUG
-        // everything needs to be in NTT!
-        for (auto &ctx: matrix) {
-            assert(!ctx.is_ntt_form());
-        }
-//        assert(right_vec.size() == dims[COL]);
-
-//#endif
-        seal::Ciphertext tmp;
-        for (uint64_t j = 0; j < dims[ROW]; j++) {
-            w_evaluator->mult(matrix[j], right_vec[0], result[j]);
-            std::cout << "dbg1: " << client.decrypt(right_vec[0]).to_string() << std::endl;
-            std::cout << "dbg2: " << client.decrypt(matrix[j]).to_string() << std::endl;
-            std::cout << "dbg3: " << client.decrypt(result[j]).to_string() << std::endl;
-            for (uint64_t k = 1; k < dims[COL]; k++) {
-
-                w_evaluator->mult(
-                        matrix[j + k * dims[ROW]],
-                        right_vec[k],
-                        tmp
-                );
-
-                w_evaluator->evaluator->add_inplace(result[j], tmp);
-
-            }
-        }
-    }
-
 }

@@ -89,9 +89,6 @@ namespace multiplication_utils {
         void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
-        void right_multiply_debug(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
-                                  std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result,
-                                  PIRClient &client);
     };
 
     void foo();

@@ -11,10 +11,12 @@ void correct_expansion_test(TestUtils::SetupConfigs);
 void expanding_full_dimension_query(TestUtils::SetupConfigs);
 
 int query_expander_test(int, char *[]) {
+    // encryption parameters ensure that we have enough multiplication depth.
+    // coefficient modulus is set automatically.
     auto cnfgs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bgv,
-                    .polynomial_degree = 4096,
+                    .scheme_type = seal::scheme_type::bfv,
+                    .polynomial_degree = 4096 * 2,
                     .log_coefficient_modulus = 20,
             },
             .pir_params_configs = {
@@ -26,9 +28,12 @@ int query_expander_test(int, char *[]) {
                     .use_recursive_mod_switching = true,
             },
     };
+
     expanding_full_dimension_query(cnfgs);
+    cnfgs.encryption_params_configs.polynomial_degree = 4096;
+    cnfgs.pir_params_configs.number_of_items = 512;
     cnfgs.pir_params_configs.dimensions = 1;
-//    correct_expansion_test(cnfgs);
+    correct_expansion_test(cnfgs);
     return 0;
 }
 
@@ -147,29 +152,21 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
         assert(client.decrypt(matXv0[i]).to_string() == db_ptr->at(i).to_string()); // assert row was taken.
     }
 
-    // expanded query  = 1,0000
-    for (auto &i: expanded_query_dim_1) {
-        std::cout << client.decrypt(i).to_string() << std::endl;
-    }
-    for (auto &i: matXv0) {
-        std::cout << client.decrypt(i).to_string() << std::endl;
-    }
 
-    // because the expanded vector has a single element that is not 0, i'd expect the result to contain one element from the db
-
-    dims[ROW] = 1;
-    dims[COL] = 8;
+    //dims is [col,row]
+    dims = {dim1_size, 1};
     std::vector<seal::Ciphertext> reduced_result(1);
 
-    matops->right_multiply_debug(dims, matXv0, expanded_query_dim_1, reduced_result, client);
+    matops->right_multiply(dims, matXv0, expanded_query_dim_1, reduced_result);
     auto out = client.decrypt(reduced_result.at(0));
     auto out_string = out.to_string();
-    std::cout << "out = " << out_string << std::endl;
-    for (int i = 0; i < db_ptr->size(); ++i) {
-        if (db_ptr->at(i).to_string() == out_string) {
-            return; // std::cout << "found match" << std::endl;
-        }
+
+
+    if (db_ptr->at(0).to_string() == out_string) {
+        std::cout << "found match" << std::endl;
+        return;
     }
+
     throw std::runtime_error("could not find match");
 }
 
