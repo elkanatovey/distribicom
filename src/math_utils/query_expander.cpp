@@ -2,6 +2,7 @@
 
 #include "query_expander.hpp"
 #include "seal/seal.h"
+#include "seal/util/polyarithsmallmod.h"
 #include <vector>
 #include <cmath>
 #include <stdexcept>

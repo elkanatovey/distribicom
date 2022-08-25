@@ -1,8 +1,6 @@
 #pragma once
 
 #include "evaluator_wrapper.hpp"
-#include <pir_client.hpp>
-
 
 namespace multiplication_utils {
     /***

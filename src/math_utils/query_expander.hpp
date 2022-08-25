@@ -1,7 +1,6 @@
 #pragma once
 
 #include <seal/seal.h>
-#include <pir.hpp>
 #include <vector>
 
 namespace multiplication_utils {
