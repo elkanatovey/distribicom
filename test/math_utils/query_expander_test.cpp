@@ -125,7 +125,7 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
     std::uint64_t dim0_size = all->pir_params.nvec[0];
     std::uint64_t dim1_size = all->pir_params.nvec[1];
 
-    std::uint64_t ele_index = 0;
+    std::uint64_t ele_index = 71; // Choosing the SECOND plaintext that is stored in the DB. that is cell number 71.
     std::uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
     std::cout << "Main: element index = " << ele_index << " from [0, "
               << all->pir_params.ele_num - 1 << "]" << std::endl;
@@ -162,7 +162,7 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
     auto out_string = out.to_string();
 
 
-    if (db_ptr->at(0).to_string() == out_string) {
+    if (db_ptr->at(1).to_string() == out_string) {
         std::cout << "found match" << std::endl;
         return;
     }
