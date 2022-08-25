@@ -92,19 +92,6 @@ void correct_expansion_test(TestUtils::SetupConfigs cnfgs) {
 // helper func
 std::shared_ptr<Database> gen_db(const shared_ptr<TestUtils::CryptoObjects> &all);
 
-// todo: add to mat-ops class.
-void to_ntt(shared_ptr<TestUtils::CryptoObjects> all, multiplication_utils::CiphertextDefaultFormMatrix &m) {
-    for (auto &i: m) {
-        all->w_evaluator->evaluator->transform_to_ntt_inplace(i);
-    }
-}
-
-void from_ntt(shared_ptr<TestUtils::CryptoObjects> all, std::vector<seal::Ciphertext> &m) {
-    for (auto &i: m) {
-        all->w_evaluator->evaluator->transform_from_ntt_inplace(i);
-    }
-}
-
 // this test creates two (encrypted) e_0 vectors from the basic base. and multiply them with the matrix and except to
 // find the element mat[0][0] in the result.
 void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
@@ -143,11 +130,11 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
 
     std::vector<seal::Ciphertext> matXv0(expanded_query_dim_0.size());
     std::vector<std::uint64_t> dims = {dim0_size, dim1_size}; // todo: bug.
-    to_ntt(all, expanded_query_dim_0);
+    matops->to_ntt(expanded_query_dim_0);
     matops->right_multiply(dims, splittx_db, expanded_query_dim_0, matXv0);
 
     // mat*v0:
-    from_ntt(all, matXv0);
+    matops->from_ntt(matXv0);
     for (int i = 0; i < matXv0.size(); ++i) {
         assert(client.decrypt(matXv0[i]).to_string() == db_ptr->at(i).to_string()); // assert row was taken.
     }

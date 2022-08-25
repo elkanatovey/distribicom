@@ -143,4 +143,16 @@ namespace multiplication_utils {
         }
     }
 
+    void matrix_multiplier::to_ntt(vector<seal::Ciphertext> &m) {
+        for (auto &i: m) {
+            w_evaluator->evaluator->transform_to_ntt_inplace(i);
+        }
+    }
+
+    void matrix_multiplier::from_ntt(vector<seal::Ciphertext> &m) {
+        for (auto &i: m) {
+            w_evaluator->evaluator->transform_from_ntt_inplace(i);
+        }
+    }
+
 }

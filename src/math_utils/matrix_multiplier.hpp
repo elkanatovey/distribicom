@@ -89,6 +89,9 @@ namespace multiplication_utils {
         void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
+        void to_ntt(std::vector<seal::Ciphertext> &m);
+
+        void from_ntt(std::vector<seal::Ciphertext> &m);
     };
 
     void foo();
