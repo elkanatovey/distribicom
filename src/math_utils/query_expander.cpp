@@ -1,194 +1,187 @@
+// Extracted code from sealPIR, to specifically expanding single part of PIRQuery.
+
 #include "query_expander.hpp"
-
-// Copyright (C) 2020 Intel Corporation
-// SPDX-License-Identifier: Apache-2.0
-
-#include "kernels/seal/seal_bfv_kernel_executor.h"
-
+#include "seal/seal.h"
+#include "seal/util/polyarithsmallmod.h"
+#include <vector>
+#include <cmath>
 #include <stdexcept>
 
-#include "kernels/seal/seal_ckks_context.h"
-#include "kernels/seal/seal_omp_utils.h"
+namespace multiplication_utils {
 
-namespace intel {
-    namespace he {
-        namespace heseal {
+    /***
+     * expand_query takes a part of multi-dimensional query and expand one part of.
+     *  in sealPIR, this is consider a part out of a full query that should be expanded.
+     * @param query_i the query_i to be expanded in dimension i
+     * @param n_i - number of elements in dimension i
+     * @return
+     */
+    std::vector<seal::Ciphertext>
+    QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey) {
+        std::vector<seal::Ciphertext> expanded_query;
+        auto N = enc_params_.poly_modulus_degree();
 
-            SealBFVKernelExecutor::SealBFVKernelExecutor(
-                    const seal::EncryptionParameters& params, const seal::PublicKey& public_key,
-                    const seal::RelinKeys& relin_keys, const seal::GaloisKeys& galois_keys) {
-                if (params.scheme() != seal::scheme_type::bfv)
-                    throw std::invalid_argument("Only BFV scheme supported.");
-                m_public_key = public_key;
-                m_relin_keys = relin_keys;
-                m_galois_keys = galois_keys;
-                m_pcontext.reset(new seal::SEALContext(params));
-                m_pevaluator = std::make_shared<seal::Evaluator>(*m_pcontext);
-                m_pbatch_encoder = std::make_shared<seal::BatchEncoder>(*m_pcontext);
-                m_pencryptor = std::make_shared<seal::Encryptor>(*m_pcontext, m_public_key);
+        auto pool = seal::MemoryManager::GetPool();
+
+        std::cout << "Server: n_i = " << n_i << std::endl;
+        std::cout << "queryExpander: expanding " << query_i.size() << " query_i ctxts" << std::endl;
+        // Expand each dim according to its vector. the result should be equal `total` at most per ciphertext in that dimension. (N or n_i).
+        for (uint32_t j = 0; j < query_i.size(); j++) {
+            uint64_t total = N;
+            if (j == query_i.size() - 1) {
+                total = n_i % N; // how much more should i expand.
             }
+            std::cout << "-- expanding one query_i ctxt into " << total << " ctxts " << std::endl;
+            std::vector<seal::Ciphertext> expanded_query_part = __expand_query(query_i[j], total, galkey);
+            expanded_query.insert(
+                    expanded_query.end(),
+                    std::make_move_iterator(expanded_query_part.begin()),
+                    std::make_move_iterator(expanded_query_part.end()));
+            expanded_query_part.clear();
+        }
+        std::cout << "Server: expansion done " << std::endl;
+        if (expanded_query.size() != n_i) {
 
-            SealBFVKernelExecutor::~SealBFVKernelExecutor() {
-                m_pencryptor.reset();
-                m_pbatch_encoder.reset();
-                m_pevaluator.reset();
+            std::stringstream o;
+            o << " size mismatch!!! " << expanded_query.size() << ", " << n_i;
+            throw std::runtime_error(o.str());
+        }
+
+        return expanded_query;
+    }
+
+
+    inline std::vector<seal::Ciphertext>
+    QueryExpander::__expand_query(const seal::Ciphertext &encrypted,
+                                  uint32_t m,
+                                  seal::GaloisKeys &galkey) {
+
+
+        // Assume that m is a power of 2. If not, round it to the next power of 2.
+        uint32_t logm = ceil(log2(m));
+        seal::Plaintext two("2");
+
+        std::vector<int> galois_elts;
+        auto n = enc_params_.poly_modulus_degree();
+        if (logm > ceil(log2(n))) {
+            throw std::logic_error("m > n is not allowed.");
+        }
+        for (int i = 0; i < ceil(log2(n)); i++) {
+            galois_elts.push_back((n + seal::util::exponentiate_uint(2, i)) /
+                                  seal::util::exponentiate_uint(2, i));
+        }
+
+        std::vector<seal::Ciphertext> temp;
+        temp.push_back(encrypted);
+        seal::Ciphertext tempctxt;
+        seal::Ciphertext tempctxt_rotated;
+        seal::Ciphertext tempctxt_shifted;
+        seal::Ciphertext tempctxt_rotatedshifted;
+
+        for (uint32_t i = 0; i < logm - 1; i++) {
+            std::vector<seal::Ciphertext> newtemp(temp.size() << 1);
+            // temp[a] = (j0 = a (mod 2**i) ? ) : Enc(x^{j0 - a}) else Enc(0).  With
+            // some scaling....
+            int index_raw = (n << 1) - (1 << i);
+            int index = (index_raw * galois_elts[i]) % (n << 1);
+
+            for (uint32_t a = 0; a < temp.size(); a++) {
+
+                evaluator_->apply_galois(temp[a], galois_elts[i], galkey,
+                                         tempctxt_rotated);
+
+                // cout << "rotate " <<
+                // client.decryptor_->invariant_noise_budget(tempctxt_rotated) << ", ";
+
+                evaluator_->add(temp[a], tempctxt_rotated, newtemp[a]);
+                multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);
+
+                // cout << "mul by x^pow: " <<
+                // client.decryptor_->invariant_noise_budget(tempctxt_shifted) << ", ";
+
+                multiply_power_of_X(tempctxt_rotated, tempctxt_rotatedshifted, index);
+
+                // cout << "mul by x^pow: " <<
+                // client.decryptor_->invariant_noise_budget(tempctxt_rotatedshifted) <<
+                // ", ";
+
+                // Enc(2^i x^j) if j = 0 (mod 2**i).
+                evaluator_->add(tempctxt_shifted, tempctxt_rotatedshifted,
+                                newtemp[a + temp.size()]);
             }
-
-            void SealBFVKernelExecutor::matchLevel(seal::Ciphertext* a,
-                                                   seal::Ciphertext* b) const {
-                int a_level = getLevel(*a);
-                int b_level = getLevel(*b);
-                if (a_level > b_level)
-                    m_pevaluator->mod_switch_to_inplace(*a, b->parms_id());
-                else if (a_level < b_level)
-                    m_pevaluator->mod_switch_to_inplace(*b, a->parms_id());
+            temp = newtemp;
+            /*
+            cout << "end: ";
+            for (int h = 0; h < temp.size();h++){
+                cout << client.decryptor_->invariant_noise_budget(temp[h]) << ", ";
             }
-
-            std::vector<seal::Ciphertext> SealBFVKernelExecutor::dotPlainBatchAxis(
-                    const std::vector<seal::Ciphertext>& arg1,
-                    const std::vector<seal::Plaintext>& arg2, size_t dim0, size_t dim1,
-                    size_t dim2) {
-                if (arg1.size() != dim0 * dim1) {
-                    throw std::runtime_error("DotPlainBatchAxis arg1 wrong shape");
-                }
-                if (arg2.size() != dim1 * dim2) {
-                    throw std::runtime_error("DotPlainBatchAxis arg2 wrong shape");
-                }
-
-                std::vector<seal::Ciphertext> out(dim0 * dim2);
-#pragma omp parallel for collapse(2) \
-num_threads(OMPUtilitiesS::getThreadsAtLevel())
-                for (size_t out_ind0 = 0; out_ind0 < dim0; ++out_ind0) {
-                    for (size_t out_ind1 = 0; out_ind1 < dim2; ++out_ind1) {
-                        size_t out_idx = colMajorIndex(dim0, dim2, out_ind0, out_ind1);
-                        for (size_t inner_dim = 0; inner_dim < dim1; inner_dim++) {
-                            size_t arg1_idx = colMajorIndex(dim0, dim1, out_ind0, inner_dim);
-                            size_t arg2_idx = colMajorIndex(dim1, dim2, inner_dim, out_ind1);
-                            if (inner_dim == 0) {
-                                m_pevaluator->multiply_plain(arg1[arg1_idx], arg2[arg2_idx],
-                                                             out[out_idx]);
-                                continue;
-                            }
-                            seal::Ciphertext tmp;
-                            m_pevaluator->multiply_plain(arg1[arg1_idx], arg2[arg2_idx], tmp);
-                            m_pevaluator->add_inplace(out[out_idx], tmp);
-                        }
-                    }
-                }
-                return out;
+            cout << endl;
+            */
+        }
+        // Last step of the loop
+        std::vector<seal::Ciphertext> newtemp(temp.size() << 1);
+        int index_raw = (n << 1) - (1 << (logm - 1));
+        int index = (index_raw * galois_elts[logm - 1]) % (n << 1);
+        for (uint32_t a = 0; a < temp.size(); a++) {
+            if (a >= (m - (1 << (logm - 1)))) { // corner case.
+                evaluator_->multiply_plain(temp[a], two,
+                                           newtemp[a]); // plain multiplication by 2.
+                // cout << client.decryptor_->invariant_noise_budget(newtemp[a]) << ", ";
             }
-
-            std::vector<seal::Ciphertext> SealBFVKernelExecutor::dotCipherBatchAxis(
-                    const std::vector<seal::Ciphertext>& arg1,
-                    const std::vector<seal::Ciphertext>& arg2, size_t dim0, size_t dim1,
-                    size_t dim2) {
-                if (arg1.size() != dim0 * dim1) {
-                    throw std::runtime_error("DotCipherBatchAxis arg1 wrong shape");
-                }
-                if (arg2.size() != dim1 * dim2) {
-                    throw std::runtime_error("DotCipherBatchAxis arg2 wrong shape");
-                }
-
-                std::vector<seal::Ciphertext> out(dim0 * dim2);
-#pragma omp parallel for collapse(2) \
-num_threads(OMPUtilitiesS::getThreadsAtLevel())
-                for (size_t out_ind0 = 0; out_ind0 < dim0; ++out_ind0) {
-                    for (size_t out_ind1 = 0; out_ind1 < dim2; ++out_ind1) {
-                        size_t out_idx = colMajorIndex(dim0, dim2, out_ind0, out_ind1);
-                        for (size_t inner_dim = 0; inner_dim < dim1; inner_dim++) {
-                            size_t arg1_idx = colMajorIndex(dim0, dim1, out_ind0, inner_dim);
-                            size_t arg2_idx = colMajorIndex(dim1, dim2, inner_dim, out_ind1);
-
-                            if (inner_dim == 0) {
-                                m_pevaluator->multiply(arg1[arg1_idx], arg2[arg2_idx], out[out_idx]);
-                                m_pevaluator->relinearize_inplace(out[out_idx], m_relin_keys);
-                                continue;
-                            }
-                            seal::Ciphertext tmp;
-                            m_pevaluator->multiply(arg1[arg1_idx], arg2[arg2_idx], tmp);
-                            m_pevaluator->relinearize_inplace(tmp, m_relin_keys);
-                            m_pevaluator->add_inplace(out[out_idx], tmp);
-                        }
-                    }
-                }
-                return out;
+            else {
+                evaluator_->apply_galois(temp[a], galois_elts[logm - 1], galkey,
+                                         tempctxt_rotated);
+                evaluator_->add(temp[a], tempctxt_rotated, newtemp[a]);
+                multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);
+                multiply_power_of_X(tempctxt_rotated, tempctxt_rotatedshifted, index);
+                evaluator_->add(tempctxt_shifted, tempctxt_rotatedshifted,
+                                newtemp[a + temp.size()]);
             }
+        }
 
-            seal::Ciphertext SealBFVKernelExecutor::accumulate(
-                    const seal::Ciphertext& cipher_input, std::size_t count) {
-                seal::Ciphertext retval;
-                if (count > 0) {
-                    retval = cipher_input;
-                    auto max_steps = (1 << seal::util::get_significant_bit_count(count));
-                    for (int steps = 1; steps < max_steps; steps <<= 1) {
-                        seal::Ciphertext rotated;
-                        m_pevaluator->rotate_rows(retval, steps, m_galois_keys, rotated,
-                                                  seal::MemoryPoolHandle::ThreadLocal());
-                        m_pevaluator->add_inplace(retval, rotated);
-                    }
-                } else {
-                    m_pencryptor->encrypt_zero(retval);
-                }
+        std::vector<seal::Ciphertext>::const_iterator first = newtemp.begin();
+        std::vector<seal::Ciphertext>::const_iterator last = newtemp.begin() + m;
+        std::vector<seal::Ciphertext> newVec(first, last);
 
-                return retval;
+        return newVec;
+    }
+
+    inline void QueryExpander::multiply_power_of_X(const seal::Ciphertext &encrypted,
+                                                   seal::Ciphertext &destination,
+                                                   uint32_t index) {
+
+        auto coeff_mod_count = enc_params_.coeff_modulus().size() - 1;
+        auto coeff_count = enc_params_.poly_modulus_degree();
+        auto encrypted_count = encrypted.size();
+
+        // cout << "coeff mod count for power of X = " << coeff_mod_count << endl;
+        // cout << "coeff count for power of X = " << coeff_count << endl;
+
+        // First copy over.
+        destination = encrypted;
+
+        // Prepare for destination
+        // Multiply X^index for each ciphertext polynomial
+        for (int i = 0; i < encrypted_count; i++) {
+            for (int j = 0; j < coeff_mod_count; j++) {
+                seal::util::negacyclic_shift_poly_coeffmod(encrypted.data(i) + (j * coeff_count),
+                                                           coeff_count, index,
+                                                           enc_params_.coeff_modulus()[j],
+                                                           destination.data(i) + (j * coeff_count));
             }
+        }
+    }
 
-            std::vector<std::vector<seal::Ciphertext>> SealBFVKernelExecutor::matMulVal(
-                    const std::vector<seal::Ciphertext>& A,
-                    const std::vector<seal::Ciphertext>& B_T, size_t dim1, size_t dim2,
-                    size_t dim3) {
-                std::vector<std::vector<seal::Ciphertext>> out(
-                        dim1, std::vector<seal::Ciphertext>(dim3));
+    QueryExpander::QueryExpander(const seal::EncryptionParameters enc_params) :
+            enc_params_(enc_params) {
+        seal::SEALContext context(enc_params, true);
 
-#pragma omp parallel for collapse(2) \
-num_threads(OMPUtilitiesS::getThreadsAtLevel())
-                for (size_t i = 0; i < dim1; i++) {
-                    for (size_t j = 0; j < dim3; j++) {
-                        m_pevaluator->multiply(A[i], B_T[j], out[i][j]);
-                        m_pevaluator->relinearize_inplace(out[i][j], m_relin_keys);
+        evaluator_ = std::make_unique<seal::Evaluator>(context);
+    }
 
-                        out[i][j] = accumulate(out[i][j], dim2);
-                    }
-                }
-                return out;
-            }
-
-            std::vector<seal::Ciphertext> SealBFVKernelExecutor::matMulRow(
-                    const std::vector<seal::Ciphertext>& A, const seal::Ciphertext& B,
-                    size_t dim1, size_t dim2, size_t dim3) {
-                std::vector<seal::Ciphertext> out(A.size());
-
-                std::vector<seal::Ciphertext> vec_ct_res(A.size());
-
-                size_t slot_count = m_pbatch_encoder->slot_count();
-                size_t row_size = slot_count / 2;
-
-                // Spacing is based on the number of Rows in Matrix B (or Columns in A)
-                size_t spacers = row_size / dim2;
-
-                std::mutex mtx;
-
-#pragma omp parallel for num_threads(OMPUtilitiesS::getThreadsAtLevel())
-                for (size_t i = 0; i < A.size(); i++) {
-                    m_pevaluator->multiply(A[i], B, vec_ct_res[i]);
-                    m_pevaluator->relinearize_inplace(vec_ct_res[i], m_relin_keys);
-
-                    // Rotating by step * spacer
-                    out[i] = vec_ct_res[i];
-#pragma omp parallel for num_threads(OMPUtilitiesS::getThreadsAtLevel())
-                    for (size_t j = 1; j < dim2; j++) {
-                        seal::Ciphertext rotated;
-                        m_pevaluator->rotate_rows(vec_ct_res[i], j * spacers, m_galois_keys,
-                                                  rotated, seal::MemoryPoolHandle::ThreadLocal());
-                        {
-                            std::lock_guard<std::mutex> lock(mtx);
-                            m_pevaluator->add_inplace(out[i], rotated);
-                        }
-                    }
-                }
-                return out;
-            }
-
-        }  // namespace heseal
-    }  // namespace he
-}  // namespace intel
+    std::shared_ptr<QueryExpander>
+    QueryExpander::Create(const seal::EncryptionParameters enc_params) {
+        auto eval = QueryExpander(enc_params);
+        return std::make_shared<QueryExpander>(std::move(eval));
+    }
+}

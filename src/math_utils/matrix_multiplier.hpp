@@ -11,6 +11,7 @@ namespace multiplication_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
+    // TODO: this is not a class name style. and maybe change it to MatrixOperations
     class matrix_multiplier {
     private:
         explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator) {};
@@ -42,7 +43,8 @@ namespace multiplication_utils {
          * @param matrix plaintext matrix to mult
          * @param result where to place result, not in ntt representation
          */
-        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
+        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                           PlaintextDefaultFormMatrix &matrix,
                            std::vector<seal::Plaintext> &result);
 
 
@@ -85,7 +87,9 @@ namespace multiplication_utils {
         void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
+        void to_ntt(std::vector<seal::Ciphertext> &m);
 
+        void from_ntt(std::vector<seal::Ciphertext> &m);
     };
 
     void foo();

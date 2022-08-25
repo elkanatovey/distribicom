@@ -7,9 +7,9 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
-//        #ifdef MY_DEBUG
+        #ifdef MY_DEBUG
         assert(m.size() == v.size());
-//        #endif
+        #endif
 
         for (uint64_t i = 0; i < v.size(); i++) {
             m[i] = w_evaluator->split_plaintext(v[i]);
@@ -17,9 +17,9 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
-//        #ifdef DISTRIBICOM_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         assert(m.size() == v.size());
-//        #endif
+        #endif
 
         for (std::uint64_t i = 0; i < v.size(); i++) {
             w_evaluator->trivial_ciphertext(v[i], m[i]);
@@ -67,7 +67,7 @@ namespace multiplication_utils {
 
     void matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
                                           std::vector<seal::Ciphertext> &matrix, std::vector<seal::Ciphertext>
-                                                  &result) {
+                                          &result) {
 
         for (uint64_t k = 0; k < dims[COL]; k++) {
             for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -88,15 +88,15 @@ namespace multiplication_utils {
 
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
                                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
-                                                   &result) {
-//        #ifdef DISTRIBICOM_DEBUG
+                                           &result) {
+        #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
         for (auto &ptx: matrix) {
             assert(ptx[0].is_ntt_form());
         }
 
         assert(right_vec.size() == dims[COL]);
-//        #endif
+        #endif
 
         seal::Ciphertext tmp;
         for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -117,15 +117,14 @@ namespace multiplication_utils {
 
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                                            std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
-                                                   &result) {
-//#ifdef DISTRIBICOM_DEBUG
+                                           &result) {
+#ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
-        for (auto & ctx : matrix) {
+        for (auto &ctx: matrix) {
             assert(!ctx.is_ntt_form());
         }
         assert(right_vec.size() == dims[COL]);
-
-//#endif
+#endif
         seal::Ciphertext tmp;
         for (uint64_t j = 0; j < dims[ROW]; j++) {
             w_evaluator->mult(matrix[j], right_vec[0], result[j]);
@@ -140,6 +139,18 @@ namespace multiplication_utils {
                 w_evaluator->evaluator->add_inplace(result[j], tmp);
 
             }
+        }
+    }
+
+    void matrix_multiplier::to_ntt(std::vector<seal::Ciphertext> &m) {
+        for (auto &i: m) {
+            w_evaluator->evaluator->transform_to_ntt_inplace(i);
+        }
+    }
+
+    void matrix_multiplier::from_ntt(std::vector<seal::Ciphertext> &m) {
+        for (auto &i: m) {
+            w_evaluator->evaluator->transform_from_ntt_inplace(i);
         }
     }
 
