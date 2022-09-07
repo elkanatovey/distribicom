@@ -127,12 +127,10 @@ void order_of_ops_test2() {
             e = all->random_ciphertext(),
             f = all->random_ciphertext();
 
-
-    seal::Ciphertext ae, bf, ce, df;
-
     all->w_evaluator->evaluator->transform_to_ntt_inplace(e);
     all->w_evaluator->evaluator->transform_to_ntt_inplace(f);
 
+    seal::Ciphertext ae, bf, ce, df;
     all->w_evaluator->mult_modified(a, e, ae);
     all->w_evaluator->mult_modified(b, f, bf);
     all->w_evaluator->mult_modified(c, e, ce);
