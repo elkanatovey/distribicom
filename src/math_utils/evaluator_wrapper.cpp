@@ -58,9 +58,9 @@ namespace multiplication_utils {
      * The resulted SplitPlaintextNTTForm is in NTT.
      */
     SplitPlaintextNTTForm EvaluatorWrapper::split_plaintext(const seal::Plaintext &a) const {
-        #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
-        #endif
+#endif
 
         seal::Plaintext a1(enc_params.poly_modulus_degree());
         seal::Plaintext a2(enc_params.poly_modulus_degree());
@@ -74,12 +74,16 @@ namespace multiplication_utils {
                 // skipping if to perform + 1 in case a[current_coeff] is odd.
                 a1[current_coeff] = (a[current_coeff] >> 1) + (a[current_coeff] & 1);
                 a2[current_coeff] = (a[current_coeff] >> 1);
-            }
-            else {
+            } else {
                 a1[current_coeff] = a[current_coeff];
                 a2[current_coeff] = 0;
             }
         }
+
+#ifdef DISTRIBICOM_DEBUG
+        assert_plain_is_under_threshold(a1);
+        assert_plain_is_under_threshold(a2);
+#endif
 
         evaluator->transform_to_ntt_inplace(a1, context.first_parms_id());
         evaluator->transform_to_ntt_inplace(a2, context.first_parms_id());
@@ -91,14 +95,15 @@ namespace multiplication_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef DISTRIBICOM_DEBUG
+    EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b,
+                                    seal::Ciphertext &c) const {
+#ifdef DISTRIBICOM_DEBUG
         assert(2 == a.size());
         for (auto &a_i: a) {
             assert(a_i.is_ntt_form());
         }
         assert(b.is_ntt_form());
-        #endif
+#endif
         evaluator->multiply_plain(b, a[0], c);
 
         seal::Ciphertext tmp;
@@ -109,27 +114,27 @@ namespace multiplication_utils {
 
     void
     EvaluatorWrapper::mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
         assert(b.is_ntt_form());
-        #endif
+#endif
         auto split_ptx = split_plaintext(a);
         mult_modified(split_ptx, b, c);
     }
 
     void EvaluatorWrapper::mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(a.is_ntt_form());
         assert(b.is_ntt_form());
-        #endif
+#endif
 
         evaluator->multiply_plain(b, a, c);
     }
 
     void EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form() && !b.is_ntt_form());
-        #endif
+#endif
 
         evaluator->multiply(a, b, c);
     }
@@ -152,4 +157,11 @@ namespace multiplication_utils {
         evaluator->add_plain(trivial_zero, ptx, result);
     }
 
+    void EvaluatorWrapper::assert_plain_is_under_threshold(const seal::Plaintext &plaintext) const {
+        auto threshold = (enc_params.plain_modulus().value() + 1) >> 1;
+        auto coeff_count = plaintext.coeff_count();
+        for (uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+            assert(plaintext[current_coeff] < threshold);
+        }
+    }
 }

@@ -20,6 +20,7 @@ namespace multiplication_utils {
 
         EvaluatorWrapper(seal::EncryptionParameters enc_params);
 
+        void assert_plain_is_under_threshold(const seal::Plaintext &plaintext) const;
 
     public:
         seal::EncryptionParameters enc_params; // SEAL parameters
