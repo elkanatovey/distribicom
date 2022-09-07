@@ -9,13 +9,14 @@ void order_of_ops_test2();
 
 int evaluator_wrapper_test(int, char *[]) {
     mult_slow_vs_modified_test();
+
+    // commutative test.
     order_of_ops_test1();
+
+    // associative test.
     order_of_ops_test2();
 
     return 0;
-// associative test.
-
-// commutative test.
 }
 
 void mult_slow_vs_modified_test() {
