@@ -101,7 +101,7 @@ void order_of_ops_test1() {
 void order_of_ops_test2() {
     auto cnfgs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bfv,
+                    .scheme_type = seal::scheme_type::bgv,
                     .polynomial_degree = 4096 * 2,
                     .log_coefficient_modulus = 20,
             },
