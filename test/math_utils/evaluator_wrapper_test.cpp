@@ -5,7 +5,7 @@ void mult_slow_vs_modified_test();
 
 void order_of_ops_test1();
 
-void order_of_ops_test2();
+void order_of_ops_test2(std::shared_ptr<TestUtils::CryptoObjects> all);
 
 int evaluator_wrapper_test(int, char *[]) {
     mult_slow_vs_modified_test();
@@ -13,8 +13,27 @@ int evaluator_wrapper_test(int, char *[]) {
     // commutative test.
     order_of_ops_test1();
 
-    // associative test.
-    order_of_ops_test2();
+    // reusing parameters for 100 iterations:
+    auto cnfgs = TestUtils::SetupConfigs{
+            .encryption_params_configs = {
+                    .scheme_type = seal::scheme_type::bgv,
+                    .polynomial_degree = 4096 * 2,
+                    .log_coefficient_modulus = 20,
+            },
+            .pir_params_configs = {
+                    .number_of_items = 2048,
+                    .size_per_item = 288,
+                    .dimensions= 2,
+                    .use_symmetric = false,
+                    .use_batching = true,
+                    .use_recursive_mod_switching = true,
+            },
+    };
+    auto all = TestUtils::setup(cnfgs);
+    for (int i = 0; i < 100; ++i) {
+        // random associative test.
+        order_of_ops_test2(all);
+    }
 
     return 0;
 }
@@ -98,23 +117,8 @@ void order_of_ops_test1() {
     assert(ctx1.is_transparent());
 }
 
-void order_of_ops_test2() {
-    auto cnfgs = TestUtils::SetupConfigs{
-            .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bgv,
-                    .polynomial_degree = 4096 * 2,
-                    .log_coefficient_modulus = 20,
-            },
-            .pir_params_configs = {
-                    .number_of_items = 2048,
-                    .size_per_item = 288,
-                    .dimensions= 2,
-                    .use_symmetric = false,
-                    .use_batching = true,
-                    .use_recursive_mod_switching = true,
-            },
-    };
-    auto all = TestUtils::setup(cnfgs);
+void order_of_ops_test2(std::shared_ptr<TestUtils::CryptoObjects> all) {
+
     // in this test we check whether  g(ae + bf) + h(ce + df) == e(ga +hc) + f(gb + hd)
     // where g = 1 and h = 1, so:
     // ae+bf + ce+df = e(a+c) + f(b+d)
@@ -128,33 +132,27 @@ void order_of_ops_test2() {
             e = all->random_ciphertext(),
             f = all->random_ciphertext();
 
-    all->w_evaluator->evaluator->transform_to_ntt_inplace(e);
-    all->w_evaluator->evaluator->transform_to_ntt_inplace(f);
-
     seal::Ciphertext ae, bf, ce, df;
-    all->w_evaluator->mult_modified(a, e, ae);
-    all->w_evaluator->mult_modified(b, f, bf);
-    all->w_evaluator->mult_modified(c, e, ce);
-    all->w_evaluator->mult_modified(d, f, df);
+    all->w_evaluator->mult_slow(a, e, ae);
+    all->w_evaluator->mult_slow(b, f, bf);
+    all->w_evaluator->mult_slow(c, e, ce);
+    all->w_evaluator->mult_slow(d, f, df);
 
     seal::Ciphertext sum_left; // ae +bf + ce+df
-    all->w_evaluator->evaluator->add(ce, df, sum_left);
-    all->w_evaluator->evaluator->add(ae, sum_left, sum_left);
-    all->w_evaluator->evaluator->add(bf, sum_left, sum_left);
+    all->w_evaluator->add(ce, df, sum_left);
+    all->w_evaluator->add(ae, sum_left, sum_left);
+    all->w_evaluator->add(bf, sum_left, sum_left);
 
-
-    seal::Plaintext a_plus_c, b_plus_d;
-    all->w_evaluator->add_plain(a, c, a_plus_c);
-    all->w_evaluator->add_plain(b, d, b_plus_d);
+    seal::Ciphertext a_plus_c, b_plus_d;
+    all->w_evaluator->add_plain_trivial(a, c, a_plus_c);
+    all->w_evaluator->add_plain_trivial(b, d, b_plus_d);
 
     seal::Ciphertext e_x_a_plus_c, f_x_b_plus_d;
-    all->w_evaluator->mult_modified(a_plus_c, e, e_x_a_plus_c);
-    all->w_evaluator->mult_modified(b_plus_d, f, f_x_b_plus_d);
-    seal::Ciphertext sum_right; // e(a+c) + f(b+d)
-    all->w_evaluator->evaluator->add(e_x_a_plus_c, f_x_b_plus_d, sum_right);
+    all->w_evaluator->mult(a_plus_c, e, e_x_a_plus_c);
+    all->w_evaluator->mult(b_plus_d, f, f_x_b_plus_d);
 
-    all->w_evaluator->evaluator->transform_from_ntt_inplace(sum_left);
-    all->w_evaluator->evaluator->transform_from_ntt_inplace(sum_right);
+    seal::Ciphertext sum_right; // e(a+c) + f(b+d)
+    all->w_evaluator->add(e_x_a_plus_c, f_x_b_plus_d, sum_right);
 
     seal::Plaintext ptx_left, ptx_right;
     all->decryptor.decrypt(sum_left, ptx_left);

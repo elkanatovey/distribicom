@@ -36,6 +36,14 @@ namespace multiplication_utils {
         c = tmp;
     }
 
+    void EvaluatorWrapper::add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
+                                             seal::Ciphertext &out) const {
+        auto tmp_a = into_trivial_cipher(a);
+        auto tmp_b = into_trivial_cipher(b);
+        evaluator->add(tmp_a, tmp_b, out);
+    }
+
+
     void EvaluatorWrapper::add_plain_in_place(seal::Plaintext &a, const seal::Plaintext &b) const {
         auto ptx_mod = enc_params.plain_modulus().value();
 
@@ -52,6 +60,12 @@ namespace multiplication_utils {
                                      seal::Ciphertext &c) const {
         evaluator->add_plain(trivial_zero, a, c);
         evaluator->multiply_inplace(c, b);
+    }
+
+    seal::Ciphertext EvaluatorWrapper::into_trivial_cipher(const seal::Plaintext &a) const {
+        seal::Ciphertext c;
+        evaluator->add_plain(trivial_zero, a, c);
+        return c;
     }
 
     /**
@@ -74,7 +88,8 @@ namespace multiplication_utils {
                 // skipping if to perform + 1 in case a[current_coeff] is odd.
                 a1[current_coeff] = (a[current_coeff] >> 1) + (a[current_coeff] & 1);
                 a2[current_coeff] = (a[current_coeff] >> 1);
-            } else {
+            }
+            else {
                 a1[current_coeff] = a[current_coeff];
                 a2[current_coeff] = 0;
             }
@@ -131,7 +146,8 @@ namespace multiplication_utils {
         evaluator->multiply_plain(b, a, c);
     }
 
-    void EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+    void
+    EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form() && !b.is_ntt_form());
 #endif
