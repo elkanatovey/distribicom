@@ -7,20 +7,14 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
-        #ifdef MY_DEBUG
-        assert(m.size() == v.size());
-        #endif
-
+        m.resize(v.size());
         for (uint64_t i = 0; i < v.size(); i++) {
             m[i] = w_evaluator->split_plaintext(v[i]);
         }
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
-        #ifdef DISTRIBICOM_DEBUG
-        assert(m.size() == v.size());
-        #endif
-
+        m.resize(v.size());
         for (std::uint64_t i = 0; i < v.size(); i++) {
             w_evaluator->trivial_ciphertext(v[i], m[i]);
         }
