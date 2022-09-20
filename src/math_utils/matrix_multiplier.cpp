@@ -20,6 +20,14 @@ namespace multiplication_utils {
         }
     }
 
+    void matrix_multiplier::transform(const matrix<seal::Plaintext> &mat, matrix<seal::Ciphertext> &cmat) const {
+        cmat.resize(mat.rows, mat.cols);
+        for (uint64_t i = 0; i < mat.rows * mat.cols; i++) {
+            w_evaluator->trivial_ciphertext(mat.data[i], cmat.data[i]);
+        }
+    }
+
+
 
     /*
      * note this only works when left=0/1
@@ -44,6 +52,45 @@ namespace multiplication_utils {
                 w_evaluator->multiply_add(left_vec[j], matrix[j + k * dims[ROW]], result[k]);
             }
         }
+    }
+
+    // only works when left_vec is 0/1..
+    void matrix_multiplier::left_multiply(const std::vector<std::uint64_t> &left_vec,
+                                          const matrix <seal::Ciphertext> &mat,
+                                          matrix <seal::Ciphertext> &result) const {
+        #ifdef DISTRIBICOM_DEBUG
+        assert(left_vec.size() == mat.rows);
+        for (auto item: left_vec) {
+            assert(item <= 1);
+        }
+        #endif
+        result.resize(1, mat.cols);
+
+        for (uint64_t k = 0; k < mat.cols; k++) {
+            result(1, k) = seal::Ciphertext(w_evaluator->context);
+            for (uint64_t j = 0; j < mat.rows; j++) {
+                if (left_vec[j] == 0) {
+                    continue;
+                }
+                w_evaluator->add(mat(j, k), result(1, k), result(1, k));
+            }
+        }
+    }
+
+    void matrix_multiplier::left_multiply(const std::vector<std::uint64_t> &left_vec,
+                                          const matrix <seal::Plaintext> &mat,
+                                          matrix <seal::Ciphertext> &result) const {
+        #ifdef DISTRIBICOM_DEBUG
+        assert(left_vec.size() == mat.rows);
+        for (auto item: left_vec) {
+            assert(item <= 1);
+        }
+        #endif
+
+        result.resize(1, mat.cols);
+        matrix<seal::Ciphertext> cmat;
+        transform(mat, cmat);
+        left_multiply(left_vec, cmat, result);
     }
 
 

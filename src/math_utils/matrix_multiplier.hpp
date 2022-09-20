@@ -1,6 +1,7 @@
 #pragma once
 
 #include "evaluator_wrapper.hpp"
+#include "matrix.h"
 
 namespace multiplication_utils {
     /***
@@ -27,6 +28,7 @@ namespace multiplication_utils {
 
         void transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const;
 
+        void transform(const matrix<seal::Plaintext> &mat, matrix<seal::Ciphertext> &cmat) const;
 
         /***
          * Creates and returns a an initialized matrix_multiplier
@@ -90,6 +92,22 @@ namespace multiplication_utils {
         void to_ntt(std::vector<seal::Ciphertext> &m);
 
         void from_ntt(std::vector<seal::Ciphertext> &m);
+
+        // working with matrices:
+        void left_multiply(const std::vector<std::uint64_t> &left_vec,
+                           const matrix <seal::Ciphertext> &mat,
+                           matrix <seal::Ciphertext> &result) const;
+
+        /**
+         * Will transform the mat into trivial ciphertexts
+         * @param left_vec
+         * @param mat
+         * @param result
+         */
+        void left_multiply(const std::vector<std::uint64_t> &left_vec,
+                           const matrix <seal::Plaintext> &mat,
+                           matrix <seal::Ciphertext> &result) const;
+
     };
 
     void foo();
