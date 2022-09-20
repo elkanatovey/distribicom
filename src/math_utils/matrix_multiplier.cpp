@@ -67,12 +67,12 @@ namespace multiplication_utils {
         result.resize(1, mat.cols);
 
         for (uint64_t k = 0; k < mat.cols; k++) {
-            result(1, k) = seal::Ciphertext(w_evaluator->context);
+            result(0, k) = seal::Ciphertext(w_evaluator->context);
             for (uint64_t j = 0; j < mat.rows; j++) {
                 if (left_vec[j] == 0) {
                     continue;
                 }
-                w_evaluator->add(mat(j, k), result(1, k), result(1, k));
+                w_evaluator->add(mat(j, k), result(0, k), result(0, k));
             }
         }
     }
@@ -195,4 +195,68 @@ namespace multiplication_utils {
         }
     }
 
+
+    void matrix_multiplier::multiply(const matrix<seal::Ciphertext> &left,
+                                     const matrix<seal::Ciphertext> &right,
+                                     matrix<seal::Ciphertext> &result) const {
+        seal::Ciphertext tmp;
+        result.resize(left.rows, right.cols);
+        for (std::uint64_t i = 0; i < left.rows; i++) {
+            for (std::uint64_t j = 0; j < right.cols; j++) {
+                result(i, j) = seal::Ciphertext(w_evaluator->context);
+
+                for (std::uint64_t k = 0; k < left.cols; k++) {
+                    w_evaluator->mult(left(i, k), right(k, j), tmp);
+                    w_evaluator->add(tmp, result(i, j), result(i, j));
+                }
+            }
+        }
+    }
+
+
+    void fill_rand_vec(uint64_t size, std::vector<std::uint64_t> &randvec) {
+        randvec.resize(size);
+        // using random seed:
+        seal::Blake2xbPRNGFactory factory;
+        auto gen = factory.create();
+        for (auto &i: randvec) {
+            i = gen->generate() % 2;
+        }
+    }
+
+    void matrix_multiplier::left_frievalds(const std::vector<std::uint64_t> &rand_vec,
+                                           const matrix<seal::Ciphertext> &a,
+                                           const matrix<seal::Ciphertext> &b,
+                                           matrix<seal::Ciphertext> &result) const {
+        matrix<seal::Ciphertext> tmp;
+        left_multiply(rand_vec, a, tmp);
+        multiply(tmp, b, result);
+    }
+
+    bool matrix_multiplier::frievalds(const matrix<seal::Ciphertext> &a,
+                                      const matrix<seal::Ciphertext> &b,
+                                      const matrix<seal::Ciphertext> &c) const {
+        // nxm * mxp = nxp
+        if (a.rows != c.rows || b.cols != c.cols) {
+            return false;
+        }
+        std::vector<std::uint64_t> rand_vec;
+        fill_rand_vec(a.rows, rand_vec);
+
+        matrix<seal::Ciphertext> left_vec;
+        left_frievalds(rand_vec, a, b, left_vec);
+
+        matrix<seal::Ciphertext> right_vec;
+        left_multiply(rand_vec, c, right_vec);
+
+        // subtracting the two vectors:
+        for (std::uint64_t i = 0; i < left_vec.data.size(); i++) {
+            w_evaluator->evaluator->sub_inplace(left_vec.data[i], right_vec.data[i]);
+            if (!left_vec.data[i].is_transparent()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

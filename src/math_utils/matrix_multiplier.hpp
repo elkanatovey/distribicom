@@ -108,6 +108,19 @@ namespace multiplication_utils {
                            const matrix <seal::Plaintext> &mat,
                            matrix <seal::Ciphertext> &result) const;
 
+        void
+        multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
+                 matrix<seal::Ciphertext> &result) const;
+
+        bool frievalds(const matrix<seal::Ciphertext> &A, const matrix<seal::Ciphertext> &B,
+                       const matrix<seal::Ciphertext> &C) const;
+
+    private:
+        void
+        left_frievalds(const std::vector<std::uint64_t> &rand_vec,
+                       const matrix<seal::Ciphertext> &a,
+                       const matrix<seal::Ciphertext> &b,
+                       matrix<seal::Ciphertext> &result) const;
     };
 
     void foo();
