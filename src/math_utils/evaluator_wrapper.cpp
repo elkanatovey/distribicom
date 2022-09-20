@@ -38,8 +38,9 @@ namespace multiplication_utils {
 
     void EvaluatorWrapper::add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
                                              seal::Ciphertext &out) const {
-        auto tmp_a = into_trivial_cipher(a);
-        auto tmp_b = into_trivial_cipher(b);
+        seal::Ciphertext tmp_a, tmp_b;
+        trivial_ciphertext(a, tmp_a);
+        trivial_ciphertext(b, tmp_b);
         evaluator->add(tmp_a, tmp_b, out);
     }
 
@@ -60,12 +61,6 @@ namespace multiplication_utils {
                                      seal::Ciphertext &c) const {
         evaluator->add_plain(trivial_zero, a, c);
         evaluator->multiply_inplace(c, b);
-    }
-
-    seal::Ciphertext EvaluatorWrapper::into_trivial_cipher(const seal::Plaintext &a) const {
-        seal::Ciphertext c;
-        evaluator->add_plain(trivial_zero, a, c);
-        return c;
     }
 
     /**
@@ -169,7 +164,7 @@ namespace multiplication_utils {
         trivial_zero.resize(2);
     }
 
-    void EvaluatorWrapper::trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) {
+    void EvaluatorWrapper::trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const {
         evaluator->add_plain(trivial_zero, ptx, result);
     }
 

@@ -94,8 +94,6 @@ namespace multiplication_utils {
 
         void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
-        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result);
-
-        seal::Ciphertext into_trivial_cipher(const seal::Plaintext &a) const;
+        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
     };
 }
