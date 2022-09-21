@@ -42,5 +42,12 @@ int frievalds_test(int, char *[]) {
     time_func("mat-mult", [&matops, &A, &B, &C]() { matops->multiply(A, B, C); });
 
     time_func("frievalds", [&matops, &A, &B, &C]() { assert(matops->frievalds(A, B, C)); });
+
+    // Verifying Frievalds fails a bad C, such that C!= A * B
+    for (int i = 0; i < 5; ++i) {
+        C.data[0 + i * C.cols] = all->random_ciphertext();
+    }
+
+    time_func("frievalds", [&matops, &A, &B, &C]() { assert(!matops->frievalds(A, B, C)); });
     return 0;
 }
