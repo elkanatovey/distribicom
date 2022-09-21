@@ -4,7 +4,7 @@
 
 int mult_benchmark(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
-    int iters = 10;
+    int iters = 1000;
     auto ptx = all->random_plaintext();
     auto ctx = all->random_ciphertext();
     auto res = all->random_ciphertext();
