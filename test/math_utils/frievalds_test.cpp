@@ -1,13 +1,6 @@
 #include "../test_utils.hpp"
 #include "matrix_multiplier.hpp"
 
-void time_func(const std::string &name, const std::function<void()> &f) {
-    auto start = std::chrono::high_resolution_clock::now();
-    f();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << name << " took " << duration.count() << " milliseconds" << std::endl;
-}
 
 int frievalds_test(int, char *[]) {
     auto cnfgs = TestUtils::SetupConfigs{
@@ -38,16 +31,16 @@ int frievalds_test(int, char *[]) {
     }
     auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
 
-    time_func("DB-transform", [&matops, &DB, &A]() { matops->transform(DB, A); });
-    time_func("mat-mult", [&matops, &A, &B, &C]() { matops->multiply(A, B, C); });
+    TestUtils::time_func_print("DB-transform", [&matops, &DB, &A]() { matops->transform(DB, A); });
+    TestUtils::time_func_print("mat-mult", [&matops, &A, &B, &C]() { matops->multiply(A, B, C); });
 
-    time_func("frievalds", [&matops, &A, &B, &C]() { assert(matops->frievalds(A, B, C)); });
+    TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(matops->frievalds(A, B, C)); });
 
     // Verifying Frievalds fails a bad C, such that C!= A * B
     for (int i = 0; i < 5; ++i) {
         C.data[0 + i * C.cols] = all->random_ciphertext();
     }
 
-    time_func("frievalds", [&matops, &A, &B, &C]() { assert(!matops->frievalds(A, B, C)); });
+    TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(!matops->frievalds(A, B, C)); });
     return 0;
 }

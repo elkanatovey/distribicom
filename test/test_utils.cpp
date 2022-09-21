@@ -1,4 +1,5 @@
 #include "test_utils.hpp"
+
 namespace TestUtils {
     void set_enc_params(uint32_t N, uint32_t logt, seal::EncryptionParameters &enc_params) {
         std::cout << "Main: Generating SEAL parameters" << std::endl;
@@ -13,7 +14,7 @@ namespace TestUtils {
                 configs.encryption_params_configs.polynomial_degree,
                 configs.encryption_params_configs.log_coefficient_modulus,
                 enc_params
-                );
+        );
 
         verify_encryption_params(enc_params);
 
@@ -28,7 +29,7 @@ namespace TestUtils {
                        pir_configs.use_symmetric,
                        pir_configs.use_batching,
                        pir_configs.use_recursive_mod_switching
-                       );
+        );
         return s;
     }
 
@@ -59,13 +60,13 @@ namespace TestUtils {
 
 
     CryptoObjects::CryptoObjects(seal::EncryptionParameters encryption_params) :
-    encryption_params(encryption_params),
-    seal_context(encryption_params, true),
-    keygen(seal::SEALContext(seal_context)),
-    secret_key(keygen.secret_key()),
-    encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
-    decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
-    encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
+            encryption_params(encryption_params),
+            seal_context(encryption_params, true),
+            keygen(seal::SEALContext(seal_context)),
+            secret_key(keygen.secret_key()),
+            encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
+            decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
+            encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
 
         w_evaluator = multiplication_utils::EvaluatorWrapper::Create(encryption_params);
     }
@@ -79,7 +80,7 @@ namespace TestUtils {
         // cout << "printing galois elements...";
         for (std::uint64_t i = 0; i < logN; i++) {
             galois_elts.push_back((N + seal::util::exponentiate_uint(2, i)) /
-            seal::util::exponentiate_uint(2, i));
+                                  seal::util::exponentiate_uint(2, i));
             //#ifdef DEBUG
             // cout << galois_elts.back() << ", ";
             //#endif
@@ -107,5 +108,17 @@ namespace TestUtils {
     SetupConfigs DEFAULT_SETUP_CONFIGS = {
             .encryption_params_configs = DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
             .pir_params_configs = DEFAULT_PIR_PARAMS_CONFIGS,
-            };
+    };
+
+    long time_func(const std::function<void()> &f) {
+        auto start = std::chrono::high_resolution_clock::now();
+        f();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+        return duration.count();
+    }
+
+    void time_func_print(const std::string &name, const std::function<void()> &f) {
+        std::cout << name << ": " << time_func(f) << "ns" << std::endl;
+    }
 }
