@@ -119,6 +119,6 @@ namespace TestUtils {
     }
 
     void time_func_print(const std::string &name, const std::function<void()> &f) {
-        std::cout << name << ": " << time_func(f) << "ns" << std::endl;
+        std::cout << name << ": " << time_func(f)/1000000 << "ms" << std::endl;
     }
 }

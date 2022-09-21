@@ -20,7 +20,7 @@ int frievalds_test(int, char *[]) {
     };
     auto all = TestUtils::setup(cnfgs);
 
-    std::uint64_t n = 20;
+    std::uint64_t n = 32;
     std::uint64_t rows = n, cols = n;
 
     multiplication_utils::matrix<seal::Plaintext> DB(rows, cols);
@@ -37,8 +37,10 @@ int frievalds_test(int, char *[]) {
     TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(matops->frievalds(A, B, C)); });
 
     // Verifying Frievalds fails a bad C, such that C!= A * B
-    for (int i = 0; i < 5; ++i) {
-        C.data[0 + i * C.cols] = all->random_ciphertext();
+    for (std::uint64_t i = 0; i < rows / 4; ++i) {
+        for (std::uint64_t j = 0; j < cols / 4; ++j) {
+            C(i, j) = all->random_ciphertext();
+        }
     }
 
     TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(!matops->frievalds(A, B, C)); });
