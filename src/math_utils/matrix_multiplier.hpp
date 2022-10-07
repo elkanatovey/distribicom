@@ -89,9 +89,9 @@ namespace multiplication_utils {
         void right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                             std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext> &result);
 
-        void to_ntt(std::vector<seal::Ciphertext> &m);
+        void to_ntt(std::vector<seal::Ciphertext> &m) const;
 
-        void from_ntt(std::vector<seal::Ciphertext> &m);
+        void from_ntt(std::vector<seal::Ciphertext> &m) const;
 
         // working with matrices:
         void left_multiply(const std::vector<std::uint64_t> &left_vec,
@@ -110,6 +110,10 @@ namespace multiplication_utils {
 
         void
         multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
+                 matrix<seal::Ciphertext> &result) const;
+
+        void
+        multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
                  matrix<seal::Ciphertext> &result) const;
 
         bool frievalds(const matrix<seal::Ciphertext> &A, const matrix<seal::Ciphertext> &B,

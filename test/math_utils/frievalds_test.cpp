@@ -1,8 +1,15 @@
 #include "../test_utils.hpp"
 #include "matrix_multiplier.hpp"
 
+void frievalds_with_ptx_db();
 
 int frievalds_test(int, char *[]) {
+    frievalds_with_ptx_db();
+    return 0;
+}
+
+
+void frievalds_with_ptx_db() {
     auto cnfgs = TestUtils::SetupConfigs{
             .encryption_params_configs = {
                     .scheme_type = seal::scheme_type::bgv,
@@ -20,29 +27,27 @@ int frievalds_test(int, char *[]) {
     };
     auto all = TestUtils::setup(cnfgs);
 
-    std::uint64_t n = 32;
+    std::uint64_t n = 50;
     std::uint64_t rows = n, cols = n;
 
-    multiplication_utils::matrix<seal::Plaintext> DB(rows, cols);
     multiplication_utils::matrix<seal::Ciphertext> A, B(rows, cols), C;
+    multiplication_utils::matrix<seal::Plaintext> A_as_ptx(rows, cols);
     for (std::uint64_t i = 0; i < rows * cols; ++i) {
-        DB.data[i] = all->random_plaintext();
+        A_as_ptx.data[i] = all->random_plaintext();
         B.data[i] = all->random_ciphertext();
     }
     auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
+    TestUtils::time_func_print("A_as_ptx-transform to ctxs",
+                               [&matops, &A_as_ptx, &A]() { matops->transform(A_as_ptx, A); });
 
-    TestUtils::time_func_print("DB-transform", [&matops, &DB, &A]() { matops->transform(DB, A); });
-    TestUtils::time_func_print("mat-mult", [&matops, &A, &B, &C]() { matops->multiply(A, B, C); });
 
+    matops->to_ntt(B.data); // splitting of ptx and then ntt is performed inside the given function...
+    TestUtils::time_func_print("mat-mult", [&matops, &A_as_ptx, &B, &C]() { matops->multiply(A_as_ptx, B, C); });
+
+
+    matops->from_ntt(B.data);
+    matops->from_ntt(C.data);
     TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(matops->frievalds(A, B, C)); });
-
-    // Verifying Frievalds fails a bad C, such that C!= A * B
-    for (std::uint64_t i = 0; i < rows / 4; ++i) {
-        for (std::uint64_t j = 0; j < cols / 4; ++j) {
-            C(i, j) = all->random_ciphertext();
-        }
-    }
-
-    TestUtils::time_func_print("frievalds", [&matops, &A, &B, &C]() { assert(!matops->frievalds(A, B, C)); });
-    return 0;
 }
+
+// 364146 /13897

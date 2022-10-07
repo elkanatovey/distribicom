@@ -144,7 +144,8 @@ namespace multiplication_utils {
     void
     EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef DISTRIBICOM_DEBUG
-        assert(!a.is_ntt_form() && !b.is_ntt_form());
+        assert(!a.is_ntt_form());
+        assert(!b.is_ntt_form());
 #endif
 
         evaluator->multiply(a, b, c);
