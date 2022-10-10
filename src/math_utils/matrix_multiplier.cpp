@@ -123,8 +123,7 @@ namespace multiplication_utils {
 
     std::shared_ptr<matrix_multiplier>
     matrix_multiplier::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator) {
-        auto multiplier = matrix_multiplier(w_evaluator);
-        return std::make_shared<matrix_multiplier>(std::move(multiplier));
+        return std::make_shared<matrix_multiplier>(w_evaluator);
     }
 
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
