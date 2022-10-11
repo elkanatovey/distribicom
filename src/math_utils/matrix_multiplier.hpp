@@ -16,19 +16,21 @@ namespace multiplication_utils {
 
     // represents a task to be executed by a thread
     struct task {
-        task() : row(0), col(0), n(0), left_ntt(nullptr), left_ctx(nullptr), right(nullptr), result(nullptr) {}
-
+        int task_type; // todo: into enum. state the type of the task..
+        // the WaitGroup that the issuer of the task is waiting on.
+        std::shared_ptr<WaitGroup> wg;
+        // compute details.
         std::uint64_t row;
         std::uint64_t col;
-        std::uint64_t n; // number of elements in a row
+        std::uint64_t n; // number of elements in a row or column.
 
         // either we have a plain left
-        matrix<SplitPlaintextNTTForm> *left_ntt;
-        // or qwe have a ctx left.
-        matrix<seal::Ciphertext> *left_ctx;
+        const matrix<seal::Plaintext> *left_ntt;
+        // or we have a ctx left.
+        const matrix<seal::Ciphertext> *left_ctx;
 
         // the result and the right matrix are always ctx matrices.
-        matrix<seal::Ciphertext> *right;
+        const matrix<seal::Ciphertext> *right;
         matrix<seal::Ciphertext> *result;
     };
 
@@ -42,30 +44,16 @@ namespace multiplication_utils {
 
 
     public:
-        explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator), chan(),
-                                                                                    threads() {
-            chan = std::make_shared<Channel<task>>();
-
-            for (int i = 0; i < 4; ++i) {
-                threads.emplace_back([&] {
-                    while (true) {
-                        Result<task> r = chan->read();
-                        std::cout << "worker thread started" << std::endl;
-                        if (!r.ok) {
-                            std::cout << "Closing!" << std::endl;
-                            return;
-                        }
-                    }
-                });
-            }
-        }
+        explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
         ~matrix_multiplier() {
             chan->close();
-            for (auto &t : threads) {
+            for (auto &t: threads) {
                 t.join();
             }
         }
+
+        void start();
         /***
          * receives a plaintext matrix/ vector, and transforms it into a
          * splitPlainTextMatrix which is a vector of SplitPlaintextNTTForm in NTT form.

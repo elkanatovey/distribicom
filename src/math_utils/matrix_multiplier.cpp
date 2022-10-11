@@ -1,6 +1,7 @@
 #include "matrix_multiplier.hpp"
 #include "defines.h"
 
+#define PTX_CTX_MUL 0
 namespace multiplication_utils {
     void foo() {
         std::cout << 1 << std::endl;
@@ -123,7 +124,9 @@ namespace multiplication_utils {
 
     std::shared_ptr<matrix_multiplier>
     matrix_multiplier::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator) {
-        return std::make_shared<matrix_multiplier>(w_evaluator);
+        auto matops = std::make_shared<matrix_multiplier>(w_evaluator);
+        matops->start();
+        return matops;
     }
 
     void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
@@ -218,16 +221,30 @@ namespace multiplication_utils {
                                      matrix<seal::Ciphertext> &result) const {
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
+
+        // TODO: transform IN PARALLEL the left matrix to NTT form!
+        auto wg = std::make_shared<WaitGroup>();
+        wg->add(int(left.rows * right.cols));
+
         for (std::uint64_t i = 0; i < left.rows; i++) {
             for (std::uint64_t j = 0; j < right.cols; j++) {
-                result(i, j) = seal::Ciphertext(w_evaluator->context);
-                w_evaluator->evaluator->transform_to_ntt_inplace(result(i, j));
-                for (std::uint64_t k = 0; k < left.cols; k++) {
-                    w_evaluator->mult_modified(left(i, k), right(k, j), tmp);
-                    w_evaluator->add(tmp, result(i, j), result(i, j));
-                }
+
+                chan->write(
+                        task{
+                                .task_type = PTX_CTX_MUL,
+                                .wg = wg,
+                                .row = i,
+                                .col = j,
+                                .n = left.cols, // the amount of multiplications
+                                .left_ntt = &left,
+                                .right = &right,
+                                .result = &result
+                        }
+                );
+
             }
         }
+        wg->wait();
     }
 
 
@@ -275,5 +292,52 @@ namespace multiplication_utils {
         }
 
         return true;
+    }
+
+    matrix_multiplier::
+    matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator), chan(), threads() {
+        chan = std::make_shared<Channel<task>>();
+    }
+
+    void matrix_multiplier::start() {
+        auto processor_count = std::thread::hardware_concurrency();
+
+        // creating our multiplication worker.
+        for (std::uint64_t i = 0; i < processor_count; ++i) {
+            threads.emplace_back([&] {
+                seal::Ciphertext tmp(w_evaluator->context);
+
+                while (true) {
+                    Result<task> r = chan->read();
+                    if (!r.ok) {
+                        return;
+                    }
+                    // perform the correct multiplication here:
+                    if (r.answer.task_type == 1) {
+                        // TODO: proper task type...
+                        r.answer.wg->done();
+                        continue;
+                    }
+
+                    std::uint64_t col = r.answer.col, row = r.answer.row;
+
+                    auto left = r.answer.left_ntt;
+                    auto right = r.answer.right;
+                    auto result = r.answer.result;
+
+                    seal::Ciphertext tmp_result(w_evaluator->context);
+                    w_evaluator->evaluator->transform_to_ntt_inplace(tmp_result);
+
+                    for (std::uint64_t j = 0; j < r.answer.n; j++) {
+                        w_evaluator->mult_modified((*left)(row, j), (*right)(j, col), tmp);
+                        w_evaluator->add(tmp, tmp_result, tmp_result);
+                    }
+
+                    (*result)(row, col) = tmp_result;
+
+                    r.answer.wg->done();
+                }
+            });
+        }
     }
 }
