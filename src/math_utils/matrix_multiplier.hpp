@@ -160,6 +160,10 @@ namespace multiplication_utils {
                        const matrix<seal::Ciphertext> &a,
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
+
+        void multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
+                      const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
     };
 
     void foo();

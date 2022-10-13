@@ -222,14 +222,19 @@ namespace multiplication_utils {
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
         matrix<SplitPlaintextNTTForm> left_ntt(left.rows, left.cols);
-        transform(left.data, left_ntt.data);
+        transform(left.data, left_ntt.data);// TODO: transform IN PARALLEL the left matrix to NTT form!
 
-        // TODO: transform IN PARALLEL the left matrix to NTT form!
+        multiply(left_ntt, right, result);
+    }
+
+    void matrix_multiplier::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
+                                     const matrix<seal::Ciphertext> &right,
+                                     matrix<seal::Ciphertext> &result) const {
         auto wg = std::make_shared<WaitGroup>();
-        wg->add(int(left.rows * right.cols));
+        wg->add(int(left_ntt.rows * right.cols));
 
-        for (std::uint64_t i = 0; i < left.rows; i++) {
-            for (std::uint64_t j = 0; j < right.cols; j++) {
+        for (uint64_t i = 0; i < left_ntt.rows; i++) {
+            for (uint64_t j = 0; j < right.cols; j++) {
 
                 chan->write(
                         task{
@@ -237,7 +242,7 @@ namespace multiplication_utils {
                                 .wg = wg,
                                 .row = i,
                                 .col = j,
-                                .n = left.cols, // the amount of multiplications
+                                .n = left_ntt.cols, // the amount of multiplications
                                 .left_ntt = &left_ntt,
                                 .right = &right,
                                 .result = &result
