@@ -25,7 +25,7 @@ namespace multiplication_utils {
         std::uint64_t n; // number of elements in a row or column.
 
         // either we have a plain left
-        const matrix<seal::Plaintext> *left_ntt;
+        const matrix<SplitPlaintextNTTForm> *left_ntt;
         // or we have a ctx left.
         const matrix<seal::Ciphertext> *left_ctx;
 
@@ -54,6 +54,7 @@ namespace multiplication_utils {
         }
 
         void start();
+
         /***
          * receives a plaintext matrix/ vector, and transforms it into a
          * splitPlainTextMatrix which is a vector of SplitPlaintextNTTForm in NTT form.

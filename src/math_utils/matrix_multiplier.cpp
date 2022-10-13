@@ -221,6 +221,8 @@ namespace multiplication_utils {
                                      matrix<seal::Ciphertext> &result) const {
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
+        matrix<SplitPlaintextNTTForm> left_ntt(left.rows, left.cols);
+        transform(left.data, left_ntt.data);
 
         // TODO: transform IN PARALLEL the left matrix to NTT form!
         auto wg = std::make_shared<WaitGroup>();
@@ -236,7 +238,7 @@ namespace multiplication_utils {
                                 .row = i,
                                 .col = j,
                                 .n = left.cols, // the amount of multiplications
-                                .left_ntt = &left,
+                                .left_ntt = &left_ntt,
                                 .right = &right,
                                 .result = &result
                         }
