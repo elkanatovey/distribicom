@@ -151,6 +151,10 @@ namespace multiplication_utils {
         multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
                  matrix<seal::Ciphertext> &result) const;
 
+        void multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
+                      const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
+
         bool frievalds(const matrix<seal::Ciphertext> &A, const matrix<seal::Ciphertext> &B,
                        const matrix<seal::Ciphertext> &C) const;
 
@@ -161,9 +165,6 @@ namespace multiplication_utils {
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
 
-        void multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
-                      const matrix<seal::Ciphertext> &right,
-                      matrix<seal::Ciphertext> &result) const;
     };
 
     void foo();

@@ -1,5 +1,6 @@
 #include "matrix_multiplier.hpp"
 #include "defines.h"
+#include <execution>
 
 #define PTX_CTX_MUL 0
 namespace multiplication_utils {
@@ -9,13 +10,17 @@ namespace multiplication_utils {
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
         m.resize(v.size());
-        for (uint64_t i = 0; i < v.size(); i++) {
-            m[i] = w_evaluator->split_plaintext(v[i]);
-        }
+        std::transform(std::execution::par_unseq,
+                       v.begin(),
+                       v.end(),
+                       m.begin(),
+                       [&](seal::Plaintext &ptx) { return w_evaluator->split_plaintext(ptx); }
+        );
     }
 
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
         m.resize(v.size());
+        // TODO: into a parallel for loop.
         for (std::uint64_t i = 0; i < v.size(); i++) {
             w_evaluator->trivial_ciphertext(v[i], m[i]);
         }
@@ -186,15 +191,15 @@ namespace multiplication_utils {
     }
 
     void matrix_multiplier::to_ntt(std::vector<seal::Ciphertext> &m) const {
-        for (auto &i: m) {
-            w_evaluator->evaluator->transform_to_ntt_inplace(i);
-        }
+        std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Ciphertext &ctx) {
+            w_evaluator->evaluator->transform_to_ntt_inplace(ctx);
+        });
     }
 
     void matrix_multiplier::from_ntt(std::vector<seal::Ciphertext> &m) const {
-        for (auto &i: m) {
-            w_evaluator->evaluator->transform_from_ntt_inplace(i);
-        }
+        std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Ciphertext &ctx) {
+            w_evaluator->evaluator->transform_from_ntt_inplace(ctx);
+        });
     }
 
 
