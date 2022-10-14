@@ -66,13 +66,14 @@ message Ack{
 }
 
 message MatrixPart {
-  int32 row = 3;
-  int32 col = 4;
-
   oneof data{
     Ciphertext ctx = 1;
     Plaintext ptx = 2;
+    bool done = 3;
   }
+
+  int32 row = 5;
+  int32 col = 6;
 }
 
 // small:
