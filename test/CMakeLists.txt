@@ -6,11 +6,12 @@ target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src)
 target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/math_utils)
 target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/marshal)
 
-target_link_libraries(test_utils sealpir multiplication_utils marshal_package)
+target_link_libraries(test_utils sealpir multiplication_utils marshal_package services)
 
 add_subdirectory(general_tests)
 add_subdirectory(math_utils)
 add_subdirectory(marshal)
+add_subdirectory(services)
 
 # create the testing file and list of tests
 create_test_sourcelist(Tests
