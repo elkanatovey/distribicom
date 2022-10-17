@@ -16,5 +16,7 @@ message DistribicomConfigs {
 
 message AppConfigs{
   DistribicomConfigs configs = 1;
-  bool UseRegularMessages = 2;
+
+  //every worker/ client will need to register to the following address:
+  string main_server_hostname = 2;
 }

@@ -69,7 +69,6 @@ message MatrixPart {
   oneof data{
     Ciphertext ctx = 1;
     Plaintext ptx = 2;
-    bool done = 3;
   }
 
   int32 row = 5;

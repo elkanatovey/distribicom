@@ -1,9 +1,5 @@
 #pragma once
 
-class channel {
-
-};
-
 
 #include <queue>
 #include <mutex>
