@@ -22,6 +22,14 @@ namespace marshal {
         }
 
         template<typename T>
+        std::string marshal_seal_object(const T &in) const {
+            marshaled_seal_object out;
+            out.resize(in.save_size());
+            in.save(&out[0], out.size());
+            return {(char *) &out[0], out.size()};
+        }
+
+        template<typename T>
         void marshal_seal_vector(const std::vector<T> &in, std::vector<marshaled_seal_object> &out) const {
             for (std::uint64_t i = 0; i < in.size(); ++i) {
                 marshal_seal_object(in[i], out[i]);

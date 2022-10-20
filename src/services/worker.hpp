@@ -9,9 +9,9 @@
 
 #define MD_MATRIX_SIZE "m_size"
 namespace services {
-    static void add_matrix_size(grpc::ClientContext &context, int size);
+    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp);
 
-    static int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp);
+    void add_matrix_size(grpc::ClientContext &context, int size);
 
     // todo this is what the worker ends the SendTasks RPC call with.
     //  should contain things the worker ought to send to it's threadpool.

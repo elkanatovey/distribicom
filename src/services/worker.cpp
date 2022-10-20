@@ -1,17 +1,17 @@
 #include "worker.hpp"
 
 namespace services {
-    static int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp) {
+    void add_matrix_size(grpc::ClientContext &context, int size) {
+        context.AddMetadata(MD_MATRIX_SIZE, std::to_string(size));
+    }
+
+    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp) {
         auto ntmp = mp.find(MD_MATRIX_SIZE);
         try {
             return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
         } catch (...) {
             return -1;
         }
-    }
-
-    static void add_matrix_size(grpc::ClientContext &context, int size) {
-        context.AddMetadata(MD_MATRIX_SIZE, std::to_string(size));
     }
 
     Worker::Worker(distribicom::AppConfigs &_app_configs)
@@ -58,6 +58,9 @@ namespace services {
                 if (!ptx_rows.contains(row)) {
                     ptx_rows[row] = std::vector<seal::Plaintext>(n);
                 }
+                if (col >= n) {
+                    return {grpc::StatusCode::INVALID_ARGUMENT, "col is too big"};
+                }
                 ptx_rows[row][col]
                         = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
                 continue;
@@ -70,8 +73,15 @@ namespace services {
             if (!ctx_cols.contains(col)) {
                 ctx_cols[col] = std::vector<seal::Ciphertext>(n);
             }
+            if (row >= n) {
+                return {grpc::StatusCode::INVALID_ARGUMENT, "row is too big"};
+            }
             ctx_cols[col][row]
                     = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ptx().data());
+        }
+
+        for (int i = 0; i < 5; ++i) {
+            std::cout << ptx_rows[0][i].to_string() << std::endl;
         }
         response->set_success(true);
         // TODO: Continue once we've stopped receiving.

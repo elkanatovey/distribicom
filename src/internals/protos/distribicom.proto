@@ -123,9 +123,10 @@ message Configs {
   uint32 logarithm_plaintext_coefficient = 3;
 
   // for PIR params
-  uint64 db_capacity = 4;
-  uint64 size_per_element = 5; // element represents a position inside the plaintext that a user can write to.
-  uint32 dimensions = 6; // in our case defaults eqauls to 2.
+  uint32 db_rows = 4;
+  uint32 db_cols = 5;
+  uint32 size_per_element = 6; // element represents a position inside the plaintext that a user can write to.
+  uint32 dimensions = 7; // in our case defaults eqauls to 2.
 };
 
 message AppConfigs{
