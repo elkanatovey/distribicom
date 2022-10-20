@@ -44,10 +44,9 @@ namespace marshal {
         template<typename T>
         T unmarshal_seal_object(const std::string &in) const {
             T t;
-            t.load(context, &in[0], in.size());
+            t.load(context, (seal::seal_byte *) &in[0], in.size());
             return t;
         }
-
     };
 
 }
