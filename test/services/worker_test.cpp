@@ -22,18 +22,19 @@ int worker_test(int, char *[]) {
         wg.wait();
         server->Shutdown();
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(2 * 000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2 * 1000));
 
     distribicom::Worker::Stub client(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
     grpc::ClientContext context;
     distribicom::Ack response;
-
     distribicom::MatrixPart m;
 
-    context.AddMetadata("client", "abc");
+    services::add_matrix_size(context, 100);
     auto conn = client.SendTasks(&context, &response);
 
     conn->WriteLast(m, grpc::WriteOptions{});
+    auto out = conn->Finish();
+    std::cout << "status:" << out.ok() << std::endl;
     wg.done();
     t.join();
     return 0;
