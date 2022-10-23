@@ -67,7 +67,7 @@ class WaitGroup {
 private:
     std::mutex m;
     std::condition_variable cv;
-    int count = 0;
+    std::atomic_int32_t count = 0;
 public:
     WaitGroup() : m(), cv() {}
 
@@ -76,27 +76,24 @@ public:
 
     WaitGroup(WaitGroup &&) = delete;
 
-    // todo: can be performed without locking though, just atomic ops...
     void add(int delta) {
-        std::lock_guard<std::mutex> lock(m);
-        count += delta;
+        count.fetch_add(delta); // TODO: understand order of operation parameter in these funcs.
     }
 
     void done() {
-        std::lock_guard<std::mutex> lock(m);
-        count -= 1;
-        if (count == 0) {
+        auto prev_val = count.fetch_add(-1);
+        if (prev_val == 1) {
             cv.notify_all();
             return;
         }
-        if (count < 0) {
+        if (prev_val <= 0) {
             throw std::runtime_error("negative counter in wait group!");
         }
     }
 
     void wait() {
         std::unique_lock<std::mutex> lock(m);
-        cv.wait(lock, [this] { return count == 0; });
+        cv.wait(lock, [this] { return count.load() == 0; });
     }
 };
 
