@@ -37,14 +37,20 @@ namespace services {
                       distribicom::Ack *response) {
         response->set_success(false);
 
-        auto n = extract_size_from_metadata(context->client_metadata());
-        if (n > 10 * 1000 || n <= 0) {
-            return {grpc::StatusCode::INVALID_ARGUMENT, "bad matrix size received in metadata"};
-        }
-        std::cout << "GOT: " << n << std::endl;
+        auto task = WorkerServiceTask{
+                0, // todo: extract from metadata.
+                0, // todo: extract from metadata.
+                extract_size_from_metadata(context->client_metadata()),
+                std::map<int, std::vector<seal::Plaintext>>(),
+                std::map<int, std::vector<seal::Ciphertext>>(),
+        };
 
-        std::map<int, std::vector<seal::Plaintext>> ptx_rows;
-        std::map<int, std::vector<seal::Ciphertext>> ctx_cols;
+        try {
+            vaildate_task(task);
+        } catch (std::invalid_argument &e) {
+            return {grpc::StatusCode::INVALID_ARGUMENT, e.what()};
+        }
+
 
         distribicom::MatrixPart tmp;
         distribicom::Plaintext tmp_ptx;
@@ -55,13 +61,13 @@ namespace services {
             col = tmp.col();
 
             if (tmp.has_ptx()) {
-                if (!ptx_rows.contains(row)) {
-                    ptx_rows[row] = std::vector<seal::Plaintext>(n);
+                if (!task.ptx_rows.contains(row)) {
+                    task.ptx_rows[row] = std::vector<seal::Plaintext>(task.row_size);
                 }
-                if (col >= n) {
+                if (col >= task.row_size) {
                     return {grpc::StatusCode::INVALID_ARGUMENT, "col is too big"};
                 }
-                ptx_rows[row][col]
+                task.ptx_rows[row][col]
                         = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
                 continue;
             }
@@ -70,23 +76,35 @@ namespace services {
                 continue;
             }
             // assumes either a ptx or a ctx.
-            if (!ctx_cols.contains(col)) {
-                ctx_cols[col] = std::vector<seal::Ciphertext>(n);
+            if (!task.ctx_cols.contains(col)) {
+                task.ctx_cols[col] = std::vector<seal::Ciphertext>(task.row_size);
             }
-            if (row >= n) {
+            if (row >= task.row_size) {
                 return {grpc::StatusCode::INVALID_ARGUMENT, "row is too big"};
             }
-            ctx_cols[col][row]
+            task.ctx_cols[col][row]
                     = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ptx().data());
         }
 
-        for (int i = 0; i < 5; ++i) {
-            std::cout << ptx_rows[0][i].to_string() << std::endl;
-        }
         response->set_success(true);
         // TODO: Continue once we've stopped receiving.
         std::cout << "Disconnecting" << std::endl;
         return {};
+    }
+
+    void Worker::vaildate_task(WorkerServiceTask &task) const {
+        if (task.row_size <= 0) {
+            throw std::invalid_argument("row size must be positive");
+        }
+        if (task.row_size > 10 * 1000 || task.row_size <= 0) {
+            throw std::invalid_argument("row size must be between 0 and 10k");
+        }
+        if (task.epoch < 0) {
+            throw std::invalid_argument("epoch must be positive");
+        }
+        if (task.round < 0) {
+            throw std::invalid_argument("round must be positive");
+        }
     }
 
 }

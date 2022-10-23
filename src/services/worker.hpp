@@ -15,7 +15,15 @@ namespace services {
 
     // todo this is what the worker ends the SendTasks RPC call with.
     //  should contain things the worker ought to send to it's threadpool.
-    struct WorkerTask {
+    struct WorkerServiceTask {
+        // metadata worker needs to know.
+        int epoch;
+        int round;
+
+        // matrices:
+        int row_size;
+        std::map<int, std::vector<seal::Plaintext>> ptx_rows;
+        std::map<int, std::vector<seal::Ciphertext>> ctx_cols;
     };
 
     class Worker final : public distribicom::Worker::Service {
@@ -25,8 +33,11 @@ namespace services {
         // states how this worker will operate.
         distribicom::AppConfigs app_configs;
 
-        Channel<WorkerTask> chan;
+        Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
+
+        void vaildate_task(services::WorkerServiceTask &task) const;
+
     public:
         // register to the server.
         void start() {};
