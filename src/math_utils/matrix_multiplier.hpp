@@ -150,6 +150,13 @@ namespace multiplication_utils {
         void multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
                       matrix<seal::Ciphertext> &result) const;
 
+        /**
+         * performs threaded matrix-multiplication.
+         * will resize the result matrix to match the expected matrix output.
+         * @param left a PTX matrix with its elements NOT in NTT form.
+         * @param right a CTX matrix with its elements in NTT form.
+         * @param result a CTX matrix with its elements in NTT form.
+         */
         void multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
                       matrix<seal::Ciphertext> &result) const;
 
@@ -166,7 +173,6 @@ namespace multiplication_utils {
                        const matrix<seal::Ciphertext> &a,
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
-
     };
 
     void foo();

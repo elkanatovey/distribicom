@@ -219,10 +219,28 @@ namespace multiplication_utils {
         }
     }
 
-    // ASSUMES we use an ntt form!
+    void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left,
+                                     const matrix<seal::Ciphertext> &right) {
+        if (left.data.empty()) {
+            throw std::invalid_argument("received empty left matrix");
+        }
+        if (right.data.empty()) {
+            throw std::invalid_argument("received empty right matrix");
+        }
+        if (left.data[0].is_ntt_form()) {
+            throw std::invalid_argument("left matrix should not be in NTT form");
+
+        }
+        if (!right.data[0].is_ntt_form()) {
+            throw std::invalid_argument("right matrix should be in NTT form");
+        }
+    }
+
     void matrix_multiplier::multiply(const matrix<seal::Plaintext> &left,
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
+        verify_ptx_ctx_mat_mul_args(left, right);
+
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
         matrix<SplitPlaintextNTTForm> left_ntt(left.rows, left.cols);
@@ -230,6 +248,7 @@ namespace multiplication_utils {
 
         multiply(left_ntt, right, result);
     }
+
 
     void matrix_multiplier::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
                                      const matrix<seal::Ciphertext> &right,
