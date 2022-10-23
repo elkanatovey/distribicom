@@ -2,11 +2,20 @@
 #include "defines.h"
 #include <execution>
 
-namespace multiplication_utils {
-    void foo() {
-        std::cout << 1 << std::endl;
-    }
 
+namespace multiplication_utils {
+    // helper funcs:
+    template<typename T, typename U>
+    void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right);
+
+
+    void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left,
+                                     const matrix<seal::Ciphertext> &right);
+
+    void verify_spltptx_ctx_mat_mul_args(const matrix<SplitPlaintextNTTForm> &left,
+                                         const matrix<seal::Ciphertext> &right);
+
+    // actual code:
     void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
         m.resize(v.size());
         std::transform(std::execution::par_unseq,
@@ -205,6 +214,11 @@ namespace multiplication_utils {
     void matrix_multiplier::multiply(const matrix<seal::Ciphertext> &left,
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
+        verify_not_empty_matrices(left, right);
+        if (!left.data[0].is_ntt_form() || !right.data[0].is_ntt_form()) {
+            throw std::runtime_error("matrix_multiplier::multiply: matrices are not in NTT form");
+        }
+
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
         for (std::uint64_t i = 0; i < left.rows; i++) {
@@ -219,22 +233,6 @@ namespace multiplication_utils {
         }
     }
 
-    void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left,
-                                     const matrix<seal::Ciphertext> &right) {
-        if (left.data.empty()) {
-            throw std::invalid_argument("received empty left matrix");
-        }
-        if (right.data.empty()) {
-            throw std::invalid_argument("received empty right matrix");
-        }
-        if (left.data[0].is_ntt_form()) {
-            throw std::invalid_argument("left matrix should not be in NTT form");
-
-        }
-        if (!right.data[0].is_ntt_form()) {
-            throw std::invalid_argument("right matrix should be in NTT form");
-        }
-    }
 
     void matrix_multiplier::multiply(const matrix<seal::Plaintext> &left,
                                      const matrix<seal::Ciphertext> &right,
@@ -253,6 +251,7 @@ namespace multiplication_utils {
     void matrix_multiplier::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
+        verify_spltptx_ctx_mat_mul_args(left_ntt, right);
         auto wg = std::make_shared<WaitGroup>();
         wg->add(int(left_ntt.rows * right.cols));
 
@@ -368,6 +367,38 @@ namespace multiplication_utils {
                     r.answer.wg->done();
                 }
             });
+        }
+    }
+
+
+    template<typename T, typename U>
+    void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right) {
+        if (left.data.empty()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: received empty left matrix");
+        }
+        if (right.data.empty()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: received empty right matrix");
+        }
+    }
+
+    void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right) {
+        verify_not_empty_matrices(left, right);
+        if (left.data[0].is_ntt_form()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: left matrix should not be in NTT form");
+        }
+        if (!right.data[0].is_ntt_form()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: right matrix should be in NTT form");
+        }
+    }
+
+    void
+    verify_spltptx_ctx_mat_mul_args(const matrix<SplitPlaintextNTTForm> &left, const matrix<seal::Ciphertext> &right) {
+        verify_not_empty_matrices(left, right);
+        if (!left.data[0][0].is_ntt_form()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: left matrix should be in NTT form");
+        }
+        if (!right.data[0].is_ntt_form()) {
+            throw std::invalid_argument("matrix_multiplier::multiply: right matrix should be in NTT form");
         }
     }
 }
