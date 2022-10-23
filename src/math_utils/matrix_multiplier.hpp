@@ -147,13 +147,11 @@ namespace multiplication_utils {
                            const matrix <seal::Plaintext> &mat,
                            matrix <seal::Ciphertext> &result) const;
 
-        void
-        multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
-                 matrix<seal::Ciphertext> &result) const;
+        void multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
 
-        void
-        multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
-                 matrix<seal::Ciphertext> &result) const;
+        void multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
 
         void multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
                       const matrix<seal::Ciphertext> &right,
