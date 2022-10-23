@@ -14,9 +14,13 @@ namespace multiplication_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
+    enum MultTaskType {
+        ptx_to_ctx,
+        ctx_to_ctx
+    };
     // represents a task to be executed by a thread
     struct task {
-        int task_type; // todo: into enum. state the type of the task..
+        MultTaskType task_type;
         // the WaitGroup that the issuer of the task is waiting on.
         std::shared_ptr<WaitGroup> wg;
         // compute details.

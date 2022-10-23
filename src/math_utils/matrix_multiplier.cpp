@@ -2,7 +2,6 @@
 #include "defines.h"
 #include <execution>
 
-#define PTX_CTX_MUL 0
 namespace multiplication_utils {
     void foo() {
         std::cout << 1 << std::endl;
@@ -243,7 +242,7 @@ namespace multiplication_utils {
 
                 chan->write(
                         task{
-                                .task_type = PTX_CTX_MUL,
+                                .task_type = ptx_to_ctx,
                                 .wg = wg,
                                 .row = i,
                                 .col = j,
