@@ -13,7 +13,7 @@ service Worker {// anyone who wishes to work runs this services.
 
     Metadata, like round number ETC should be sent inside the stream context.
    */
-  rpc SendTasks(stream MatrixPart) returns (Ack){};
+  rpc SendTask(stream MatrixPart) returns (Ack){};
 }
 
 
