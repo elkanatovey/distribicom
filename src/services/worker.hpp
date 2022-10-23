@@ -13,9 +13,9 @@ namespace services {
 
     void add_matrix_size(grpc::ClientContext &context, int size);
 
-    // todo this is what the worker ends the SendTasks RPC call with.
-    //  should contain things the worker ought to send to it's threadpool.
     struct WorkerServiceTask {
+        explicit WorkerServiceTask(grpc::ServerContext *pContext);
+
         // metadata worker needs to know.
         int epoch;
         int round;
@@ -36,8 +36,6 @@ namespace services {
         Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
 
-        void vaildate_task(services::WorkerServiceTask &task) const;
-
     public:
         // register to the server.
         void start() {};
@@ -48,5 +46,6 @@ namespace services {
         SendTasks(grpc::ServerContext *context, grpc::ServerReader<::distribicom::MatrixPart> *reader,
                   distribicom::Ack *response) override;
 
+        void fill_task(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
     };
 }
