@@ -2,11 +2,14 @@
 
 #include "distribicom.pb.h"
 #include "distribicom.grpc.pb.h"
-#include "../math_utils/channel.h" // TODO: Ask Elkana how to import correctly.
-#include "../marshal/marshal.hpp" // TODO: Ask Elkana how to import correctly.
 #include "seal/seal.h"
 #include "constants.hpp"
 #include <string>
+
+// TODO: Ask Elkana how to import correctly.
+#include "../math_utils/channel.h"
+#include "../marshal/marshal.hpp"
+#include "../math_utils/query_expander.hpp"
 
 namespace services {
     int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
@@ -36,10 +39,9 @@ namespace services {
 
         Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
+        std::shared_ptr<multiplication_utils::QueryExpander> query_expander;
 
     public:
-        // register to the server.
-        void start() {};
 
         explicit Worker(distribicom::AppConfigs &app_configs);
 
@@ -48,5 +50,9 @@ namespace services {
                   distribicom::Ack *response) override;
 
         void fill_task(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
+
+        void inspect_configs() const;
+
+        seal::EncryptionParameters setup_enc_params() const;
     };
 }

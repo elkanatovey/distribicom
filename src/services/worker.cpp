@@ -12,18 +12,15 @@ namespace services {
     }
 
     Worker::Worker(distribicom::AppConfigs &_app_configs)
-            : symmetric_secret_key(), app_configs(_app_configs), chan(), mrshl() {
-        if (app_configs.configs().scheme() != "bgv") {
-            throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
-        }
-        auto row_size = app_configs.configs().db_cols();
-        if (row_size <= 0) {
-            throw std::invalid_argument("row size must be positive");
-        }
-        if (row_size > 10 * 1000 || row_size <= 0) {
-            throw std::invalid_argument("row size must be between 1 and 10k");
-        }
+            : symmetric_secret_key(), app_configs(_app_configs), chan(), mrshl(), query_expander() {
+        inspect_configs();
+        seal::EncryptionParameters enc_params = setup_enc_params();
 
+        mrshl = marshal::Marshaller::Create(enc_params);
+        query_expander = multiplication_utils::QueryExpander::Create(enc_params);
+    }
+
+    seal::EncryptionParameters Worker::setup_enc_params() const {
         seal::EncryptionParameters enc_params(seal::scheme_type::bgv);
         auto N = app_configs.configs().polynomial_degree();
         auto logt = app_configs.configs().logarithm_plaintext_coefficient();
@@ -32,14 +29,26 @@ namespace services {
         // TODO: Use correct BGV parameters.
         enc_params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(N));
         enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));
+        return enc_params;
+    }
 
-        mrshl = marshal::Marshaller::Create(enc_params);
+    void Worker::inspect_configs() const {
+        if (app_configs.configs().scheme() != "bgv") {
+            throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
+        }
+
+        auto row_size = app_configs.configs().db_cols();
+        if (row_size <= 0) {
+            throw std::invalid_argument("row size must be positive");
+        }
+        if (row_size > 10 * 1000 || row_size <= 0) {
+            throw std::invalid_argument("row size must be between 1 and 10k");
+        }
     }
 
     grpc::Status
     Worker::SendTasks(grpc::ServerContext *context, grpc::ServerReader<::distribicom::MatrixPart> *reader,
                       distribicom::Ack *response) {
-        response->set_success(false);
         try {
             WorkerServiceTask task(context, app_configs.configs());
 
@@ -47,17 +56,13 @@ namespace services {
             while (reader->Read(&tmp)) {
                 fill_task(task, tmp);
             }
-
-            for (int i = 0; i < 5; ++i) {
-                std::cout << task.ptx_rows[0][i].to_string() << std::endl;
-            }
-
-            response->set_success(true);
-            // TODO: Continue once we've stopped receiving.
-            std::cout << "Disconnecting" << std::endl;
+            chan.write(task);
         } catch (std::invalid_argument &e) {
             std::cout << "Exception: " << e.what() << std::endl;
             return {grpc::StatusCode::INVALID_ARGUMENT, e.what()};
+        } catch (std::exception &e) {
+            std::cout << "Exception: " << e.what() << std::endl;
+            return {grpc::StatusCode::INTERNAL, e.what()};
         }
 
         return {};
@@ -89,7 +94,7 @@ namespace services {
         if (row >= 1) {
             throw std::invalid_argument("should receive at most one compressed ciphertext");
         }
-        task.ctx_cols[col][row] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ptx().data());
+        task.ctx_cols[col][row] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
     }
 
     WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :
