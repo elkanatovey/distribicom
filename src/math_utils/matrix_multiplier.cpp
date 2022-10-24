@@ -9,6 +9,9 @@ namespace multiplication_utils {
     void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right);
 
 
+    template<typename T, typename U>
+    void verify_correct_dimension(const matrix<T> &left, const matrix<U> &right);
+
     void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left,
                                      const matrix<seal::Ciphertext> &right);
 
@@ -215,6 +218,8 @@ namespace multiplication_utils {
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
         verify_not_empty_matrices(left, right);
+        verify_correct_dimension(left, right);
+
         if (!left.data[0].is_ntt_form() || !right.data[0].is_ntt_form()) {
             throw std::runtime_error("matrix_multiplier::multiply: matrices are not in NTT form");
         }
@@ -238,6 +243,7 @@ namespace multiplication_utils {
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
         verify_ptx_ctx_mat_mul_args(left, right);
+        verify_correct_dimension(left, right);
 
         seal::Ciphertext tmp;
         result.resize(left.rows, right.cols);
@@ -252,6 +258,8 @@ namespace multiplication_utils {
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
         verify_spltptx_ctx_mat_mul_args(left_ntt, right);
+        verify_correct_dimension(left_ntt, right);
+
         auto wg = std::make_shared<WaitGroup>();
         wg->add(int(left_ntt.rows * right.cols));
 
@@ -399,6 +407,13 @@ namespace multiplication_utils {
         }
         if (!right.data[0].is_ntt_form()) {
             throw std::invalid_argument("matrix_multiplier::multiply: right matrix should be in NTT form");
+        }
+    }
+
+    template<typename T, typename U>
+    void verify_correct_dimension(const matrix<T> &left, const matrix<U> &right) {
+        if (left.cols != right.rows) {
+            throw std::invalid_argument("matrix_multiplier::multiply: left matrix cols != right matrix rows");
         }
     }
 }
