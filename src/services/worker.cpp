@@ -4,7 +4,7 @@ class NotImplemented : public std::logic_error {
 public:
     NotImplemented() : std::logic_error("Function not yet implemented") {};
 
-    NotImplemented(const std::string &txt) : std::logic_error(txt) {};
+    explicit NotImplemented(const std::string &txt) : std::logic_error(txt) {};
 };
 namespace services {
     void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size) {
