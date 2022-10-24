@@ -49,7 +49,7 @@ service Server {// masterServer runs this service.
 
    Once the client is done sending to the server, it should close the connection.
    */
-  rpc StoreQuery(stream ClientQueryRequest) returns (Ack){};
+  rpc StoreQuery(ClientQueryRequest) returns (Ack){};
 
   /*
     Anyone can write to the DB, on an unsecured channel.
