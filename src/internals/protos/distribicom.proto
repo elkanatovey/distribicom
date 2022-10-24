@@ -3,73 +3,111 @@ syntax = "proto3";
 package distribicom;
 
 
-message TODO{}
-
 // all services assumes configs: (DistribicomConfigs)
-service Worker {// anyone who wishes to work.
-  rpc SendDB(stream TODO) returns (TODO);
+service Worker {// anyone who wishes to work runs this services.
+  /*
+    Send task is a stream that runs each round until all information in regards to the task is done.
+    The manager initialize the stream once the round begins, and pushes all ctxs and ptxs the worker should
+    use in the mat-mul operation.
+    once the server is done sending the data, it should close the stream.
 
-  rpc SendQueries(stream TODO) returns (TODO);
+    Metadata, like round number ETC should be sent inside the stream context.
+   */
+  rpc SendTask(stream MatrixPart) returns (Ack){};
 }
 
-service Client{// anyone who owns a query can run this.
-  rpc Answer(TODO) returns (stream TODO);
-  rpc RegAnswer(TODO) returns (stream TODO);
-}
 
 // facing workers, pub/sub of work that should be done.
 service Manager {// masterServer runs this service.
 
   // PartialWorkStream i save this on my server map.
-  rpc RegisterAsWorker(TODO) returns (TODO){};
+  rpc RegisterAsWorker(WorkerRegistryRequest) returns (Ack){};
 
   // a worker should send its work, along with credentials of what it sent.
-  rpc ReturnLocalWork(stream TODO) returns (TODO){};
+  rpc ReturnLocalWork(stream MatrixPart) returns (Ack){};
+}
+
+
+service Client{// anyone who owns a query need to run a listener for this service.
+  // once the round ends, and the server has an answer it should call upon this RPC call and send the answer
+  //  to the client
+  rpc Answer(Ciphertext) returns (Ack){};
+  rpc TellNewRound(TellNewRoundRequest) returns (Ack){};
 }
 
 // facing clients, allowing them to read and write to the server.
 service Server {// masterServer runs this service.
-  // Can be called at the start of an epoch. otherwise, dismissed / dropped.
-  // StoreQuery serves as registration of a query and a client for multiple epochs.
-  // ensure no client can write to anothers query position.
+  /*
+  Assumes this cannot be called in the middle of a round.
 
-  // might be compromised of:
-  // client credentials
-  // uint32 client_id = 2;
-  // bytes galois_key = 3; todo: about 3.5mb?
-  // uint32 num_ctexts = 4;
-  // repeated bytes ctxs = 5;
-  rpc StoreQuery(TODO) returns (Ack){}; // TODO: note that these are fairly small messages.
+  We assume this connection is performed with a TLS secured channel to the server.
 
-  // in metadata:
-  // attempt to send dbpart info in the context
+   Upon receiving this call, the server should create a Client instance so it'll be able to answer the client
+   using the `Answer` RPC call once the round is over.
+   Should contact this given client according to its IP.
+   Should contact the client with MAC with a MAC using the clients given request key.
+
+   Once the client is done sending to the server, it should close the connection.
+   */
+  rpc StoreQuery(ClientQueryRequest) returns (Ack){};
+
+  /*
+    Anyone can write to the DB, on an unsecured channel.
+    Need to avoid malicious users from writing to all cells in the DB.
+    the server must ensure any writing is done once per
+    client though. (TODO: think of the proper way to do that in our system).
+   */
   rpc WriteToDB(WriteRequest) returns (Ack){};
 }
 
 
-message Ack{}
+message Ack{
+  bool success = 1; // states whether the client received all messages correctly.
+}
+
+message MatrixPart {
+  int32 row = 3;
+  int32 col = 4;
+
+  oneof data{
+    Ciphertext ctx = 1;
+    Plaintext ptx = 2;
+  }
+}
 
 // small:
 message WriteRequest{
+  // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...
   int64 ptxnumber = 1;
   int32 whereinptx = 2;
   bytes data = 3; // 288 bytes?
 };
 
-message DBPartRequest {
-  int32 round = 1;
-}
-
 message Ciphertext{bytes data = 1;}
 
 message Plaintext{bytes data = 1;}
 
-message RegistrationReply{
-  uint32 client_id = 1;
-  uint32 shard_id = 2;
-};
+message ClientQueryRequest{
+  oneof payload{
+    bytes GaloisKeyElem = 1;
+    bytes ctx = 3;
+  }
+}
 
-message WorkInfo{
-  uint32 event = 1;
-};
+message TellNewRoundRequest{
+  int32 round = 1;
+}
 
+message WorkerRegistryRequest{
+  bytes credentials = 1;
+  // should be used to ensure the worker knows the messages are legitimate from the server.
+}
+
+// Every subscriber should have a certificate it created to ensure the connections from the server
+// are secure
+message Subscriber{
+  // TODO consider how to use. probably only need the sym_key.
+  bytes secretKey = 1;
+  bytes publicKey = 2;
+  bytes sym_key = 3;
+}

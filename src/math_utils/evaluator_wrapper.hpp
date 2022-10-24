@@ -20,6 +20,7 @@ namespace multiplication_utils {
 
         EvaluatorWrapper(seal::EncryptionParameters enc_params);
 
+        void assert_plain_is_under_threshold(const seal::Plaintext &plaintext) const;
 
     public:
         seal::EncryptionParameters enc_params; // SEAL parameters
@@ -41,6 +42,10 @@ namespace multiplication_utils {
          *  ptx ->  either both are NTT or both aren't NTT.
          */
         void mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+
+        inline void add(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+            evaluator->add(a, b, c);
+        };
 
         // TODO: Note that plaintext type would be changed into a "modified-ptx" that can be split into two items.
         /***
@@ -79,6 +84,8 @@ namespace multiplication_utils {
 
         void add_plain(const seal::Plaintext &a, const seal::Plaintext &b, seal::Plaintext &c);
 
+        void add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
+                               seal::Ciphertext &out) const;
 
         /***
         * take vector along with constant and do sum += vector*constant.
@@ -87,6 +94,6 @@ namespace multiplication_utils {
 
         void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
-        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result);
+        void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
     };
 }

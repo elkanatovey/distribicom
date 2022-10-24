@@ -7,6 +7,8 @@ create_test_sourcelist (Tests
         right_vec_multiply.cpp
         evaluator_wrapper_test.cpp
         query_expander_test.cpp
+        mult_benchmark.cpp
+        frievalds_test.cpp
         )
 
 # add the executable

@@ -53,6 +53,7 @@ namespace TestUtils {
         seal::Plaintext random_plaintext();
 
         seal::Ciphertext random_ciphertext();
+
         seal::GaloisKeys generate_galois_keys();
     };
 
@@ -61,7 +62,9 @@ namespace TestUtils {
     extern TestEncryptionParamsConfigs DEFAULT_ENCRYPTION_PARAMS_CONFIGS;
     extern TestPIRParamsConfigs DEFAULT_PIR_PARAMS_CONFIGS;
 
-    extern SetupConfigs DEFAULT_SETUP_CONFIGS ;
+    extern SetupConfigs DEFAULT_SETUP_CONFIGS;
 
+    long time_func(const std::function<void()> &f);
 
+    void time_func_print(const std::string &name, const std::function<void()> &f);
 }
