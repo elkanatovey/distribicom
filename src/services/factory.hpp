@@ -4,7 +4,7 @@
 #include "distribicom.grpc.pb.h"
 
 
-namespace services {
+namespace services::configurations {
 
     distribicom::Configs create_configs(int poly_deg, int logt, int rows, int cols) {
         distribicom::Configs c;
@@ -26,5 +26,4 @@ namespace services {
 
         return c;
     }
-
 }

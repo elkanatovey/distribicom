@@ -19,7 +19,7 @@ RUN apt-get clean
 
 
 RUN ( \
-    echo 'LogLevel DEBUG2'; \
+    echo 'LogLevel ERROR'; \
     echo 'PermitRootLogin yes'; \
     echo 'PasswordAuthentication yes'; \
     echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \

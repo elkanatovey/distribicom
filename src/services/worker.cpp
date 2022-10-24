@@ -1,23 +1,27 @@
 #include "worker.hpp"
 
 namespace services {
-    void add_matrix_size(grpc::ClientContext &context, int size) {
-        context.AddMetadata(MD_MATRIX_SIZE, std::to_string(size));
+    void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size) {
+        context.AddMetadata(std::string(md), std::to_string(size));
     }
 
-    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp) {
-        auto ntmp = mp.find(MD_MATRIX_SIZE);
-        try {
-            return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
-        } catch (...) {
-            return -1;
-        }
+    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
+                                   const constants::metadata &md) {
+        auto ntmp = mp.find(std::string(md));
+        return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
     }
 
     Worker::Worker(distribicom::AppConfigs &_app_configs)
             : symmetric_secret_key(), app_configs(_app_configs), chan(), mrshl() {
         if (app_configs.configs().scheme() != "bgv") {
             throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
+        }
+        auto row_size = app_configs.configs().db_cols();
+        if (row_size <= 0) {
+            throw std::invalid_argument("row size must be positive");
+        }
+        if (row_size > 10 * 1000 || row_size <= 0) {
+            throw std::invalid_argument("row size must be between 1 and 10k");
         }
 
         seal::EncryptionParameters enc_params(seal::scheme_type::bgv);
@@ -37,7 +41,7 @@ namespace services {
                       distribicom::Ack *response) {
         response->set_success(false);
         try {
-            WorkerServiceTask task(context);
+            WorkerServiceTask task(context, app_configs.configs());
 
             distribicom::MatrixPart tmp;
             while (reader->Read(&tmp)) {
@@ -80,24 +84,21 @@ namespace services {
         }
 
         if (!task.ctx_cols.contains(col)) {
-            task.ctx_cols[col] = std::vector<seal::Ciphertext>(task.row_size);
+            task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
         }
-        if (row >= task.row_size) {
-            throw std::invalid_argument("Invalid row index, too big");
+        if (row >= 1) {
+            throw std::invalid_argument("should receive at most one compressed ciphertext");
         }
         task.ctx_cols[col][row] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ptx().data());
     }
 
-    WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext) :
-            epoch(-1), round(-1), row_size(-1), ptx_rows(), ctx_cols() {
+    WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :
+            epoch(-1), round(-1), row_size(int(configs.db_cols())), ptx_rows(), ctx_cols() {
+
         const auto &metadata = pContext->client_metadata();
-        row_size = extract_size_from_metadata(metadata);
-        if (row_size <= 0) {
-            throw std::invalid_argument("row size must be positive");
-        }
-        if (row_size > 10 * 1000 || row_size <= 0) {
-            throw std::invalid_argument("row size must be between 0 and 10k");
-        }
+        epoch = extract_size_from_metadata(metadata, constants::epoch_md);
+        round = extract_size_from_metadata(metadata, constants::round_md);
+
         if (epoch < 0) {
             throw std::invalid_argument("epoch must be positive");
         }

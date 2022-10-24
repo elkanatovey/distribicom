@@ -7,7 +7,7 @@
 std::unique_ptr<grpc::Server> run_server();
 
 int worker_test(int, char *[]) {
-    auto cfgs = services::create_app_configs("srvr", 4096, 20, 50, 50);
+    auto cfgs = services::configurations::create_app_configs("srvr", 4096, 20, 50, 50);
 
     WaitGroup wg;
 
@@ -32,7 +32,10 @@ int worker_test(int, char *[]) {
     distribicom::Ack response;
 
 
-    services::add_matrix_size(context, 100);
+    services::add_metadata_size(context, services::constants::size_md, 5);
+    services::add_metadata_size(context, services::constants::round_md, 1);
+    services::add_metadata_size(context, services::constants::epoch_md, 2);
+
     auto conn = client.SendTasks(&context, &response);
 
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);

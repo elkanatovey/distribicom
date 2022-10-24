@@ -5,16 +5,17 @@
 #include "../math_utils/channel.h" // TODO: Ask Elkana how to import correctly.
 #include "../marshal/marshal.hpp" // TODO: Ask Elkana how to import correctly.
 #include "seal/seal.h"
+#include "constants.hpp"
 #include <string>
 
-#define MD_MATRIX_SIZE "m_size"
 namespace services {
-    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp);
+    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
+                                   const constants::metadata &md);
 
-    void add_matrix_size(grpc::ClientContext &context, int size);
+    void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size);
 
     struct WorkerServiceTask {
-        explicit WorkerServiceTask(grpc::ServerContext *pContext);
+        explicit WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs);
 
         // metadata worker needs to know.
         int epoch;
