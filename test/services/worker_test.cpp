@@ -36,7 +36,7 @@ int worker_test(int, char *[]) {
     services::add_metadata_size(context, services::constants::round_md, 1);
     services::add_metadata_size(context, services::constants::epoch_md, 2);
 
-    auto conn = client.SendTasks(&context, &response);
+    auto conn = client.SendTask(&context, &response);
 
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
     auto ptx = all->random_plaintext();
@@ -48,10 +48,14 @@ int worker_test(int, char *[]) {
     mptx.mutable_data()->assign(marshaler->marshal_seal_object<seal::Plaintext>(ptx));
     distribicom::MatrixPart m;
     m.mutable_ptx()->CopyFrom(mptx);
+
+    distribicom::WorkerTaskPart tsk;
+    tsk.mutable_matrixpart()->CopyFrom(m);
+    tsk.mutable_matrixpart()->set_row(0);
+
     for (int i = 0; i < 5; ++i) {
-        m.set_col(i);
-        m.set_row(0);
-        conn->Write(m, grpc::WriteOptions{});
+        tsk.mutable_matrixpart()->set_col(i);
+        conn->Write(tsk, grpc::WriteOptions{});
     }
     conn->WritesDone();
     auto out = conn->Finish();

@@ -13,7 +13,7 @@ service Worker {// anyone who wishes to work runs this services.
 
     Metadata, like round number ETC should be sent inside the stream context.
    */
-  rpc SendTasks(stream MatrixPart) returns (Ack){};
+  rpc SendTask(stream WorkerTaskPart) returns (Ack){};
 }
 
 
@@ -64,17 +64,34 @@ service Server {// masterServer runs this service.
 message Ack{
   bool success = 1; // states whether the client received all messages correctly.
 }
-
+message WorkerTaskPart {
+  oneof part {
+    MatrixPart matrixPart = 1;
+    GaloisKeys gkey = 3;
+  }
+}
 message MatrixPart {
   oneof data{
     Ciphertext ctx = 1;
     Plaintext ptx = 2;
+    // GaloisKey should be sent to match a specific ctx. thus should be sent with specific row, col arguments.
   }
 
   int32 row = 5;
   int32 col = 6;
 }
 
+message QueryCiphertext{
+  bytes data = 1;
+  bytes GaloisKeyElem = 2;
+}
+message GaloisKeys{
+  bytes keys = 1;
+  // should point to the matching ciphertext.
+}
+message Ciphertext{bytes data = 1;}
+
+message Plaintext{bytes data = 1;}
 // small:
 message WriteRequest{
   // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...
@@ -82,10 +99,6 @@ message WriteRequest{
   int32 whereinptx = 2;
   bytes data = 3; // 288 bytes?
 };
-
-message Ciphertext{bytes data = 1;}
-
-message Plaintext{bytes data = 1;}
 
 message ClientQueryRequest{
   oneof payload{

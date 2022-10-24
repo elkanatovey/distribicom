@@ -46,10 +46,10 @@ namespace services {
         explicit Worker(distribicom::AppConfigs &app_configs);
 
         grpc::Status
-        SendTasks(grpc::ServerContext *context, grpc::ServerReader<::distribicom::MatrixPart> *reader,
+        SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
                   distribicom::Ack *response) override;
 
-        void fill_task(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
+        void fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
 
         void inspect_configs() const;
 

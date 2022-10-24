@@ -1,5 +1,11 @@
 #include "worker.hpp"
 
+class NotImplemented : public std::logic_error {
+public:
+    NotImplemented() : std::logic_error("Function not yet implemented") {};
+
+    NotImplemented(const std::string &txt) : std::logic_error(txt) {};
+};
 namespace services {
     void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size) {
         context.AddMetadata(std::string(md), std::to_string(size));
@@ -47,14 +53,18 @@ namespace services {
     }
 
     grpc::Status
-    Worker::SendTasks(grpc::ServerContext *context, grpc::ServerReader<::distribicom::MatrixPart> *reader,
-                      distribicom::Ack *response) {
+    Worker::SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
+                     distribicom::Ack *response) {
         try {
             WorkerServiceTask task(context, app_configs.configs());
 
-            distribicom::MatrixPart tmp;
+            distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
-                fill_task(task, tmp);
+                if (!tmp.has_matrixpart()) {
+                    // TODO update the worker's galois keys perhaps?
+                    throw NotImplemented("receiving GaloisKey not implemented yet.");
+                }
+                fill_matrix_part(task, tmp.matrixpart());
             }
             chan.write(task);
         } catch (std::invalid_argument &e) {
@@ -68,7 +78,7 @@ namespace services {
         return {};
     }
 
-    void Worker::fill_task(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const {
+    void Worker::fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const {
         int row = tmp.row();
         int col = tmp.col();
 
