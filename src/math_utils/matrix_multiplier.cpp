@@ -220,8 +220,8 @@ namespace multiplication_utils {
         verify_not_empty_matrices(left, right);
         verify_correct_dimension(left, right);
 
-        if (!left.data[0].is_ntt_form() || !right.data[0].is_ntt_form()) {
-            throw std::runtime_error("matrix_multiplier::multiply: matrices are not in NTT form");
+        if (left.data[0].is_ntt_form() || right.data[0].is_ntt_form()) {
+            throw std::runtime_error("matrix_multiplier::multiply: matrices should not be in NTT form");
         }
 
         seal::Ciphertext tmp;
