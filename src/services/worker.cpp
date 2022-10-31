@@ -17,6 +17,7 @@ namespace services {
         return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
     }
 
+    // todo: take a const ref of the app_configs:
     Worker::Worker(distribicom::AppConfigs &_app_configs)
             : symmetric_secret_key(), app_configs(_app_configs), chan(), mrshl(), query_expander() {
         inspect_configs();
@@ -24,6 +25,8 @@ namespace services {
 
         mrshl = marshal::Marshaller::Create(enc_params);
         query_expander = multiplication_utils::QueryExpander::Create(enc_params);
+
+
     }
 
     seal::EncryptionParameters Worker::setup_enc_params() const {

@@ -4,35 +4,38 @@
 #include "server.hpp"
 #include <grpc++/grpc++.h>
 
+constexpr std::string_view server_port = "5051";
+constexpr std::string_view worker_port = "52100";
 
-std::unique_ptr<grpc::Server> run_server();
+std::thread runFullServer(WaitGroup &wg);
+
+std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs);
 
 int worker_test(int, char *[]) {
-    auto cfgs = services::configurations::create_app_configs("srvr", 4096, 20, 50, 50);
+    auto cfgs = services::configurations::create_app_configs(
+            "localhost:" + std::string(server_port),
+            4096,
+            20,
+            50,
+            50
+    );
 
     WaitGroup wg;
+    wg.add(1); // will tell the servers when to quit.
 
-    wg.add(1);
-    std::thread t([&] {
-        std::string server_address("0.0.0.0:50051");
-        services::Worker service(cfgs);
-        services::FullServer f;
+    std::vector<std::thread> threads;
+    threads.emplace_back(runFullServer(wg));
 
-        grpc::ServerBuilder builder;
-        builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-        builder.RegisterService(&service);
+    std::cout << "setting up manager and client services." << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(3 * 1000));
 
-        builder.RegisterService(f.get_manager_service());
+    std::cout << "setting up worker-service" << std::endl;
+    threads.emplace_back(setupWorker(wg, cfgs));
 
-        auto server(builder.BuildAndStart());
-        std::cout << "Server listening on " << server_address << std::endl;
-        std::cout << "\n\n" << std::endl;
-        wg.wait();
-        server->Shutdown();
-    });
-    std::this_thread::sleep_for(std::chrono::milliseconds(2 * 1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3 * 1000));
 
-    distribicom::Worker::Stub client(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
+    distribicom::Worker::Stub client(
+            grpc::CreateChannel("localhost:" + std::string(worker_port), grpc::InsecureChannelCredentials()));
     grpc::ClientContext context;
     distribicom::Ack response;
 
@@ -64,23 +67,53 @@ int worker_test(int, char *[]) {
     }
     conn->WritesDone();
     auto out = conn->Finish();
-    std::cout << "status:" << out.ok() << std::endl;
+    assert(out.ok() == 1);
     wg.done();
-    t.join();
+
+    std::cout << "\nshutting down.\n" << std::endl;
+    for (auto &t: threads) {
+        t.join();
+    }
+
     return 0;
 }
 
-std::unique_ptr<grpc::Server> run_server() {
-    std::string server_address("0.0.0.0:50051");
-    distribicom::AppConfigs a;
-    services::Worker service(a);
+std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
+    return std::thread([&] {
+        try {
+            std::string server_address("0.0.0.0:" + std::string(worker_port));
 
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-    auto server(builder.BuildAndStart());
-    std::cout << "Server listening on " << server_address << std::endl;
-    std::cout << "\n\n" << std::endl;
-    server->Wait();
-    return nullptr;
+            services::Worker worker(configs);
+
+            grpc::ServerBuilder builder;
+            builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+            builder.RegisterService(&worker);
+
+            auto server(builder.BuildAndStart());
+            std::cout << "worker-service listening on " << server_address << std::endl;
+            wg.wait();
+            server->Shutdown();
+        } catch (std::exception &e) {
+            std::cerr << "setupWorker :: exception: " << e.what() << std::endl;
+        }
+
+    });
+}
+
+std::thread runFullServer(WaitGroup &wg) {
+    return std::thread([&] {
+        std::string server_address("0.0.0.0:" + std::string(server_port));
+
+        services::FullServer f;
+
+        grpc::ServerBuilder builder;
+        builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+
+
+        builder.RegisterService(f.get_manager_service());
+        auto server(builder.BuildAndStart());
+        std::cout << "manager and client services are listening on " << server_address << std::endl;
+        wg.wait();
+        server->Shutdown();
+    });
 }
