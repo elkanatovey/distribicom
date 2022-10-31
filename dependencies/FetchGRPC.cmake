@@ -1,9 +1,6 @@
 
-option(USE_PREINSTALLED_GRPC "Use preinstalled gRPC" OFF)
-message("GRPC install dir is ${GRPC_DIR}")
-if(1)
+if(USE_PREINSTALLED_GRPC)
     # Find previously-installed gRPC
-    list(APPEND CMAKE_PREFIX_PATH ${GRPC_DIR})
     find_package(Protobuf CONFIG REQUIRED)
 
     message(STATUS "Using protobuf ${Protobuf_VERSION}")

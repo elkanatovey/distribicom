@@ -1,5 +1,8 @@
 set(CMAKE_CXX_FLAGS "-Wall -Wextra ")
 option(DONT_COMPILE_DEPENDENCIES "GET_SEAL" OFF)
+
+option(USE_PRECOMPILED_SEAL "Use preinstalled seal" OFF)
+option(USE_PREINSTALLED_GRPC "Use preinstalled gRPC" OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 cmake_minimum_required(VERSION 3.20)
