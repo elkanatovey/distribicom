@@ -5,7 +5,7 @@
 
 namespace services {
     // contains the workers and knows how to distribute their work.
-    // shouls be able to give a Promise for a specific round and fullfill it once all workers have sent their jobs.
+    // should be able to give a Promise for a specific round and fullfill it once all workers have sent their jobs.
     // can use Frievalds to verify their work.
 
     class Manager : public distribicom::Manager::Service {

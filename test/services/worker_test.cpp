@@ -1,6 +1,7 @@
 #include "../test_utils.hpp"
 #include "worker.hpp"
 #include "factory.hpp"
+#include "server.hpp"
 #include <grpc++/grpc++.h>
 
 
@@ -15,10 +16,14 @@ int worker_test(int, char *[]) {
     std::thread t([&] {
         std::string server_address("0.0.0.0:50051");
         services::Worker service(cfgs);
+        services::FullServer f;
 
         grpc::ServerBuilder builder;
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
         builder.RegisterService(&service);
+
+        builder.RegisterService(f.get_manager_service());
+
         auto server(builder.BuildAndStart());
         std::cout << "Server listening on " << server_address << std::endl;
         std::cout << "\n\n" << std::endl;
