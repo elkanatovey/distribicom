@@ -13,7 +13,7 @@ mkdir -p $MY_INSTALL_DIR
 export PATH="$MY_INSTALL_DIR/bin:$PATH"
 
 # install grpc
-git clone --recurse-submodules -b v1.48.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc
+git clone --recurse-submodules -b v1.50.1 --depth 1 --shallow-submodules https://github.com/grpc/grpc
 cd grpc
 mkdir -p cmake/build
 pushd cmake/build
@@ -31,7 +31,7 @@ rm -rf grpc
 # install seal
 git clone --recurse-submodules -b v4.0.0 --depth 1 --shallow-submodules https://github.com/microsoft/SEAL
 cd SEAL
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR -DSEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR -DSEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF -DSEAL_USE_INTEL_HEXL=ON
 cmake --build build
 cmake --install build
 cd ..

@@ -30,7 +30,7 @@ else()
     FetchContent_Declare(
             gRPC
             GIT_REPOSITORY https://github.com/grpc/grpc
-            GIT_TAG        v1.48.0  # e.g v1.28.0
+            GIT_TAG        v1.50.1  # e.g v1.28.0
             USES_TERMINAL_DOWNLOAD ON
     )
     set(FETCHCONTENT_QUIET OFF)
