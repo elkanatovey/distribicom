@@ -1,8 +1,6 @@
 #include "../test_utils.hpp"
 
-int left_int_vec_multiply(int, char*[]) {
-    // sanity check
-    multiplication_utils::foo();
+int left_int_vec_multiply(int, char *[]) {
 
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 

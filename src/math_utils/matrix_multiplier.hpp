@@ -14,9 +14,14 @@ namespace multiplication_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
+
+    enum MultTaskType {
+        ptx_to_ctx,
+        ctx_to_ctx
+    };
     // represents a task to be executed by a thread
     struct task {
-        int task_type; // todo: into enum. state the type of the task..
+        MultTaskType task_type;
         // the WaitGroup that the issuer of the task is waiting on.
         std::shared_ptr<WaitGroup> wg;
         // compute details.
@@ -126,6 +131,7 @@ namespace multiplication_utils {
 
         void to_ntt(std::vector<seal::Ciphertext> &m) const;
 
+
         void from_ntt(std::vector<seal::Ciphertext> &m) const;
 
         // working with matrices:
@@ -143,14 +149,33 @@ namespace multiplication_utils {
                            const matrix <seal::Plaintext> &mat,
                            matrix <seal::Ciphertext> &result) const;
 
-        void
-        multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
-                 matrix<seal::Ciphertext> &result) const;
+        /***
+         * performs matrix-multiplication.
+         * will resize the result matrix to match the expected matrix output.
+         * @param left a CTX matrix with its elements in NTT form.
+         * @param right a CTX matrix with its elements in NTT form.
+         * @param result a CTX matrix with its elements in NTT form.
+         */
+        void multiply(const matrix<seal::Ciphertext> &left, const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
 
-        void
-        multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
-                 matrix<seal::Ciphertext> &result) const;
+        /**
+         * performs threaded matrix-multiplication.
+         * will resize the result matrix to match the expected matrix output.
+         * @param left a PTX matrix with its elements NOT in NTT form.
+         * @param right a CTX matrix with its elements in NTT form.
+         * @param result a CTX matrix with its elements in NTT form.
+         */
+        void multiply(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right,
+                      matrix<seal::Ciphertext> &result) const;
 
+        /***
+         * performs threaded matrix-multiplication.
+         * will resize the result matrix to match the expected matrix output.
+         * @param left_ntt a PTX matrix with its elements split and in NTT form.
+         * @param right a CTX matrix with its elements in NTT form.
+         * @param result a CTX matrix with its elements in NTT form.
+         */
         void multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
                       const matrix<seal::Ciphertext> &right,
                       matrix<seal::Ciphertext> &result) const;
@@ -166,7 +191,5 @@ namespace multiplication_utils {
                        matrix<seal::Ciphertext> &result) const;
 
     };
-
-    void foo();
 
 }

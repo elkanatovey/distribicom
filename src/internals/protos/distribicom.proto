@@ -49,8 +49,7 @@ service Server {// masterServer runs this service.
 
    Once the client is done sending to the server, it should close the connection.
    */
-  rpc StoreQuery(stream ClientQueryRequest) returns (Ack){};
-
+  rpc StoreQuery(ClientQueryRequest) returns (Ack){};
   /*
     Anyone can write to the DB, on an unsecured channel.
     Need to avoid malicious users from writing to all cells in the DB.
@@ -74,11 +73,10 @@ message MatrixPart {
   oneof data{
     Ciphertext ctx = 1;
     Plaintext ptx = 2;
-    // GaloisKey should be sent to match a specific ctx. thus should be sent with specific row, col arguments.
   }
 
-  int32 row = 5;
-  int32 col = 6;
+  int32 row = 3;
+  int32 col = 4;
 }
 
 message QueryCiphertext{
@@ -148,4 +146,4 @@ message AppConfigs{
   //every worker/ client will need to register to the following address:
   string main_server_hostname = 2;
   bytes main_server_cert = 3; // TODO: use for TLS connection.
-}
+};

@@ -41,7 +41,7 @@ void frievalds_with_ptx_db() {
                                [&matops, &A_as_ptx, &A]() { matops->transform(A_as_ptx, A); });
 
 
-    matops->to_ntt(B.data); // splitting of ptx and then ntt is performed inside the given function...
+    matops->to_ntt(B.data);
     TestUtils::time_func_print("mat-mult", [&matops, &A_as_ptx, &B, &C]() { matops->multiply(A_as_ptx, B, C); });
 
 
