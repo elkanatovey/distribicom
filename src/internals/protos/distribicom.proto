@@ -147,4 +147,5 @@ message AppConfigs{
 
   //every worker/ client will need to register to the following address:
   string main_server_hostname = 2;
+  bytes main_server_cert = 3; // TODO: use for TLS connection.
 }
