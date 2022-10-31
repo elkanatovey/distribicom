@@ -11,6 +11,8 @@ std::thread runFullServer(WaitGroup &wg);
 
 std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs);
 
+void sleep(int n_seconds) { std::this_thread::sleep_for(std::chrono::milliseconds(n_seconds * 1000)); }
+
 int worker_test(int, char *[]) {
     auto cfgs = services::configurations::create_app_configs(
             "localhost:" + std::string(server_port),
@@ -27,15 +29,15 @@ int worker_test(int, char *[]) {
     threads.emplace_back(runFullServer(wg));
 
     std::cout << "setting up manager and client services." << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(3 * 1000));
+    sleep(3);
 
     std::cout << "setting up worker-service" << std::endl;
     threads.emplace_back(setupWorker(wg, cfgs));
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(3 * 1000));
+    sleep(3);
 
     distribicom::Worker::Stub client(
             grpc::CreateChannel("localhost:" + std::string(worker_port), grpc::InsecureChannelCredentials()));
+
     grpc::ClientContext context;
     distribicom::Ack response;
 
