@@ -40,6 +40,7 @@ namespace services {
         Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::shared_ptr<multiplication_utils::QueryExpander> query_expander;
+        std::unique_ptr<distribicom::Manager::Stub> manager_conn;
 
     public:
 

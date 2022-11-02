@@ -110,8 +110,11 @@ message TellNewRoundRequest{
 }
 
 message WorkerRegistryRequest{
-  bytes credentials = 1;
   // should be used to ensure the worker knows the messages are legitimate from the server.
+  bytes credentials = 1;
+
+  // the port the worker is listening to.
+  uint32  workerPort = 2;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
@@ -146,4 +149,11 @@ message AppConfigs{
   //every worker/ client will need to register to the following address:
   string main_server_hostname = 2;
   bytes main_server_cert = 3; // TODO: use for TLS connection.
+};
+
+message WorkerConfigs{
+  AppConfigs appConfigs = 1;
+
+  // the port the worker is listening to.
+  uint32  workerPort = 2;
 };

@@ -1,4 +1,5 @@
 #include "worker.hpp"
+#include <grpc++/grpc++.h>
 
 class NotImplemented : public std::logic_error {
 public:
@@ -27,6 +28,20 @@ namespace services {
         query_expander = multiplication_utils::QueryExpander::Create(enc_params);
 
 
+        manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
+                grpc::CreateChannel(
+                        app_configs.main_server_hostname(),
+                        grpc::InsecureChannelCredentials()
+                )
+        ));
+
+        grpc::ClientContext context;
+        distribicom::Ack response;
+        distribicom::WorkerRegistryRequest request;
+
+        request.set_workerport(12345);
+
+        manager_conn->RegisterAsWorker(&context, request, &response);
     }
 
     seal::EncryptionParameters Worker::setup_enc_params() const {

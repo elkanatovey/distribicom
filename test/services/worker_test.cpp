@@ -98,7 +98,6 @@ std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
         } catch (std::exception &e) {
             std::cerr << "setupWorker :: exception: " << e.what() << std::endl;
         }
-
     });
 }
 

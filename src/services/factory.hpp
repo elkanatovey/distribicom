@@ -26,4 +26,11 @@ namespace services::configurations {
 
         return c;
     }
+
+    distribicom::WorkerConfigs create_worker_configs(const distribicom::AppConfigs &app_configs, int worker_port) {
+        distribicom::WorkerConfigs c;
+        c.set_workerport(worker_port);
+        c.mutable_appconfigs()->CopyFrom(app_configs);
+        return c;
+    }
 }
