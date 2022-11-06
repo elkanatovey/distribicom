@@ -8,6 +8,9 @@
 # If you wish to change the install location of the librariesthan just change ${HOME}/.distribicom_installs to your
 # preferred location in every place in this file and proceed according to the above instructions.
 
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+
 export MY_INSTALL_DIR=$HOME/.distribicom_installs
 mkdir -p $MY_INSTALL_DIR
 export PATH="$MY_INSTALL_DIR/bin:$PATH"
