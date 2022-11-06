@@ -2,7 +2,7 @@
 #include "defines.h"
 #include <execution>
 
-
+#define PTX_CTX_MUL 0
 namespace multiplication_utils {
     // helper funcs:
     template<typename T, typename U>
@@ -217,6 +217,7 @@ namespace multiplication_utils {
     void matrix_multiplier::multiply(const matrix<seal::Ciphertext> &left,
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
+
         verify_not_empty_matrices(left, right);
         verify_correct_dimension(left, right);
 
@@ -238,7 +239,6 @@ namespace multiplication_utils {
         }
     }
 
-
     void matrix_multiplier::multiply(const matrix<seal::Plaintext> &left,
                                      const matrix<seal::Ciphertext> &right,
                                      matrix<seal::Ciphertext> &result) const {
@@ -252,7 +252,6 @@ namespace multiplication_utils {
 
         multiply(left_ntt, right, result);
     }
-
 
     void matrix_multiplier::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
                                      const matrix<seal::Ciphertext> &right,

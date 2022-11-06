@@ -14,6 +14,7 @@ namespace multiplication_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
+
     enum MultTaskType {
         ptx_to_ctx,
         ctx_to_ctx
@@ -130,6 +131,7 @@ namespace multiplication_utils {
 
         void to_ntt(std::vector<seal::Ciphertext> &m) const;
 
+
         void from_ntt(std::vector<seal::Ciphertext> &m) const;
 
         // working with matrices:
@@ -187,6 +189,7 @@ namespace multiplication_utils {
                        const matrix<seal::Ciphertext> &a,
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
+
     };
 
 }

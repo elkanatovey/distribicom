@@ -1,9 +1,5 @@
 #pragma once
 
-class channel {
-
-};
-
 
 #include <queue>
 #include <mutex>
@@ -96,4 +92,3 @@ public:
         cv.wait(lock, [this] { return count.load() == 0; });
     }
 };
-
