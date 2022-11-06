@@ -80,9 +80,15 @@ int worker_test(int, char *[]) {
     return 0;
 }
 
+// assumes that configs are not freed until we copy it inside the thread!
 std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
+            auto wcnfgs = services::configurations::create_worker_configs(
+                    configs,
+                    std::stoi(std::string(worker_port))
+            );
+
             std::string server_address("0.0.0.0:" + std::string(worker_port));
 
             services::Worker worker(configs);
