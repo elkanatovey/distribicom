@@ -1,6 +1,5 @@
 #pragma once
 
-#include "distribicom.pb.h"
 #include "distribicom.grpc.pb.h"
 #include "seal/seal.h"
 #include "constants.hpp"
@@ -12,10 +11,6 @@
 #include "../math_utils/query_expander.hpp"
 
 namespace services {
-    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
-                                   const constants::metadata &md);
-
-    void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size);
 
     struct WorkerServiceTask {
         explicit WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs);
@@ -35,7 +30,7 @@ namespace services {
         std::vector<std::byte> symmetric_secret_key;
 
         // states how this worker will operate.
-        distribicom::AppConfigs app_configs;
+        distribicom::WorkerConfigs cnfgs;
 
         Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
@@ -44,11 +39,11 @@ namespace services {
 
     public:
 
-        explicit Worker(distribicom::AppConfigs &app_configs);
+        explicit Worker(distribicom::WorkerConfigs &&wcnfgs);
 
         grpc::Status
         SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
-                  distribicom::Ack *response) override;
+                 distribicom::Ack *response) override;
 
         void fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
 

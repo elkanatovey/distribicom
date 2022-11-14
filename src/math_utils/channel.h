@@ -26,15 +26,19 @@ public:
     Channel(Channel &&) = delete;
 
 
-    // Add an element to the queue.
+    /**
+     * Adds an element to the queue.
+     */
     void write(T t) {
         std::lock_guard<std::mutex> lock(m);
         q.push(t);
         c.notify_one();
     }
 
-    // Get the "front"-element.
-    // If the queue is empty, wait till an element is available.
+    /**
+     * Get the "front"-element.
+     * If there is nothing to read from the channel, wait till an element was written on another thread.
+     */
     Result<T> read() {
         std::unique_lock<std::mutex> lock(m);
         // returns if q is not empty, and if channel is not closed. // todo verify this expression.
@@ -45,6 +49,27 @@ public:
         return Result<T>{val, true};
     }
 
+    /**
+     * read_until behaves like read(), but ensures the caller does not block forever on the channel.
+     * After the given duration the channel returns a result of read failure.
+<<<<<<< HEAD
+     */ // TODO: should return something that indicates timeout.
+    template<typename _Duration>
+    Result<T> read_until(std::chrono::time_point<std::chrono::steady_clock, _Duration> &duration) {
+        std::unique_lock<std::mutex> lock(m);
+        // returns if q is not empty, and if channel is not closed. // todo verify this expression.
+        auto res = c.wait_until(duration, lock, [&] { return (!q.empty() || closed); });
+        if (res == std::cv_status::timeout) { return Result<T>{T(), false}; } // result timed_out!
+        if (closed) { return Result<T>{T(), false}; } // result is not OK.
+
+        T val = q.front();
+        q.pop();
+        return Result<T>{val, true};
+    }
+
+    /**
+     * Closes the channel, anyone attempting to read from a closed channel should quickly receive read failure.
+     */
     void close() {
         std::lock_guard<std::mutex> lock(m);
         closed = true;

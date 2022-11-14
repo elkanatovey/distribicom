@@ -6,6 +6,13 @@
 #include <cassert>
 
 
+#ifdef DISTRIBICOM_DEBUG
+
+#include <iostream>
+
+#endif // DISTRIBICOM_DEBUG
+
+
 namespace multiplication_utils {
     template<typename T>
     class matrix {
@@ -32,25 +39,27 @@ namespace multiplication_utils {
         [[nodiscard]] inline std::uint64_t pos(std::uint64_t row, std::uint64_t col) const { return row + col * rows; }
 
         inline const T &operator()(std::uint64_t row, std::uint64_t col) const {
-            #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
             assert_pos(row, col);
-            #endif
+#endif
             return data[pos(row, col)];
         }
 
 
         inline T &operator()(std::uint64_t row, std::uint64_t col) {
-            #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
             assert_pos(row, col);
-            #endif
+#endif
             return data[pos(row, col)];
         }
 
         inline void assert_pos(std::uint64_t row, std::uint64_t col) const {
+#ifdef DISTRIBICOM_DEBUG
             if (row + col * rows >= data.size()) {
                 std::cout << std::endl;
             }
             assert(row + col * rows < data.size());
+#endif
         };
     };
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace services::constants {
     typedef std::string_view metadata;
     // defines the size of a row or column in the database.

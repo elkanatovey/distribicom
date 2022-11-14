@@ -1,4 +1,5 @@
 #include "worker.hpp"
+#include "utils.hpp"
 #include <grpc++/grpc++.h>
 
 class NotImplemented : public std::logic_error {
@@ -8,29 +9,21 @@ public:
     explicit NotImplemented(const std::string &txt) : std::logic_error(txt) {};
 };
 namespace services {
-    void add_metadata_size(grpc::ClientContext &context, const constants::metadata &md, int size) {
-        context.AddMetadata(std::string(md), std::to_string(size));
-    }
-
-    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
-                                   const constants::metadata &md) {
-        auto ntmp = mp.find(std::string(md));
-        return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
-    }
 
     // todo: take a const ref of the app_configs:
-    Worker::Worker(distribicom::AppConfigs &_app_configs)
-            : symmetric_secret_key(), app_configs(_app_configs), chan(), mrshl(), query_expander() {
+    Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
+            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl(), query_expander() {
         inspect_configs();
-        seal::EncryptionParameters enc_params = setup_enc_params();
+        seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
 
         mrshl = marshal::Marshaller::Create(enc_params);
         query_expander = multiplication_utils::QueryExpander::Create(enc_params);
 
 
+        // todo: put in a different function.
         manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
                 grpc::CreateChannel(
-                        app_configs.main_server_hostname(),
+                        cnfgs.appconfigs().main_server_hostname(),
                         grpc::InsecureChannelCredentials()
                 )
         ));
@@ -39,29 +32,17 @@ namespace services {
         distribicom::Ack response;
         distribicom::WorkerRegistryRequest request;
 
-        request.set_workerport(12345);
+        request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
     }
 
-    seal::EncryptionParameters Worker::setup_enc_params() const {
-        seal::EncryptionParameters enc_params(seal::scheme_type::bgv);
-        auto N = app_configs.configs().polynomial_degree();
-        auto logt = app_configs.configs().logarithm_plaintext_coefficient();
-
-        enc_params.set_poly_modulus_degree(N);
-        // TODO: Use correct BGV parameters.
-        enc_params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(N));
-        enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));
-        return enc_params;
-    }
-
     void Worker::inspect_configs() const {
-        if (app_configs.configs().scheme() != "bgv") {
+        if (cnfgs.appconfigs().configs().scheme() != "bgv") {
             throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
         }
 
-        auto row_size = app_configs.configs().db_cols();
+        auto row_size = cnfgs.appconfigs().configs().db_cols();
         if (row_size <= 0) {
             throw std::invalid_argument("row size must be positive");
         }
@@ -74,7 +55,7 @@ namespace services {
     Worker::SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
                      distribicom::Ack *response) {
         try {
-            WorkerServiceTask task(context, app_configs.configs());
+            WorkerServiceTask task(context, cnfgs.appconfigs().configs());
 
             distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
@@ -86,10 +67,10 @@ namespace services {
             }
             chan.write(task);
         } catch (std::invalid_argument &e) {
-            std::cout << "Exception: " << e.what() << std::endl;
+            std::cout << "Worker::SendTask::Exception: " << e.what() << std::endl;
             return {grpc::StatusCode::INVALID_ARGUMENT, e.what()};
         } catch (std::exception &e) {
-            std::cout << "Exception: " << e.what() << std::endl;
+            std::cout << "Worker::SendTask:: " << e.what() << std::endl;
             return {grpc::StatusCode::INTERNAL, e.what()};
         }
 
@@ -129,8 +110,8 @@ namespace services {
             epoch(-1), round(-1), row_size(int(configs.db_cols())), ptx_rows(), ctx_cols() {
 
         const auto &metadata = pContext->client_metadata();
-        epoch = extract_size_from_metadata(metadata, constants::epoch_md);
-        round = extract_size_from_metadata(metadata, constants::round_md);
+        epoch = utils::extract_size_from_metadata(metadata, constants::epoch_md);
+        round = utils::extract_size_from_metadata(metadata, constants::round_md);
 
         if (epoch < 0) {
             throw std::invalid_argument("epoch must be positive");
