@@ -50,17 +50,24 @@ public:
     }
 
     /**
-     * read_until behaves like read(), but ensures the caller does not block forever on the channel.
+     * read_for behaves like read(), but ensures the caller does not block forever on the channel.
      * After the given duration the channel returns a result of read failure.
-<<<<<<< HEAD
      */ // TODO: should return something that indicates timeout.
-    template<typename _Duration>
-    Result<T> read_until(std::chrono::time_point<std::chrono::steady_clock, _Duration> &duration) {
+    template<typename _Rep, typename _Period>
+    Result<T> read_for(const std::chrono::duration<_Rep, _Period> &dur) {
+        auto max_timeout = std::chrono::steady_clock::now() + dur;
+
         std::unique_lock<std::mutex> lock(m);
-        // returns if q is not empty, and if channel is not closed. // todo verify this expression.
-        auto res = c.wait_until(duration, lock, [&] { return (!q.empty() || closed); });
-        if (res == std::cv_status::timeout) { return Result<T>{T(), false}; } // result timed_out!
-        if (closed) { return Result<T>{T(), false}; } // result is not OK.
+        // returns if q is not empty, and if channel is not closed.
+        c.wait_until(lock, max_timeout, [&] { return (!q.empty() || closed); });
+
+        if (std::chrono::steady_clock::now() > max_timeout) {
+            return Result<T>{T(), false}; // timeout passed..
+        }
+
+        if (closed) {
+            return Result<T>{T(), false};
+        } // result is not OK.
 
         T val = q.front();
         q.pop();

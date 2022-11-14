@@ -44,8 +44,7 @@ namespace services {
                 ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1);
             }
             // todo, should behave as a promise.
-            std::chrono::time_point<std::chrono::steady_clock, std::chrono::seconds> duration(std::chrono::seconds(10));
-            ledger->done.read_until(duration); // todo: set specific timeout..
+            ledger->done.read_for(std::chrono::milliseconds(1000)); // todo: set specific timeout..
             // i don't want to wait on a timeout!
             return ledger;
         }
