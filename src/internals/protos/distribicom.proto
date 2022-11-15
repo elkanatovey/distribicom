@@ -134,15 +134,23 @@ message Configs {
   // encryption params
   string scheme = 1;
   uint32 polynomial_degree = 2;
-  uint32 logarithm_plaintext_coefficient = 3;
+  uint32 logarithm_plaintext_coefficient = 3; //logt
 
   // for PIR params
   uint32 db_rows = 4;
   uint32 db_cols = 5;
   uint32 size_per_element = 6; // element represents a position inside the plaintext that a user can write to.
   uint32 dimensions = 7; // in our case defaults eqauls to 2.
+
+  // legacy from sealpir
+  uint32 number_of_elements = 8; //number of elements packed in ptx, referred to as items in sealpir
+  bool use_symmetric = 9;
+  bool use_batching = 10;
+  bool use_recursive_mod_switching = 11;
 };
 
+
+// all configs necessary for individual client/worker ?
 message AppConfigs{
   Configs configs = 1;
 

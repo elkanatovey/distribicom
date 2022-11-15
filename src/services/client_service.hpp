@@ -2,6 +2,7 @@
 
 #include "distribicom.grpc.pb.h"
 #include "marshal.hpp"
+#include "pir_client.hpp"
 
 namespace services {
 
@@ -10,9 +11,11 @@ namespace services {
 
         distribicom::AppConfigs app_configs;
         std::shared_ptr<marshal::Marshaller> mrshl;
+        std::unique_ptr<distribicom::Server::Stub> server_conn;
+        std::unique_ptr<PIRClient> client;
 
-
-        explicit ClientListener(distribicom::AppConfigs &app_configs);
+    public:
+        explicit ClientListener(distribicom::AppConfigs &_app_configs);
 
         grpc::Status
         Answer(grpc::ServerContext *context, const distribicom::Ciphertext *answer,
@@ -21,6 +24,7 @@ namespace services {
         grpc::Status
         TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest* request, distribicom::Ack* response)override;
 
+        seal::EncryptionParameters setup_enc_params() const;
     };
 
 } // services
