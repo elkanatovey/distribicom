@@ -25,6 +25,14 @@ namespace services {
         TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest* request, distribicom::Ack* response)override;
 
         seal::EncryptionParameters setup_enc_params() const;
+
+        grpc::Status Query(std::uint64_t desiredIndex);
+
+        /**
+         *
+         * @return
+         */
+        grpc::Status Query();
     };
 
 } // services
