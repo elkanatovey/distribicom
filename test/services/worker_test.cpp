@@ -105,6 +105,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
     return {db, queries, configs};
 }
 
+
 // assumes that configs are not freed until we copy it inside the thread!
 std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
