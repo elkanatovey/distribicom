@@ -17,7 +17,7 @@ namespace services {
         seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
 
         mrshl = marshal::Marshaller::Create(enc_params);
-        query_expander = multiplication_utils::QueryExpander::Create(enc_params);
+        query_expander = math_utils::QueryExpander::Create(enc_params);
 
 
         // todo: put in a different function.

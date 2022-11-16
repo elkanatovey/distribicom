@@ -2,11 +2,11 @@
 
 #include "evaluator_wrapper.hpp"
 #include "matrix.h"
-#include <concurrency/channel.hpp>
-#include <concurrency/waitgroup.hpp>
+#include "concurrency/channel.hpp"
+#include "concurrency/waitgroup.hpp"
 
 
-namespace multiplication_utils {
+namespace math_utils {
     /***
      *  represents a matrix made out of SplitPlaintexts as its elements.
      */
@@ -40,8 +40,7 @@ namespace multiplication_utils {
         matrix<seal::Ciphertext> *result;
     };
 
-// TODO: this is not a class name style. and maybe change it to MatrixOperations
-    class matrix_multiplier {
+    class MatrixOperations {
     protected:
         std::shared_ptr<EvaluatorWrapper> w_evaluator;
     private:
@@ -50,9 +49,9 @@ namespace multiplication_utils {
 
 
     public:
-        explicit matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator);
+        explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
-        ~matrix_multiplier() {
+        ~MatrixOperations() {
             chan->close();
             for (auto &t: threads) {
                 t.join();
@@ -72,12 +71,12 @@ namespace multiplication_utils {
         void transform(const matrix<seal::Plaintext> &mat, matrix<seal::Ciphertext> &cmat) const;
 
         /***
-         * Creates and returns a an initialized matrix_multiplier
+         * Creates and returns a an initialized MatrixOperations
          * @param evaluator
          * @param enc_params
          * @return a matrix multiplier
          */
-        static std::shared_ptr<matrix_multiplier> Create(std::shared_ptr<EvaluatorWrapper> w_evaluator);
+        static std::shared_ptr<MatrixOperations> Create(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
         /***
          * multiply matrix by integer array using operations on plaintexts

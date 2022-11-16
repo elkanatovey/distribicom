@@ -91,8 +91,8 @@ int worker_test(int, char *[]) {
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
     auto n = 5;
-    multiplication_utils::matrix<seal::Plaintext> db(n, n);
-    multiplication_utils::matrix<seal::Ciphertext> queries(n, n);
+    math_utils::matrix<seal::Plaintext> db(n, n);
+    math_utils::matrix<seal::Ciphertext> queries(n, n);
     for (auto &q: queries.data) {
         q = all->random_ciphertext();
     }

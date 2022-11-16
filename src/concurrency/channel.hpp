@@ -4,14 +4,15 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-
-template<class T>
-struct Result {
-    T answer;
-    bool ok;
-};
-
 namespace concurrency {
+
+    template<class T>
+    struct Result {
+        T answer;
+        bool ok;
+    };
+
+
     template<class T>
     class Channel {
     public:

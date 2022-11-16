@@ -5,10 +5,9 @@
 #include "constants.hpp"
 #include <string>
 
-// TODO: Ask Elkana how to import correctly.
-#include<concurrency/channel.hpp>
-#include "../marshal/marshal.hpp"
-#include "../math_utils/query_expander.hpp"
+#include "concurrency/channel.hpp"
+#include "marshal/marshal.hpp"
+#include "math_utils/query_expander.hpp"
 
 namespace services {
 
@@ -34,7 +33,7 @@ namespace services {
 
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
-        std::shared_ptr<multiplication_utils::QueryExpander> query_expander;
+        std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::unique_ptr<distribicom::Manager::Stub> manager_conn;
 
     public:

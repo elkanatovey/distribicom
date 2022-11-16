@@ -16,7 +16,7 @@ int left_int_vec_multiply(int, char *[]) {
 
 
     // test with [1,1]
-    auto matrix_multiplier = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
+    auto matrix_multiplier = math_utils::MatrixOperations::Create(all->w_evaluator);
 
     std::vector<std::uint64_t> left_vec(rows, 1);
     std::vector<seal::Plaintext> result(cols, seal::Plaintext(all->encryption_params.poly_modulus_degree()));

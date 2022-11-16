@@ -1,7 +1,6 @@
 #include "manager.hpp"
 #include <grpc++/grpc++.h>
 #include "utils.hpp"
-#include "../concurrency/channel.hpp"
 
 
 namespace services {
@@ -44,8 +43,8 @@ namespace services {
     }
 
     std::unique_ptr<WorkDistributionLedger>
-    Manager::distribute_work(const multiplication_utils::matrix<seal::Plaintext> &db,
-                             const multiplication_utils::matrix<seal::Ciphertext> &compressed_queries,
+    Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
+                             const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                              int rnd, int epoch) {
         // TODO: should set up a `promise` channel specific to the round and channel, anyone requesting info should get
         //   it through the channel.
@@ -62,13 +61,13 @@ namespace services {
     }
 
     std::unique_ptr<WorkDistributionLedger>
-    Manager::sendtask(const multiplication_utils::matrix<seal::Plaintext> &db,
-                      const multiplication_utils::matrix<seal::Ciphertext> &compressed_queries,
+    Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
+                      const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                       grpc::ClientContext &context) {
 
         auto ledger = std::make_unique<WorkDistributionLedger>();
         ledger->worker_list = std::vector<std::string>(worker_stubs.size());
-        ledger->result_mat = multiplication_utils::matrix<seal::Ciphertext>(
+        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
                 db.cols, compressed_queries.data.size());
 
         distribicom::Ack response;

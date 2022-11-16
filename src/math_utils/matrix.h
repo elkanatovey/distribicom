@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "vector"
+#include <vector>
 #include <cstdint>
 #include <cassert>
 
@@ -13,7 +13,7 @@
 #endif // DISTRIBICOM_DEBUG
 
 
-namespace multiplication_utils {
+namespace math_utils {
     template<typename T>
     class matrix {
     public:

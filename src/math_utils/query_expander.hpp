@@ -3,7 +3,7 @@
 #include <seal/seal.h>
 #include <vector>
 
-namespace multiplication_utils {
+namespace math_utils {
     /***
      * Represents a query in a specific dimension. (unlike sealPIR where each query contains multiple dimensions).
      */

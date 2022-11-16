@@ -4,7 +4,7 @@
 #include <cassert>
 #include "defines.h"
 
-namespace multiplication_utils {
+namespace math_utils {
     /***
      * SplitPlaintextNTTForm represents a plaintext that was intentionally split into two plaintexts such that their
      * sum equals the original.
@@ -28,7 +28,7 @@ namespace multiplication_utils {
         std::unique_ptr<seal::Evaluator> evaluator;
 
         /***
-         * Creates and returns a an initialized matrix_multiplier
+         * Creates and returns a an initialized MatrixOperations
          * @param evaluator
          * @param enc_params
          * @return a matrix multiplier
