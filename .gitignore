@@ -5,3 +5,4 @@ CmakeFiles
 .idea
 .DS_Store
 bin
+*checks*
