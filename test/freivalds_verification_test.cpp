@@ -1,8 +1,8 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 
-#include "master.hpp"
-#include "FreivaldsVector.hpp"
+#include "old_src/master.hpp"
+#include "old_src/FreivaldsVector.hpp"
 
 #include <seal/seal.h>
 #include "test_utils.hpp"

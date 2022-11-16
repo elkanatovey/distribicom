@@ -2,7 +2,8 @@
 
 #include "evaluator_wrapper.hpp"
 #include "matrix.h"
-#include "channel.h"
+#include <concurrency/channel.hpp>
+#include <concurrency/waitgroup.hpp>
 
 
 namespace multiplication_utils {
@@ -23,7 +24,7 @@ namespace multiplication_utils {
     struct task {
         MultTaskType task_type;
         // the WaitGroup that the issuer of the task is waiting on.
-        std::shared_ptr<WaitGroup> wg;
+        std::shared_ptr<concurrency::WaitGroup> wg;
         // compute details.
         std::uint64_t row;
         std::uint64_t col;
@@ -44,7 +45,7 @@ namespace multiplication_utils {
     protected:
         std::shared_ptr<EvaluatorWrapper> w_evaluator;
     private:
-        std::shared_ptr<Channel<task>> chan;
+        std::shared_ptr<concurrency::Channel<task>> chan;
         std::vector<std::thread> threads;
 
 

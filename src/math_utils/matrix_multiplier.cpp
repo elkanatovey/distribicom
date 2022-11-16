@@ -259,7 +259,7 @@ namespace multiplication_utils {
         verify_spltptx_ctx_mat_mul_args(left_ntt, right);
         verify_correct_dimension(left_ntt, right);
 
-        auto wg = std::make_shared<WaitGroup>();
+        auto wg = std::make_shared<concurrency::WaitGroup>();
         wg->add(int(left_ntt.rows * right.cols));
 
         for (uint64_t i = 0; i < left_ntt.rows; i++) {
@@ -332,7 +332,7 @@ namespace multiplication_utils {
 
     matrix_multiplier::
     matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator), chan(), threads() {
-        chan = std::make_shared<Channel<task>>();
+        chan = std::make_shared<concurrency::Channel<task>>();
     }
 
     void matrix_multiplier::start() {

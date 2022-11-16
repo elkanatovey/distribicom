@@ -2,7 +2,7 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 #include "../test_utils.hpp"
-#include "master.hpp"
+#include "old_src/master.hpp"
 
 
 // Throws on failure:

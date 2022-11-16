@@ -1,7 +1,7 @@
 #include "manager.hpp"
 #include <grpc++/grpc++.h>
 #include "utils.hpp"
-#include "../math_utils/channel.h"
+#include "../concurrency/channel.hpp"
 
 
 namespace services {

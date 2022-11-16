@@ -6,7 +6,7 @@
 #include "../math_utils/matrix.h"
 
 #include "../marshal/marshal.hpp"
-#include "../math_utils/channel.h"
+#include <concurrency/channel.hpp>
 #include "utils.hpp"
 
 
@@ -27,7 +27,7 @@ namespace services {
         multiplication_utils::matrix<seal::Ciphertext> result_mat;
 
         // open completion will be closed to indicate to anyone waiting.
-        Channel<int> done;
+        concurrency::Channel<int> done;
     };
 
     // contains the workers and knows how to distribute their work.

@@ -7,9 +7,9 @@
 constexpr std::string_view server_port = "5051";
 constexpr std::string_view worker_port = "52100";
 
-std::thread runFullServer(WaitGroup &wg, services::FullServer &f);
+std::thread runFullServer(concurrency::WaitGroup &wg, services::FullServer &f);
 
-std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs);
+std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs);
 
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs);
@@ -28,7 +28,7 @@ int worker_test(int, char *[]) {
     );
     services::FullServer fs = full_server_instance(all, cfgs);
 
-    WaitGroup wg;
+    concurrency::WaitGroup wg;
     wg.add(1); // will tell the servers when to quit.
 
     std::vector<std::thread> threads;
@@ -107,7 +107,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
 
 
 // assumes that configs are not freed until we copy it inside the thread!
-std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
+std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
             services::Worker worker(
@@ -133,7 +133,7 @@ std::thread setupWorker(WaitGroup &wg, distribicom::AppConfigs &configs) {
     });
 }
 
-std::thread runFullServer(WaitGroup &wg, services::FullServer &f) {
+std::thread runFullServer(concurrency::WaitGroup &wg, services::FullServer &f) {
     return std::thread([&] {
         std::string server_address("0.0.0.0:" + std::string(server_port));
 
