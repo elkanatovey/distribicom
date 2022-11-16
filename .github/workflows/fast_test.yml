@@ -1,9 +1,9 @@
 name: Cmake fast
 on:
   push:
-    branches: [ "master", "frievaldsBranch" ]
+    branches: [ "master", "dev" ]
   pull_request:
-    branches: [ "master", "frievaldsBranch" ]
+    branches: [ "master", "dev" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
