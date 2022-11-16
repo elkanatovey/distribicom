@@ -68,7 +68,7 @@ namespace TestUtils {
             decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
             encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
 
-        w_evaluator = multiplication_utils::EvaluatorWrapper::Create(encryption_params);
+        w_evaluator = math_utils::EvaluatorWrapper::Create(encryption_params);
     }
 
     seal::GaloisKeys CryptoObjects::generate_galois_keys() {

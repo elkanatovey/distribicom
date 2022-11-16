@@ -1,7 +1,7 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 #include "pir_server.hpp"
-#include "master.hpp"
+#include "old_src/master.hpp"
 #include "worker.hpp"
 #include <seal/seal.h>
 #include <chrono>
@@ -9,7 +9,7 @@
 #include <random>
 #include <cstdint>
 #include <cstddef>
-#include "FreivaldsVector.hpp"
+#include "old_src/FreivaldsVector.hpp"
 
 using namespace std::chrono;
 using namespace std;

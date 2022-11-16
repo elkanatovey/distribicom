@@ -1,5 +1,5 @@
 #include "../test_utils.hpp"
-#include "matrix_multiplier.hpp"
+#include "matrix_operations.hpp"
 
 void frievalds_with_ptx_db();
 
@@ -30,13 +30,13 @@ void frievalds_with_ptx_db() {
     std::uint64_t n = 50;
     std::uint64_t rows = n, cols = n;
 
-    multiplication_utils::matrix<seal::Ciphertext> A, B(rows, cols), C;
-    multiplication_utils::matrix<seal::Plaintext> A_as_ptx(rows, cols);
+    math_utils::matrix<seal::Ciphertext> A, B(rows, cols), C;
+    math_utils::matrix<seal::Plaintext> A_as_ptx(rows, cols);
     for (std::uint64_t i = 0; i < rows * cols; ++i) {
         A_as_ptx.data[i] = all->random_plaintext();
         B.data[i] = all->random_ciphertext();
     }
-    auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
+    auto matops = math_utils::MatrixOperations::Create(all->w_evaluator);
     TestUtils::time_func_print("A_as_ptx-transform to ctxs",
                                [&matops, &A_as_ptx, &A]() { matops->transform(A_as_ptx, A); });
 

@@ -1,7 +1,7 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 #include "pir_server.hpp"
-#include "master.hpp"
+#include "old_src/master.hpp"
 #include "worker.hpp"
 #include <seal/seal.h>
 #include <chrono>

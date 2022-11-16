@@ -22,8 +22,8 @@ namespace services {
                 db(0, 0), queries(0, 0), manager(app_configs) {};
 
         // mainly for testing.
-        FullServer(multiplication_utils::matrix<seal::Plaintext> &db,
-                   multiplication_utils::matrix<seal::Ciphertext> &queries,
+        FullServer(math_utils::matrix<seal::Plaintext> &db,
+                   math_utils::matrix<seal::Ciphertext> &queries,
                    const distribicom::AppConfigs &app_configs) :
                 db(db), queries(queries), manager(app_configs) {};
 

@@ -1,9 +1,9 @@
-#include "matrix_multiplier.hpp"
+#include "matrix_operations.hpp"
 #include "defines.h"
 #include <execution>
 
 #define PTX_CTX_MUL 0
-namespace multiplication_utils {
+namespace math_utils {
     // helper funcs:
     template<typename T, typename U>
     void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right);
@@ -19,7 +19,7 @@ namespace multiplication_utils {
                                          const matrix<seal::Ciphertext> &right);
 
     // actual code:
-    void matrix_multiplier::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
+    void MatrixOperations::transform(std::vector<seal::Plaintext> v, SplitPlaintextNTTFormMatrix &m) const {
         m.resize(v.size());
         std::transform(std::execution::par_unseq,
                        v.begin(),
@@ -29,7 +29,7 @@ namespace multiplication_utils {
         );
     }
 
-    void matrix_multiplier::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
+    void MatrixOperations::transform(std::vector<seal::Plaintext> v, CiphertextDefaultFormMatrix &m) const {
         m.resize(v.size());
         // TODO: into a parallel for loop.
         for (std::uint64_t i = 0; i < v.size(); i++) {
@@ -37,7 +37,7 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::transform(const matrix<seal::Plaintext> &mat, matrix<seal::Ciphertext> &cmat) const {
+    void MatrixOperations::transform(const matrix<seal::Plaintext> &mat, matrix<seal::Ciphertext> &cmat) const {
         cmat.resize(mat.rows, mat.cols);
         for (uint64_t i = 0; i < mat.rows * mat.cols; i++) {
             w_evaluator->trivial_ciphertext(mat.data[i], cmat.data[i]);
@@ -60,9 +60,9 @@ namespace multiplication_utils {
     }
 
 
-    void matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims,
-                                          std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
-                                          std::vector<seal::Plaintext> &result) {
+    void MatrixOperations::left_multiply(std::vector<std::uint64_t> &dims,
+                                         std::vector<std::uint64_t> &left_vec, PlaintextDefaultFormMatrix &matrix,
+                                         std::vector<seal::Plaintext> &result) {
         for (uint64_t k = 0; k < dims[COL]; k++) {
             result[k] = seal::Plaintext(w_evaluator->enc_params.poly_modulus_degree());
             for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -72,9 +72,9 @@ namespace multiplication_utils {
     }
 
     // only works when left_vec is 0/1..
-    void matrix_multiplier::left_multiply(const std::vector<std::uint64_t> &left_vec,
-                                          const matrix <seal::Ciphertext> &mat,
-                                          matrix <seal::Ciphertext> &result) const {
+    void MatrixOperations::left_multiply(const std::vector<std::uint64_t> &left_vec,
+                                         const matrix <seal::Ciphertext> &mat,
+                                         matrix <seal::Ciphertext> &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(left_vec.size() == mat.rows);
         for (auto item: left_vec) {
@@ -94,9 +94,9 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::left_multiply(const std::vector<std::uint64_t> &left_vec,
-                                          const matrix <seal::Plaintext> &mat,
-                                          matrix <seal::Ciphertext> &result) const {
+    void MatrixOperations::left_multiply(const std::vector<std::uint64_t> &left_vec,
+                                         const matrix <seal::Plaintext> &mat,
+                                         matrix <seal::Ciphertext> &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(left_vec.size() == mat.rows);
         for (auto item: left_vec) {
@@ -113,9 +113,9 @@ namespace multiplication_utils {
 
     // this is the slow version of multiplication, needed to set the DB as a ciphertext DB.
     void
-    matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                                     PlaintextDefaultFormMatrix &matrix,
-                                     std::vector<seal::Ciphertext> &result) {
+    MatrixOperations::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                                    PlaintextDefaultFormMatrix &matrix,
+                                    std::vector<seal::Ciphertext> &result) {
         std::vector<seal::Ciphertext> trivial_encrypted_matrix(matrix.size(), seal::Ciphertext(w_evaluator->context));
         transform(matrix, trivial_encrypted_matrix);
 
@@ -123,8 +123,8 @@ namespace multiplication_utils {
         left_multiply(dims, left_vec, trivial_encrypted_matrix, result);
     }
 
-    void matrix_multiplier::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                                          std::vector<seal::Ciphertext> &matrix, std::vector<seal::Ciphertext>
+    void MatrixOperations::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
+                                         std::vector<seal::Ciphertext> &matrix, std::vector<seal::Ciphertext>
                                           &result) {
 
         for (uint64_t k = 0; k < dims[COL]; k++) {
@@ -138,15 +138,15 @@ namespace multiplication_utils {
         }
     }
 
-    std::shared_ptr<matrix_multiplier>
-    matrix_multiplier::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator) {
-        auto matops = std::make_shared<matrix_multiplier>(w_evaluator);
+    std::shared_ptr<MatrixOperations>
+    MatrixOperations::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator) {
+        auto matops = std::make_shared<MatrixOperations>(w_evaluator);
         matops->start();
         return matops;
     }
 
-    void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
-                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
+    void MatrixOperations::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
+                                          std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
                                            &result) {
 #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
@@ -174,8 +174,8 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
-                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
+    void MatrixOperations::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
+                                          std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
                                            &result) {
 #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
@@ -201,28 +201,28 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::to_ntt(std::vector<seal::Ciphertext> &m) const {
+    void MatrixOperations::to_ntt(std::vector<seal::Ciphertext> &m) const {
         std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Ciphertext &ctx) {
             w_evaluator->evaluator->transform_to_ntt_inplace(ctx);
         });
     }
 
-    void matrix_multiplier::from_ntt(std::vector<seal::Ciphertext> &m) const {
+    void MatrixOperations::from_ntt(std::vector<seal::Ciphertext> &m) const {
         std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Ciphertext &ctx) {
             w_evaluator->evaluator->transform_from_ntt_inplace(ctx);
         });
     }
 
 
-    void matrix_multiplier::multiply(const matrix<seal::Ciphertext> &left,
-                                     const matrix<seal::Ciphertext> &right,
-                                     matrix<seal::Ciphertext> &result) const {
+    void MatrixOperations::multiply(const matrix<seal::Ciphertext> &left,
+                                    const matrix<seal::Ciphertext> &right,
+                                    matrix<seal::Ciphertext> &result) const {
 
         verify_not_empty_matrices(left, right);
         verify_correct_dimension(left, right);
 
         if (left.data[0].is_ntt_form() || right.data[0].is_ntt_form()) {
-            throw std::runtime_error("matrix_multiplier::multiply: matrices should not be in NTT form");
+            throw std::runtime_error("MatrixOperations::multiply: matrices should not be in NTT form");
         }
 
         seal::Ciphertext tmp;
@@ -239,9 +239,9 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::multiply(const matrix<seal::Plaintext> &left,
-                                     const matrix<seal::Ciphertext> &right,
-                                     matrix<seal::Ciphertext> &result) const {
+    void MatrixOperations::multiply(const matrix<seal::Plaintext> &left,
+                                    const matrix<seal::Ciphertext> &right,
+                                    matrix<seal::Ciphertext> &result) const {
         verify_ptx_ctx_mat_mul_args(left, right);
         verify_correct_dimension(left, right);
 
@@ -253,13 +253,13 @@ namespace multiplication_utils {
         multiply(left_ntt, right, result);
     }
 
-    void matrix_multiplier::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
-                                     const matrix<seal::Ciphertext> &right,
-                                     matrix<seal::Ciphertext> &result) const {
+    void MatrixOperations::multiply(const matrix<SplitPlaintextNTTForm> &left_ntt,
+                                    const matrix<seal::Ciphertext> &right,
+                                    matrix<seal::Ciphertext> &result) const {
         verify_spltptx_ctx_mat_mul_args(left_ntt, right);
         verify_correct_dimension(left_ntt, right);
 
-        auto wg = std::make_shared<WaitGroup>();
+        auto wg = std::make_shared<concurrency::WaitGroup>();
         wg->add(int(left_ntt.rows * right.cols));
 
         for (uint64_t i = 0; i < left_ntt.rows; i++) {
@@ -294,18 +294,18 @@ namespace multiplication_utils {
         }
     }
 
-    void matrix_multiplier::left_frievalds(const std::vector<std::uint64_t> &rand_vec,
-                                           const matrix<seal::Ciphertext> &a,
-                                           const matrix<seal::Ciphertext> &b,
-                                           matrix<seal::Ciphertext> &result) const {
+    void MatrixOperations::left_frievalds(const std::vector<std::uint64_t> &rand_vec,
+                                          const matrix<seal::Ciphertext> &a,
+                                          const matrix<seal::Ciphertext> &b,
+                                          matrix<seal::Ciphertext> &result) const {
         matrix<seal::Ciphertext> tmp;
         left_multiply(rand_vec, a, tmp);
         multiply(tmp, b, result);
     }
 
-    bool matrix_multiplier::frievalds(const matrix<seal::Ciphertext> &a,
-                                      const matrix<seal::Ciphertext> &b,
-                                      const matrix<seal::Ciphertext> &c) const {
+    bool MatrixOperations::frievalds(const matrix<seal::Ciphertext> &a,
+                                     const matrix<seal::Ciphertext> &b,
+                                     const matrix<seal::Ciphertext> &c) const {
         // nxm * mxp = nxp
         if (a.rows != c.rows || b.cols != c.cols) {
             return false;
@@ -330,12 +330,12 @@ namespace multiplication_utils {
         return true;
     }
 
-    matrix_multiplier::
-    matrix_multiplier(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator), chan(), threads() {
-        chan = std::make_shared<Channel<task>>();
+    MatrixOperations::
+    MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator) : w_evaluator(w_evaluator), chan(), threads() {
+        chan = std::make_shared<concurrency::Channel<task>>();
     }
 
-    void matrix_multiplier::start() {
+    void MatrixOperations::start() {
         auto processor_count = std::thread::hardware_concurrency();
 
         // creating our multiplication worker.
@@ -344,7 +344,7 @@ namespace multiplication_utils {
                 seal::Ciphertext tmp(w_evaluator->context);
 
                 while (true) {
-                    Result<task> r = chan->read();
+                    concurrency::Result<task> r = chan->read();
                     if (!r.ok) {
                         return;
                     }
@@ -381,20 +381,20 @@ namespace multiplication_utils {
     template<typename T, typename U>
     void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right) {
         if (left.data.empty()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: received empty left matrix");
+            throw std::invalid_argument("MatrixOperations::multiply: received empty left matrix");
         }
         if (right.data.empty()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: received empty right matrix");
+            throw std::invalid_argument("MatrixOperations::multiply: received empty right matrix");
         }
     }
 
     void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right) {
         verify_not_empty_matrices(left, right);
         if (left.data[0].is_ntt_form()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: left matrix should not be in NTT form");
+            throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
         }
         if (!right.data[0].is_ntt_form()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: right matrix should be in NTT form");
+            throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
         }
     }
 
@@ -402,17 +402,17 @@ namespace multiplication_utils {
     verify_spltptx_ctx_mat_mul_args(const matrix<SplitPlaintextNTTForm> &left, const matrix<seal::Ciphertext> &right) {
         verify_not_empty_matrices(left, right);
         if (!left.data[0][0].is_ntt_form()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: left matrix should be in NTT form");
+            throw std::invalid_argument("MatrixOperations::multiply: left matrix should be in NTT form");
         }
         if (!right.data[0].is_ntt_form()) {
-            throw std::invalid_argument("matrix_multiplier::multiply: right matrix should be in NTT form");
+            throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
         }
     }
 
     template<typename T, typename U>
     void verify_correct_dimension(const matrix<T> &left, const matrix<U> &right) {
         if (left.cols != right.rows) {
-            throw std::invalid_argument("matrix_multiplier::multiply: left matrix cols != right matrix rows");
+            throw std::invalid_argument("MatrixOperations::multiply: left matrix cols != right matrix rows");
         }
     }
 }

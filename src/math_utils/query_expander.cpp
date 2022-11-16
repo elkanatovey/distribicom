@@ -7,7 +7,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace multiplication_utils {
+namespace math_utils {
 
     /***
      * expand_query takes a part of multi-dimensional query and expand one part of.

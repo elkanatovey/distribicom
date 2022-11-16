@@ -1,6 +1,6 @@
 #pragma once
 
-#include "matrix_multiplier.hpp"
+#include "matrix_operations.hpp"
 #include <seal/seal.h>
 #include <evaluator_wrapper.hpp>
 #include <pir.hpp>
@@ -43,7 +43,7 @@ namespace TestUtils {
         seal::SEALContext seal_context;
         seal::KeyGenerator keygen;
         seal::SecretKey secret_key;
-        std::shared_ptr<multiplication_utils::EvaluatorWrapper> w_evaluator;
+        std::shared_ptr<math_utils::EvaluatorWrapper> w_evaluator;
 
 
         seal::Encryptor encryptor;

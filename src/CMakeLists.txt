@@ -1,12 +1,12 @@
 
-
+add_subdirectory(concurrency)
 add_subdirectory(math_utils)
 add_subdirectory(marshal)
 add_subdirectory(services)
 add_subdirectory(internals)
 
-add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp master.hpp master.cpp worker.hpp worker.cpp
-        FreivaldsVector.hpp FreivaldsVector.cpp)
+add_library(distribicom_cpp old_src/distributed_pir.hpp old_src/distributed_pir.cpp old_src/master.hpp old_src/master.cpp old_src/worker.hpp old_src/worker.cpp
+        old_src/FreivaldsVector.hpp old_src/FreivaldsVector.cpp)
 
 
 target_include_directories(distribicom_cpp PUBLIC marshal math_utils services ${com_sealpir_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
