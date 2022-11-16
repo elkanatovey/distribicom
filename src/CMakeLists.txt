@@ -8,7 +8,7 @@ add_subdirectory(internals)
 add_library(distribicom_cpp distributed_pir.hpp distributed_pir.cpp master.hpp master.cpp worker.hpp worker.cpp
         FreivaldsVector.hpp FreivaldsVector.cpp)
 
-target_include_directories(distribicom_cpp PUBLIC marshal math_utils services ${com_sealpir_SOURCE_DIR}/src)
+target_include_directories(distribicom_cpp PUBLIC marshal math_utils services ${com_sealpir_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(distribicom_cpp marshal_package multiplication_utils sealpir services)
 
 
