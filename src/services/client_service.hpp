@@ -13,6 +13,8 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::unique_ptr<distribicom::Server::Stub> server_conn;
         std::unique_ptr<PIRClient> client;
+        PirParams pir_params;
+        seal::EncryptionParameters enc_params;
 
     public:
         explicit ClientListener(distribicom::AppConfigs &_app_configs);
@@ -24,7 +26,6 @@ namespace services {
         grpc::Status
         TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest* request, distribicom::Ack* response)override;
 
-        seal::EncryptionParameters setup_enc_params() const;
 
         grpc::Status Query(std::uint64_t desiredIndex);
 

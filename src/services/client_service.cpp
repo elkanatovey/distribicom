@@ -1,13 +1,31 @@
 #include "client_service.hpp"
+#include "utils.hpp"
 
 namespace services {
-    ClientListener::ClientListener(distribicom::AppConfigs &_app_configs): app_configs(_app_configs), mrshl(){
-        seal::EncryptionParameters enc_params = setup_enc_params();
-        PirParams p;
+    ClientListener::ClientListener(distribicom::AppConfigs &_app_configs): app_configs(_app_configs), mrshl(),
+    enc_params(utils::setup_enc_params(_app_configs)){
+
         gen_pir_params(app_configs.configs().number_of_elements(), app_configs.configs().size_per_element(),
-                       app_configs.configs().dimensions(), enc_params, p,  app_configs.configs().use_symmetric(),
+                       app_configs.configs().dimensions(), enc_params, pir_params,  app_configs.configs().use_symmetric(),
                        app_configs.configs().use_batching(), app_configs.configs().use_recursive_mod_switching());
-        client = make_unique<PIRClient>(PIRClient(enc_params, std::move(p)));
+        client = make_unique<PIRClient>(PIRClient(enc_params, pir_params));
+
+        mrshl = marshal::Marshaller::Create(enc_params);
+
+        manager_conn = std::make_unique<distribicom::Server::Stub>(distribicom::Server::Stub(
+                grpc::CreateChannel(
+                        app_configs().main_server_hostname(),
+                        grpc::InsecureChannelCredentials()
+                )
+        ));
+
+        grpc::ClientContext context;
+        distribicom::Ack response;
+        distribicom::WorkerRegistryRequest request;
+
+        request.set_workerport(cnfgs.workerport());
+
+        manager_conn->RegisterAsWorker(&context, request, &response);
 
     }
 
@@ -22,15 +40,5 @@ namespace services {
         return Service::TellNewRound(context, request, response);
     }
 
-    seal::EncryptionParameters ClientListener::setup_enc_params() const {
-        seal::EncryptionParameters enc_params(seal::scheme_type::bgv);
-        auto N = app_configs.configs().polynomial_degree();
-        auto logt = app_configs.configs().logarithm_plaintext_coefficient();
 
-        enc_params.set_poly_modulus_degree(N);
-        // TODO: Use correct BGV parameters.
-        enc_params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(N));
-        enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));
-        return enc_params;
-    }
 } // services
