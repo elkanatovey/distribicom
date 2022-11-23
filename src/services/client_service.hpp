@@ -9,15 +9,17 @@ namespace services {
     // listener run by query owner to receive answer
     class ClientListener final : public distribicom::Client::Service {
 
-        distribicom::AppConfigs app_configs;
+        distribicom::ClientConfigs client_configs;
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::unique_ptr<distribicom::Server::Stub> server_conn;
         std::unique_ptr<PIRClient> client;
+        distribicom::ClientRegistryReply mail_data;
+
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
 
     public:
-        explicit ClientListener(distribicom::AppConfigs &_app_configs);
+        explicit ClientListener(distribicom::ClientConfigs &_client_configs);
 
         grpc::Status
         Answer(grpc::ServerContext *context, const distribicom::Ciphertext *answer,

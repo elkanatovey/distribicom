@@ -46,7 +46,10 @@ service Server {// masterServer runs this service.
    using the `Answer` RPC call once the round is over.
    Should contact this given client according to its IP.
    Should contact the client with MAC with a MAC using the clients given request key.
+   */
+  rpc RegisterAsClient(ClientRegistryRequest) returns (ClientRegistryReply){};
 
+  /*
    Once the client is done sending to the server, it should close the connection.
    */
   rpc StoreQuery(ClientQueryRequest) returns (Ack){};
@@ -107,6 +110,29 @@ message ClientQueryRequest{
     bytes ctx = 3;
   }
 }
+
+message ClientRegistryRequest{
+  // should be used to ensure the client knows the messages are legitimate from the server.
+  bytes credentials = 1;
+
+  // the port the client is listening to.
+  uint32  client_port = 2;
+}
+
+message ClientRegistryReply{
+  // should be used to ensure the server knows the messages are legitimate from the client.
+  bytes credentials = 1;
+  uint32  num_mailboxes = 2;
+  uint32 mailbox_id = 3;
+}
+
+message ClientConfigs{
+  AppConfigs app_configs = 1;
+
+  // the port the client is listening to.
+  uint32  client_port = 2;
+};
+
 
 message TellNewRoundRequest{
   int32 round = 1;
