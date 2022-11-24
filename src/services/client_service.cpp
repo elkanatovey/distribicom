@@ -31,6 +31,8 @@ namespace services {
 
     grpc::Status ClientListener::Answer(grpc::ServerContext *context, const distribicom::Ciphertext *answer,
                                         distribicom::Ack *response) {
+//        answer->data();
+//        mrshl->unmarshal_seal_vector(answer->data());
         return Service::Answer(context, answer, response);
     }
 

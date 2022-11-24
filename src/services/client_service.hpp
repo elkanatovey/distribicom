@@ -17,6 +17,7 @@ namespace services {
 
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
+        seal::Plaintext current_answer;
 
     public:
         explicit ClientListener(distribicom::ClientConfigs &_client_configs);
