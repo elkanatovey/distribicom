@@ -3,7 +3,7 @@
 
 
 int db_many_reads_test(int, char *[]) {
-    multiplication_utils::matrix<seal::Plaintext> mat(10, 10);
+    math_utils::matrix<seal::Plaintext> mat(10, 10);
     DB<seal::Plaintext> db(mat);
 
     {

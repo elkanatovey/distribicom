@@ -1,6 +1,6 @@
 #include "evaluator_wrapper.hpp"
 
-namespace multiplication_utils {
+namespace math_utils {
 
     void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Plaintext &right,
                                         seal::Plaintext &sum) const {

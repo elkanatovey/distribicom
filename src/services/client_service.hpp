@@ -1,7 +1,7 @@
 #pragma once
 
 #include "distribicom.grpc.pb.h"
-#include "marshal.hpp"
+#include "marshal/marshal.hpp"
 #include "pir_client.hpp"
 
 namespace services {

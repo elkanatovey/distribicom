@@ -5,8 +5,8 @@
 #include "distribicom.grpc.pb.h"
 #include "../math_utils/matrix.h"
 
-#include "../marshal/marshal.hpp"
-#include "../math_utils/channel.h"
+#include "marshal/marshal.hpp"
+#include "concurrency/channel.hpp"
 #include "utils.hpp"
 
 
@@ -24,10 +24,10 @@ namespace services {
         std::vector<std::string> worker_list;
 
         // result_mat is the work result of all workers.
-        multiplication_utils::matrix<seal::Ciphertext> result_mat;
+        math_utils::matrix<seal::Ciphertext> result_mat;
 
         // open completion will be closed to indicate to anyone waiting.
-        Channel<int> done;
+        concurrency::Channel<int> done;
     };
 
     // contains the workers and knows how to distribute their work.
@@ -63,19 +63,19 @@ namespace services {
 
 
         // todo:
-//        void distribute_work(const multiplication_utils::matrix<seal::Plaintext> &db);
+//        void distribute_work(const math_utils::matrix<seal::Plaintext> &db);
 
         // todo:
 
         std::unique_ptr<WorkDistributionLedger> distribute_work(
-                const multiplication_utils::matrix<seal::Plaintext> &db,
-                const multiplication_utils::matrix<seal::Ciphertext> &compressed_queries,
+                const math_utils::matrix<seal::Plaintext> &db,
+                const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                 int rnd,
                 int epoch
         );
 
-        std::unique_ptr<WorkDistributionLedger> sendtask(const multiplication_utils::matrix<seal::Plaintext> &db,
-                                                         const multiplication_utils::matrix<seal::Ciphertext> &compressed_queries,
+        std::unique_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
+                                                         const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                                                          grpc::ClientContext &context);
     };
 }

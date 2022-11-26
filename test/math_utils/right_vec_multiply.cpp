@@ -16,11 +16,11 @@ int right_vec_multiply(int, char*[]) {
     std::vector<seal::Ciphertext> right_vec(cols);
     std::generate(right_vec.begin(), right_vec.end(), [&all]() { return all->random_ciphertext(); });
 
-    auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
+    auto matops = math_utils::MatrixOperations::Create(all->w_evaluator);
 
     // transform it into CiphertextMatrix.
-    multiplication_utils::CiphertextDefaultFormMatrix ciphertext_db(rows * cols,
-                                                                    seal::Ciphertext(all->w_evaluator->context));
+    math_utils::CiphertextDefaultFormMatrix ciphertext_db(rows * cols,
+                                                          seal::Ciphertext(all->w_evaluator->context));
     matops->transform(db, ciphertext_db);
 
     // perform right mult transformed matrices.
@@ -30,7 +30,7 @@ int right_vec_multiply(int, char*[]) {
 
 
     // transform it into splitPlaintext.
-    multiplication_utils::SplitPlaintextNTTFormMatrix split_ptx_db(rows * cols);
+    math_utils::SplitPlaintextNTTFormMatrix split_ptx_db(rows * cols);
     matops->transform(db, split_ptx_db);
     for (auto &ctx: right_vec) {
         all->w_evaluator->evaluator->transform_to_ntt_inplace(ctx);

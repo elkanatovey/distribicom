@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../math_utils/matrix.h"
+#include "math_utils/matrix.h"
 #include "seal/seal.h"
 #include <mutex>
 
@@ -11,14 +11,14 @@ class DB {
 
     // a proper way to receive a matrix from the DB for multiple reads. upon scope exit the DB's lock will be released.
     struct shared_mat {
-        explicit shared_mat(const multiplication_utils::matrix<T> &mat, std::mutex &mtx) : mat(mat), lck(mtx) {}
+        explicit shared_mat(const math_utils::matrix<T> &mat, std::mutex &mtx) : mat(mat), lck(mtx) {}
 
-        const multiplication_utils::matrix<T> &mat;
+        const math_utils::matrix<T> &mat;
     private:
         std::lock_guard<std::mutex> lck;
     };
 
-    multiplication_utils::matrix<T> memory_matrix;
+    math_utils::matrix<T> memory_matrix;
     std::mutex mtx;
 
 public:
@@ -26,7 +26,7 @@ public:
     explicit DB(const int a, const int b) : memory_matrix(), mtx() {}
 
     // used mainly for testing.
-    explicit DB(multiplication_utils::matrix<T> &mat) : memory_matrix(mat), mtx() {}
+    explicit DB(math_utils::matrix<T> &mat) : memory_matrix(mat), mtx() {}
 
     // gives access to a locked reference of the matrix.
     // as long as the shared_mat instance is not destroyed the DB remains locked.

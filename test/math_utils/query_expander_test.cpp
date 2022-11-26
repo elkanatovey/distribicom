@@ -2,7 +2,7 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 #include "../test_utils.hpp"
-#include "master.hpp"
+#include "old_src/master.hpp"
 
 
 // Throws on failure:
@@ -45,7 +45,7 @@ void correct_expansion_test(TestUtils::SetupConfigs cnfgs) {
     seal::GaloisKeys galois_keys = client.generate_galois_keys();
 
     std::uint64_t n_i = all->pir_params.nvec[0];
-    auto expander = multiplication_utils::QueryExpander::Create(all->encryption_params);
+    auto expander = math_utils::QueryExpander::Create(all->encryption_params);
 
     for (std::uint64_t k = 0; k < all->pir_params.ele_num; ++k) {
         std::uint64_t ele_index = k;
@@ -118,14 +118,14 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
               << all->pir_params.ele_num - 1 << "]" << std::endl;
     PirQuery query = client.generate_query(index);
 
-    auto expander = multiplication_utils::QueryExpander::Create(all->encryption_params);
+    auto expander = math_utils::QueryExpander::Create(all->encryption_params);
 
     auto expanded_query_dim_0 = expander->expand_query(query[0], dim0_size, galois_keys);
     auto expanded_query_dim_1 = expander->expand_query(query[1], dim1_size, galois_keys);
     // mult it.
 
-    auto matops = multiplication_utils::matrix_multiplier::Create(all->w_evaluator);
-    multiplication_utils::SplitPlaintextNTTFormMatrix splittx_db(db_ptr->size());
+    auto matops = math_utils::MatrixOperations::Create(all->w_evaluator);
+    math_utils::SplitPlaintextNTTFormMatrix splittx_db(db_ptr->size());
     matops->transform(*db_ptr, splittx_db);
 
     std::vector<seal::Ciphertext> matXv0(expanded_query_dim_0.size());
