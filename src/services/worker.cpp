@@ -12,12 +12,11 @@ namespace services {
 
     // todo: take a const ref of the app_configs:
     Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
-            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl(), query_expander() {
+            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
         inspect_configs();
         seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
 
         mrshl = marshal::Marshaller::Create(enc_params);
-        query_expander = math_utils::QueryExpander::Create(enc_params);
 
 
         // todo: put in a different function.

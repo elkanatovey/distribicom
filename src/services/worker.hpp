@@ -8,21 +8,10 @@
 #include "concurrency/channel.hpp"
 #include "marshal/marshal.hpp"
 #include "math_utils/query_expander.hpp"
+#include "worker_strategy.hpp"
 
 namespace services {
 
-    struct WorkerServiceTask {
-        explicit WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs);
-
-        // metadata worker needs to know.
-        int epoch;
-        int round;
-
-        // matrices:
-        int row_size;
-        std::map<int, std::vector<seal::Plaintext>> ptx_rows;
-        std::map<int, std::vector<seal::Ciphertext>> ctx_cols;
-    };
 
     class Worker final : public distribicom::Worker::Service {
         // used by the worker to ensure it receives authentic data.
@@ -33,7 +22,6 @@ namespace services {
 
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
-        std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::unique_ptr<distribicom::Manager::Stub> manager_conn;
 
     public:
