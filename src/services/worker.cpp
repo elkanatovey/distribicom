@@ -20,7 +20,7 @@ namespace services {
 
 
         // todo: put in a different function.
-        manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
+        auto manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
                 grpc::CreateChannel(
                         cnfgs.appconfigs().main_server_hostname(),
                         grpc::InsecureChannelCredentials()
@@ -34,6 +34,18 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
+        t = std::make_unique<std::thread>([&](seal::EncryptionParameters &&enc_params) {
+            std::cout << "worker main thread: running" << std::endl;
+            work_strategy::RowMultiplicationStrategy wk(enc_params, std::move(manager_conn));
+            for (;;) {
+                auto task = chan.read();
+                if (!task.ok) {
+                    std::cout << "worker main thread: stopping execution" << std::endl;
+                    break;
+                }
+                wk.process_task(std::move(task.answer));
+            }
+        }, std::move(enc_params));
     }
 
     void Worker::inspect_configs() const {

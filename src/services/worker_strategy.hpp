@@ -9,6 +9,8 @@
 namespace services {
 
     struct WorkerServiceTask {
+        explicit WorkerServiceTask() : epoch(-1), round(-1), row_size(-1) {};
+
         explicit WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs);
 
         // metadata worker needs to know.
@@ -103,6 +105,12 @@ namespace services::work_strategy {
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
+        std::unique_ptr<distribicom::Manager::Stub> manager_conn;
+    public:
+        explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
+                                           std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) :
+                WorkerStrategy(enc_params), manager_conn(std::move(manager_conn)) {};
+
         void process_task(WorkerServiceTask &&task) override {
             // expand all queries.
             expand_queries(task);

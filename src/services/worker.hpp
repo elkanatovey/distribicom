@@ -22,7 +22,7 @@ namespace services {
 
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
-        std::unique_ptr<distribicom::Manager::Stub> manager_conn;
+        std::unique_ptr<std::thread> t;
 
     public:
 
@@ -35,7 +35,5 @@ namespace services {
         void fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
 
         void inspect_configs() const;
-
-        seal::EncryptionParameters setup_enc_params() const;
     };
 }
