@@ -31,7 +31,7 @@ service Manager {// masterServer runs this service.
 service Client{// anyone who owns a query need to run a listener for this service.
   // once the round ends, and the server has an answer it should call upon this RPC call and send the answer
   //  to the client
-  rpc Answer(Ciphertext) returns (Ack){}; //@todo fix this to acknowledge more than one ctext in answer
+  rpc Answer(Ciphertext) returns (Ack){}; //@todo fix this to acknowledge more than one ctext in answer, andmake appropriate serialization
   rpc TellNewRound(TellNewRoundRequest) returns (Ack){};
 }
 
@@ -117,6 +117,8 @@ message ClientRegistryRequest{
 
   // the port the client is listening to.
   uint32  client_port = 2;
+
+  bytes rotation_keys = 3;
 }
 
 message ClientRegistryReply{
