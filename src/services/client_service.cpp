@@ -53,8 +53,11 @@ namespace services {
 
     void ClientListener::Query(std::uint64_t desiredIndex) {
         auto query = client->generate_query(desiredIndex);
-//        mrshl.
-//        server_conn->StoreQuery();
+        distribicom::ClientQueryRequest request;
+        mrshl->marshal_query_vector(query, request);
+        grpc::ClientContext context;
+        distribicom::Ack ack;
+        server_conn->StoreQuery(&context, request, &ack);
     }
 
 
