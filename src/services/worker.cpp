@@ -34,18 +34,19 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
-        t = std::make_unique<std::thread>([&](seal::EncryptionParameters &&enc_params) {
-            std::cout << "worker main thread: running" << std::endl;
-            work_strategy::RowMultiplicationStrategy wk(enc_params, std::move(manager_conn));
-            for (;;) {
-                auto task = chan.read();
-                if (!task.ok) {
-                    std::cout << "worker main thread: stopping execution" << std::endl;
-                    break;
-                }
-                wk.process_task(std::move(task.answer));
-            }
-        }, std::move(enc_params));
+        t = std::make_unique<std::thread>(
+                [&](seal::EncryptionParameters &&enc_params, std::unique_ptr<distribicom::Manager::Stub> conn) {
+                    std::cout << "worker main thread: running" << std::endl;
+                    work_strategy::RowMultiplicationStrategy wk(enc_params, std::move(conn));
+                    for (;;) {
+                        auto task = chan.read();
+                        if (!task.ok) {
+                            std::cout << "worker main thread: stopping execution" << std::endl;
+                            break;
+                        }
+                        wk.process_task(std::move(task.answer));
+                    }
+                }, std::move(enc_params), std::move(manager_conn));
     }
 
     void Worker::inspect_configs() const {
@@ -64,7 +65,7 @@ namespace services {
 
     grpc::Status
     Worker::SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
-                     distribicom::Ack *response) {
+                     distribicom::Ack *_) {
         try {
             WorkerServiceTask task(context, cnfgs.appconfigs().configs());
 
@@ -113,6 +114,12 @@ namespace services {
         }
 
         task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+    }
+
+    void Worker::close() {
+        chan.close();
+        t->join();
+
     }
 
     WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :

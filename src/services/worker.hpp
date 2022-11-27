@@ -35,5 +35,7 @@ namespace services {
         void fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const;
 
         void inspect_configs() const;
+
+        void close();
     };
 }

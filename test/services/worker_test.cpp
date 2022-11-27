@@ -80,11 +80,12 @@ int worker_test(int, char *[]) {
 
 
     std::cout << "\nshutting down.\n" << std::endl;
+    sleep(5);
     wg.done();
     for (auto &t: threads) {
         t.join();
     }
-
+    sleep(5);
     return 0;
 }
 
@@ -127,6 +128,7 @@ std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &con
             std::cout << "worker-service listening on " << server_address << std::endl;
             wg.wait();
             server->Shutdown();
+            worker.close();
         } catch (std::exception &e) {
             std::cerr << "setupWorker :: exception: " << e.what() << std::endl;
         }

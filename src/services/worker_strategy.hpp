@@ -40,7 +40,7 @@ namespace services::work_strategy {
     class WorkerStrategy {
 
     private:
-        std::future<void>
+        std::future<int>
         async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry) {
             // TODO: ensure this utilises a threadpool. otherwise this isn't great.
             return std::async(
@@ -50,8 +50,9 @@ namespace services::work_strategy {
                         mu.unlock_shared();
 
                         if (not_exist) {
-                            throw std::runtime_error(
-                                    "galois keys not found for query position: " + std::to_string(query_pos));
+                            std::cout << "galois keys not found for query position:" + std::to_string(query_pos)
+                                      << std::endl;
+                            return 0;
                         }
 
                         auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
@@ -59,6 +60,7 @@ namespace services::work_strategy {
                         mu.lock();
                         queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});
                         mu.unlock();
+                        return 1;
                     },
                     query_pos, expanded_size, qry
             );
@@ -74,15 +76,18 @@ namespace services::work_strategy {
 
 
         void expand_queries(WorkerServiceTask &task) {
-            std::vector<std::future<void>> futures(task.ctx_cols.size());
+            std::vector<std::future<int>> futures;
+            futures.reserve(task.ctx_cols.size());
 
             for (auto &pair: task.ctx_cols) {
                 futures.push_back(async_expand_query(pair.first, task.row_size, std::move(pair.second)));
             }
 
-            for (auto &future: futures) {
-                future.wait();
-            }
+            std::for_each(
+                    futures.begin(),
+                    futures.end(),
+                    [](std::future<int> &future) { future.get(); }
+            );
         }
 
     public:
