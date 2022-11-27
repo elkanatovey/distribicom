@@ -1,6 +1,7 @@
 #pragma once
 
 #include "seal/seal.h"
+#include "distribicom.grpc.pb.h"
 
 namespace marshal {
     typedef std::vector<seal::seal_byte> marshaled_seal_object;
@@ -35,6 +36,18 @@ namespace marshal {
                 marshal_seal_object(in[i], out[i]);
             }
         }
+
+        /**
+         * vector of vectors serialisation into protobuf
+         */
+        void marshal_query_vector(const std::vector<std::vector<seal::Ciphertext>> &in, distribicom::ClientQueryRequest &out)
+        const;
+
+        /**
+        * vector of vectors deserialisation from protobuf
+        */
+        std::vector<std::vector<seal::Ciphertext>> unmarshal_query_vector(const distribicom::ClientQueryRequest &in)
+        const;
 
         template<typename T>
         void unmarshal_seal_vector(const std::vector<marshaled_seal_object> &in, std::vector<T> &out) const {

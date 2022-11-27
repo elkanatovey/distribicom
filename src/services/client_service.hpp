@@ -31,13 +31,13 @@ namespace services {
         TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest* request, distribicom::Ack* response)override;
 
 
-        grpc::Status Query(std::uint64_t desiredIndex);
+        void Query(std::uint64_t desiredIndex);
 
         /**
          *
          * @return
          */
-        grpc::Status Query();
+        void Query();
     };
 
 } // services

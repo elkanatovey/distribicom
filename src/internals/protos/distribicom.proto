@@ -84,8 +84,6 @@ message MatrixPart {
 
 message QueryCiphertext{
   bytes data = 1;
-  bytes GaloisKeyElem = 2;
-
 }
 
 message GaloisKeys{
@@ -105,10 +103,8 @@ message WriteRequest{
 };
 
 message ClientQueryRequest{
-  oneof payload{
-    bytes GaloisKeyElem = 1;
-    bytes ctx = 3;
-  }
+  repeated Ciphertext query_dim1  = 1;
+  repeated Ciphertext query_dim2 = 2;
 }
 
 message ClientRegistryRequest{

@@ -47,7 +47,14 @@ namespace services {
                                  distribicom::Ack *response) {
         round = request->round();
         response->set_success(true);
+        // @todo write to db here?
         return grpc::Status::OK;
+    }
+
+    void ClientListener::Query(std::uint64_t desiredIndex) {
+        auto query = client->generate_query(desiredIndex);
+//        mrshl.
+//        server_conn->StoreQuery();
     }
 
 
