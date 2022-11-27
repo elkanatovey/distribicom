@@ -99,10 +99,8 @@ namespace services {
         if (!task.ctx_cols.contains(col)) {
             task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
         }
-        if (row >= 1) {
-            throw std::invalid_argument("should receive at most one compressed ciphertext");
-        }
-        task.ctx_cols[col][row] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+
+        task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
     }
 
     WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :

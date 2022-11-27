@@ -17,11 +17,17 @@ namespace services {
         // matrices:
         int row_size;
         std::map<int, std::vector<seal::Plaintext>> ptx_rows;
+        // TODO: the current item represents one dimension only!
+        //      to expand it we might need other parameters to specify which dimension (for example left side query).
         std::map<int, std::vector<seal::Ciphertext>> ctx_cols;
     };
 }
 
 namespace services::work_strategy {
+    enum type {
+        frievalds,
+        fft,
+    };
 
     /**
      * A worker strategy is a class that defines how a worker will operate in a given round.
@@ -29,33 +35,49 @@ namespace services::work_strategy {
      * Once the strategy is done processing the task, it'll return a result to the worker.
      */
     class WorkerStrategy {
+
     protected:
         // TODO: make a unique ptr!
-        // TODO: instead of queryExpander, maybe something else should be responsible? im not certain yet.
         std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::shared_ptr<math_utils::MatrixOperations> matops;
-        math_utils::matrix<seal::Ciphertext> queries;
+        std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
+        std::map<int, seal::GaloisKeys> gkeys;
 
-        // TODO: expand and store the full queries in  queries
-        // TODO: should be perform in an async manner.
-        void expand_incoming_queries(const std::map<int, std::vector<seal::Ciphertext>> &ctx_cols) {};
+        void expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &qry) {
+            if (gkeys.find(query_pos) == gkeys.end()) {
+                throw std::runtime_error("galois keys not found for query position: " + std::to_string(query_pos));
+            }
+
+            auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
+            queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});
+        }
 
     public:
         explicit WorkerStrategy(const seal::EncryptionParameters &enc_params) noexcept:
-                query_expander(), matops(), queries() {
+                query_expander(), matops(), queries(), gkeys() {
             query_expander = math_utils::QueryExpander::Create(enc_params);
             matops = math_utils::MatrixOperations::Create(
                     math_utils::EvaluatorWrapper::Create(enc_params)
             );
         }
 
-        void store_galois_key(const seal::GaloisKeys &keys, std::uint64_t query_position) {};
+        void store_galois_key(const seal::GaloisKeys &keys, int query_position) {
+            gkeys[query_position] = keys;
+        };
 
         virtual ~WorkerStrategy() = default;
 
-        virtual void process_task(WorkerServiceTask task) = 0;
+        virtual void process_task(WorkerServiceTask &&task) = 0;
+
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
+        void process_task(WorkerServiceTask &&task) override {
+            // expand all queries.
+
+            // then perform mat mul.
+
+            // then push responses back.
+        }
     };
 }
