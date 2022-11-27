@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 #include "distribicom.grpc.pb.h"
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
@@ -36,20 +37,50 @@ namespace services::work_strategy {
      */
     class WorkerStrategy {
 
+    private:
+        std::future<void>
+        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry) {
+            // TODO: ensure this utilises a threadpool. otherwise this isn't great.
+            return std::async(
+                    [&](int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry) {
+                        mu.lock_shared();
+                        auto not_exist = gkeys.find(query_pos) == gkeys.end();
+                        mu.unlock_shared();
+
+                        if (not_exist) {
+                            throw std::runtime_error(
+                                    "galois keys not found for query position: " + std::to_string(query_pos));
+                        }
+
+                        auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
+
+                        mu.lock();
+                        queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});
+                        mu.unlock();
+                    },
+                    query_pos, expanded_size, qry
+            );
+        }
+
     protected:
         // TODO: make a unique ptr!
         std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
         std::map<int, seal::GaloisKeys> gkeys;
+        std::shared_mutex mu;
 
-        void expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &qry) {
-            if (gkeys.find(query_pos) == gkeys.end()) {
-                throw std::runtime_error("galois keys not found for query position: " + std::to_string(query_pos));
+
+        void expand_queries(WorkerServiceTask &task) {
+            std::vector<std::future<void>> futures(task.ctx_cols.size());
+
+            for (auto &pair: task.ctx_cols) {
+                futures.push_back(async_expand_query(pair.first, task.row_size, std::move(pair.second)));
             }
 
-            auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
-            queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});
+            for (auto &future: futures) {
+                future.wait();
+            }
         }
 
     public:
@@ -74,10 +105,8 @@ namespace services::work_strategy {
     class RowMultiplicationStrategy : public WorkerStrategy {
         void process_task(WorkerServiceTask &&task) override {
             // expand all queries.
+            expand_queries(task);
 
-            // then perform mat mul.
-
-            // then push responses back.
         }
     };
 }
