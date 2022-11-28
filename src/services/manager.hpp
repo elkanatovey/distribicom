@@ -80,6 +80,8 @@ namespace services {
                                                          grpc::ClientContext &context);
 
         void wait_for_workers(int i);
+
+        void send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix);
     };
 }
 

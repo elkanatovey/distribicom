@@ -123,4 +123,37 @@ namespace services {
         worker_counter.wait_for(i);
     }
 
+    void Manager::send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix) {
+        grpc::ClientContext context;
+
+        utils::add_metadata_size(context, services::constants::size_md, int(matrix.cols));
+        // todo: specify epoch!
+        utils::add_metadata_size(context, services::constants::round_md, 1);
+        utils::add_metadata_size(context, services::constants::epoch_md, 1);
+
+        distribicom::Ack response;
+        distribicom::WorkerTaskPart prt;
+        std::unique_lock lock(mtx);
+
+        for (auto &worker: worker_stubs) {
+            { // this stream is released at the end of this scope.
+                auto stream = worker.second->SendTask(&context, &response);
+                for (int i = 0; i < int(matrix.cols); ++i) {
+                    prt.mutable_gkey()->set_key_pos(i);
+                    prt.mutable_gkey()->mutable_keys()->assign(
+                            marshal->marshal_seal_object(matrix(0, i))
+                    );
+                    stream->Write(prt);
+                }
+                stream->WritesDone();
+                auto status = stream->Finish();
+                if (!status.ok()) {
+                    std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
+                              " failed: " << status.error_message() << std::endl;
+                    continue;
+                }
+            }
+        }
+    }
+
 }

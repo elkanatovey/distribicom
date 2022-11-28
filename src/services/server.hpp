@@ -50,5 +50,16 @@ namespace services {
             // i don't want to wait on a timeout!
             return ledger;
         }
+
+        void wait_for_workers(int i) {
+            manager.wait_for_workers(i);
+        }
+
+        void start_epoch() {
+            //todo: start epoch for registered clients as well -> make them send queries.
+            auto handle = gal_keys.many_reads();
+            manager.send_galois_keys(handle.mat);
+//            wait_for_workers(0); todo: wait for app_configs.num_workers
+        }
     };
 }

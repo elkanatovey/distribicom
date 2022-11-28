@@ -39,9 +39,11 @@ int worker_test(int, char *[]) {
 
     std::cout << "setting up worker-service" << std::endl;
     threads.emplace_back(setupWorker(wg, cfgs));
-    sleep(3);
 
-    fs.distribute_work();
+    fs.wait_for_workers(1);
+    sleep(1);
+    fs.start_epoch();
+//    fs.distribute_work();
 //    distribicom::Worker::Stub client(
 //            grpc::CreateChannel("localhost:" + std::string(worker_port), grpc::InsecureChannelCredentials()));
 //
@@ -125,6 +127,8 @@ std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &con
 
             grpc::ServerBuilder builder;
 
+            builder.SetMaxMessageSize(services::constants::max_message_size);
+
             std::string server_address("0.0.0.0:" + std::string(worker_port));
             builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
             builder.RegisterService(&worker);
@@ -146,6 +150,8 @@ std::thread runFullServer(concurrency::WaitGroup &wg, services::FullServer &f) {
 
 
         grpc::ServerBuilder builder;
+        builder.SetMaxMessageSize(services::constants::max_message_size);
+
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 
 

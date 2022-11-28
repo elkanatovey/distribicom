@@ -71,6 +71,7 @@ namespace services {
 
             distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
+                std::cout << tmp.part_case() << std::endl;
                 if (!tmp.has_gkey() && !tmp.has_matrixpart()) {
                     throw std::invalid_argument("received a message that is not a matrix part or a gkey");
                 }
@@ -78,9 +79,11 @@ namespace services {
                     fill_matrix_part(task, tmp.matrixpart());
                 }
                 if (tmp.has_gkey()) {
+                    std::cout << "received galois key" << std::endl;
                     // todo: unmarshal gk.
 //                    strategy->store_galois_key()
                 }
+                tmp.clear_part();
             }
             chan.write(task);
         } catch (std::invalid_argument &e) {
