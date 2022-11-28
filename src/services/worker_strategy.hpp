@@ -59,8 +59,10 @@ namespace services::work_strategy {
         explicit WorkerStrategy(const seal::EncryptionParameters &enc_params,
                                 std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) noexcept;
 
-        void store_galois_key(const seal::GaloisKeys &keys, int query_position) {
-            gkeys[query_position] = keys;
+        void store_galois_key(seal::GaloisKeys &&keys, int query_position) {
+            mu.lock();
+            gkeys[query_position] = std::move(keys);
+            mu.unlock();
         };
 
         virtual ~WorkerStrategy() = default;

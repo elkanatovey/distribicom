@@ -9,6 +9,7 @@
 #include "marshal/marshal.hpp"
 #include "math_utils/query_expander.hpp"
 #include "worker_strategy.hpp"
+#include "distribicom.pb.h"
 
 namespace services {
 
