@@ -23,6 +23,7 @@ namespace services {
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::unique_ptr<std::thread> t;
+        std::shared_ptr<work_strategy::RowMultiplicationStrategy> strategy;
 
     public:
 

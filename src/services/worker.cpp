@@ -34,19 +34,19 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
+        strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(enc_params, std::move(manager_conn));
         t = std::make_unique<std::thread>(
-                [&](seal::EncryptionParameters &&enc_params, std::unique_ptr<distribicom::Manager::Stub> conn) {
+                [&]() {
                     std::cout << "worker main thread: running" << std::endl;
-                    work_strategy::RowMultiplicationStrategy wk(enc_params, std::move(conn));
                     for (;;) {
                         auto task = chan.read();
                         if (!task.ok) {
                             std::cout << "worker main thread: stopping execution" << std::endl;
                             break;
                         }
-                        wk.process_task(std::move(task.answer));
+                        strategy->process_task(std::move(task.answer));
                     }
-                }, std::move(enc_params), std::move(manager_conn));
+                });
     }
 
     void Worker::inspect_configs() const {

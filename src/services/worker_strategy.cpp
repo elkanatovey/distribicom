@@ -36,7 +36,8 @@ namespace services::work_strategy {
                     mu.unlock_shared();
 
                     if (not_exist) {
-                        std::cout << "galois keys not found for query position:" + std::to_string(query_pos)
+                        std::cout << "WorkerStrategy: galois keys not found for query position:" +
+                                     std::to_string(query_pos)
                                   << std::endl;
                         return 0;
                     }
