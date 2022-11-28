@@ -39,47 +39,10 @@ int worker_test(int, char *[]) {
 
     std::cout << "setting up worker-service" << std::endl;
     threads.emplace_back(setupWorker(wg, cfgs));
+    sleep(2);
 
     fs.wait_for_workers(1);
-    sleep(1);
     fs.start_epoch();
-//    fs.distribute_work();
-//    distribicom::Worker::Stub client(
-//            grpc::CreateChannel("localhost:" + std::string(worker_port), grpc::InsecureChannelCredentials()));
-//
-//    grpc::ClientContext context;
-//    distribicom::Ack response;
-//
-//
-//    services::add_metadata_size(context, services::constants::size_md, 5);
-//    services::add_metadata_size(context, services::constants::round_md, 1);
-//    services::add_metadata_size(context, services::constants::epoch_md, 2);
-//
-//    auto conn = client.SendTask(&context, &response);
-//
-//    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
-//    auto ptx = all->random_plaintext();
-//
-//    auto marshaler = marshal::Marshaller::Create(all->encryption_params);
-//
-//
-//    distribicom::Plaintext mptx;
-//    mptx.mutable_data()->assign(marshaler->marshal_seal_object<seal::Plaintext>(ptx));
-//    distribicom::MatrixPart m;
-//    m.mutable_ptx()->CopyFrom(mptx);
-//
-//    distribicom::WorkerTaskPart tsk;
-//    tsk.mutable_matrixpart()->CopyFrom(m);
-//    tsk.mutable_matrixpart()->set_row(0);
-//
-//    for (int i = 0; i < 5; ++i) {
-//        tsk.mutable_matrixpart()->set_col(i);
-//        conn->Write(tsk, grpc::WriteOptions{});
-//    }
-//    conn->WritesDone();
-//    auto out = conn->Finish();
-//    assert(out.ok() == 1);
-
 
     std::cout << "\nshutting down.\n" << std::endl;
     sleep(5);
