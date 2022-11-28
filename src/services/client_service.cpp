@@ -2,15 +2,16 @@
 #include "utils.hpp"
 
 namespace services {
-    ClientListener::ClientListener(distribicom::ClientConfigs &&_client_configs): client_configs(std::move(_client_configs)){
+    ClientListener::ClientListener(distribicom::ClientConfigs &&_client_configs) : client_configs(
+            std::move(_client_configs)) {
         enc_params = utils::setup_enc_params(client_configs.app_configs());
         seal::Blake2xbPRNGFactory factory;
         this->answering_machine = factory.create({}); // @todo maybe receive as param for testing
 
         auto app_configs = client_configs.app_configs();
-        const auto& configs = app_configs.configs();
+        const auto &configs = app_configs.configs();
         gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
-                       configs.dimensions(), enc_params, pir_params,  configs.use_symmetric(),
+                       configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
                        configs.use_batching(), configs.use_recursive_mod_switching());
         client = make_unique<PIRClient>(PIRClient(enc_params, pir_params));
 
@@ -31,7 +32,7 @@ namespace services {
         request.set_galois_keys(galois_key);
 
         auto status = server_conn->RegisterAsClient(&context, request, &mail_data);
-        if(!status.ok()){
+        if (!status.ok()) {
             std::cout << status.error_code() << ": " << status.error_message() << std::endl;
         }
 
@@ -39,7 +40,7 @@ namespace services {
 
     grpc::Status ClientListener::Answer(grpc::ServerContext *context, const distribicom::PirResponse *answer,
                                         distribicom::Ack *response) {
-        auto ans =  mrshl->unmarshal_pir_response(*answer);
+        auto ans = mrshl->unmarshal_pir_response(*answer);
         current_answer = client->decode_reply(ans);
         response->set_success(true);
         return grpc::Status::OK;
@@ -66,7 +67,7 @@ namespace services {
         distribicom::Ack ack;
 
         auto status = server_conn->StoreQuery(&context, request, &ack);
-        if(!status.ok()){
+        if (!status.ok()) {
             std::cout << status.error_code() << ": " << status.error_message() << std::endl;
         }
     }

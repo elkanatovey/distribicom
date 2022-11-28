@@ -20,7 +20,7 @@ namespace services {
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
         seal::Plaintext current_answer;
-        std::uint32_t round=0;
+        std::uint32_t round = 0;
 
     public:
         explicit ClientListener(distribicom::ClientConfigs &&_client_configs);
@@ -30,13 +30,14 @@ namespace services {
          */
         grpc::Status
         Answer(grpc::ServerContext *context, const distribicom::PirResponse *answer,
-               distribicom::Ack *response)override;
+               distribicom::Ack *response) override;
 
         /**
          * called by main server to inform when new round starts, returns new item to write to db
          */
         grpc::Status
-        TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest* request, distribicom::WriteRequest* response)override;
+        TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest *request,
+                     distribicom::WriteRequest *response) override;
 
 
         void Query(std::uint64_t desiredIndex);
