@@ -41,30 +41,7 @@ namespace services::work_strategy {
 
     private:
         std::future<int>
-        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry) {
-            // TODO: ensure this utilises a threadpool. otherwise this isn't great.
-            return std::async(
-                    [&](int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry) {
-                        mu.lock_shared();
-                        auto not_exist = gkeys.find(query_pos) == gkeys.end();
-                        mu.unlock_shared();
-
-                        if (not_exist) {
-                            std::cout << "galois keys not found for query position:" + std::to_string(query_pos)
-                                      << std::endl;
-                            return 0;
-                        }
-
-                        auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
-
-                        mu.lock();
-                        queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});
-                        mu.unlock();
-                        return 1;
-                    },
-                    query_pos, expanded_size, qry
-            );
-        }
+        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
 
     protected:
         // TODO: make a unique ptr!
@@ -73,31 +50,14 @@ namespace services::work_strategy {
         std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
         std::map<int, seal::GaloisKeys> gkeys;
         std::shared_mutex mu;
+        std::unique_ptr<distribicom::Manager::Stub> manager_conn;
 
 
-        void expand_queries(WorkerServiceTask &task) {
-            std::vector<std::future<int>> futures;
-            futures.reserve(task.ctx_cols.size());
-
-            for (auto &pair: task.ctx_cols) {
-                futures.push_back(async_expand_query(pair.first, task.row_size, std::move(pair.second)));
-            }
-
-            std::for_each(
-                    futures.begin(),
-                    futures.end(),
-                    [](std::future<int> &future) { future.get(); }
-            );
-        }
+        void expand_queries(WorkerServiceTask &task);
 
     public:
-        explicit WorkerStrategy(const seal::EncryptionParameters &enc_params) noexcept:
-                query_expander(), matops(), queries(), gkeys() {
-            query_expander = math_utils::QueryExpander::Create(enc_params);
-            matops = math_utils::MatrixOperations::Create(
-                    math_utils::EvaluatorWrapper::Create(enc_params)
-            );
-        }
+        explicit WorkerStrategy(const seal::EncryptionParameters &enc_params,
+                                std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) noexcept;
 
         void store_galois_key(const seal::GaloisKeys &keys, int query_position) {
             gkeys[query_position] = keys;
@@ -110,11 +70,10 @@ namespace services::work_strategy {
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
-        std::unique_ptr<distribicom::Manager::Stub> manager_conn;
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
                                            std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) :
-                WorkerStrategy(enc_params), manager_conn(std::move(manager_conn)) {};
+                WorkerStrategy(enc_params, std::move(manager_conn)) {};
 
         void process_task(WorkerServiceTask &&task) override {
             // expand all queries.
