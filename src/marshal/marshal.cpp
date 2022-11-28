@@ -53,13 +53,25 @@ namespace marshal{
         return query;
     }
 
+    /**
+     *
+     * @param in pir response to marshal
+     * @param out message to marshal into
+     */
     void
     Marshaller::marshal_pir_response(const std::vector<seal::Ciphertext> &in, distribicom::PirResponse &out) const {
-        for (const auto & i : in) {
-            auto marshaled_ctx = marshal_seal_object(i);
-            distribicom::Ciphertext* current_ctx = out.add_answer_ctxs();
-            current_ctx->set_data(marshaled_ctx);
-        }
+        marshal_seal_vector(in, out);
+    }
+
+    /**
+     *
+     * @param in message to unmarshal
+     * @return unmarshaled message
+     */
+    std::vector<seal::Ciphertext> Marshaller::unmarshal_pir_response(const distribicom::PirResponse &in) const {
+        std::vector<seal::Ciphertext> unmarshalled_response;
+        unmarshal_seal_vector(in, unmarshalled_response);
+        return unmarshalled_response;
     }
 
 }

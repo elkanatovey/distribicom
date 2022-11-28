@@ -108,7 +108,7 @@ message WriteRequest{
 };
 
 message PirResponse{
-  repeated Ciphertext answer_ctxs  = 1;
+  repeated Ciphertext data  = 1;
 }
 
 message ClientQueryRequest{

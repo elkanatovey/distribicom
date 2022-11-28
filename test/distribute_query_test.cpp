@@ -183,5 +183,5 @@ int distribute_query_test1(TestUtils::SetupConfigs t) {
 //    cout << "Main: PIRClient answer decode time: " << time_decode_us / 1000 << " ms" << endl;
 //    cout << "Main: Reply num ciphertexts: " << reply.size() << endl;
 //
-//    return 0;
+    return 0;
 }

@@ -27,16 +27,18 @@ namespace services {
         request.set_client_port(client_configs.client_port());
         request.set_rotation_keys(galois_key);
 
-        server_conn->RegisterAsClient(&context, request, &mail_data);
+        auto status = server_conn->RegisterAsClient(&context, request, &mail_data);
+        if(!status.ok()){
+            std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+        }
 
     }
 
-    grpc::Status ClientListener::Answer(grpc::ServerContext *context, const distribicom::Ciphertext *answer,
+    grpc::Status ClientListener::Answer(grpc::ServerContext *context, const distribicom::PirResponse *answer,
                                         distribicom::Ack *response) {
 
         std::vector<seal::Ciphertext> ans(pir_params.expansion_ratio);
-        //@todo make serialisation for vectors sent in this fashion
-        ans[0] =  mrshl->unmarshal_seal_object<seal::Ciphertext>(answer->data());
+        ans =  mrshl->unmarshal_pir_response(*answer);
         current_answer = client->decode_reply(ans);
         response->set_success(true);
         return grpc::Status::OK;
@@ -57,7 +59,15 @@ namespace services {
         mrshl->marshal_query_vector(query, request);
         grpc::ClientContext context;
         distribicom::Ack ack;
-        server_conn->StoreQuery(&context, request, &ack);
+
+        auto status = server_conn->StoreQuery(&context, request, &ack);
+        if(!status.ok()){
+            std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+        }
+    }
+
+    void ClientListener::Query() {
+        Query(mail_data.mailbox_id());
     }
 
 

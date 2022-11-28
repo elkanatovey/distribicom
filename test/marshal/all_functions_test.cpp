@@ -192,6 +192,27 @@ void seal_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
 }
 
 
+void pir_response_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                       std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random ciphertexts
+    std::vector<seal::Ciphertext> ctxs(100);
+    for (auto &ctx: ctxs) {
+        ctx = all->random_ciphertext();
+    }
+
+    distribicom::PirResponse marshalled_ctxs;
+    m->marshal_pir_response(ctxs, marshalled_ctxs);
+
+    auto unmarshalled_ctxs = m->unmarshal_pir_response(marshalled_ctxs);
+
+    for (std::uint64_t i = 0; i < ctxs.size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(ctxs[i], unmarshalled_ctxs[i]);
+        assert(ctxs[i].is_transparent());
+    }
+
+}
+
+
 int all_functions_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
@@ -205,6 +226,7 @@ int all_functions_test(int, char *[]) {
     ciphertext_vector_check(all, m);
     query_vector_check(all, m);
     seal_vector_check(all, m);
+    pir_response_check(all, m);
 
     return 0;
 }

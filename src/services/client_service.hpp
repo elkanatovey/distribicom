@@ -24,7 +24,7 @@ namespace services {
         explicit ClientListener(distribicom::ClientConfigs &_client_configs);
 
         grpc::Status
-        Answer(grpc::ServerContext *context, const distribicom::Ciphertext *answer,
+        Answer(grpc::ServerContext *context, const distribicom::PirResponse *answer,
                distribicom::Ack *response)override;
 
         grpc::Status
