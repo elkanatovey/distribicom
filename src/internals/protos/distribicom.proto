@@ -93,7 +93,12 @@ message GaloisKeys{
 
 message Ciphertext{bytes data = 1;}
 
+message Ciphertexts{repeated Ciphertext data = 1;}
+
 message Plaintext{bytes data = 1;}
+
+message Plaintexts{repeated Plaintext data = 1;}
+
 // small:
 message WriteRequest{
   // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...

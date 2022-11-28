@@ -14,14 +14,14 @@ namespace marshal{
 
     void Marshaller::marshal_query_vector(const std::vector<std::vector<seal::Ciphertext>> &in,
                                           distribicom::ClientQueryRequest &out) const {
-        for (std::uint64_t i = 0; i < in[0].size(); ++i) {
-            auto marshaled_ctx = marshal_seal_object(in[0][i]);
+        for (const auto & i : in[0]) {
+            auto marshaled_ctx = marshal_seal_object(i);
             distribicom::Ciphertext* current_ctx = out.add_query_dim1();
             current_ctx->set_data(marshaled_ctx);
         }
         if(in.size()>1) {
-            for (std::uint64_t i = 0; i < in[1].size(); ++i) {
-                auto marshaled_ctx = marshal_seal_object(in[1][i]);
+            for (const auto & i : in[1]) {
+                auto marshaled_ctx = marshal_seal_object(i);
                 distribicom::Ciphertext *current_ctx = out.add_query_dim2();
                 current_ctx->set_data(marshaled_ctx);
             }
@@ -51,6 +51,15 @@ namespace marshal{
         if(!query_dim2.empty()){query.push_back(query_dim2);}
 
         return query;
+    }
+
+    void
+    Marshaller::marshal_pir_response(const std::vector<seal::Ciphertext> &in, distribicom::PirResponse &out) const {
+        for (const auto & i : in) {
+            auto marshaled_ctx = marshal_seal_object(i);
+            distribicom::Ciphertext* current_ctx = out.add_answer_ctxs();
+            current_ctx->set_data(marshaled_ctx);
+        }
     }
 
 }
