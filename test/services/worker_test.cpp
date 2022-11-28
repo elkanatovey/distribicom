@@ -43,9 +43,10 @@ int worker_test(int, char *[]) {
 
     fs.wait_for_workers(1);
     fs.start_epoch();
+    fs.distribute_work();
 
-    std::cout << "\nshutting down.\n" << std::endl;
     sleep(5);
+    std::cout << "\nshutting down.\n" << std::endl;
     wg.done();
     for (auto &t: threads) {
         t.join();
