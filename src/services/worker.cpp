@@ -71,11 +71,16 @@ namespace services {
 
             distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
-                if (!tmp.has_matrixpart()) {
-                    // TODO update the worker's galois keys perhaps?
-                    throw NotImplemented("receiving GaloisKey not implemented yet.");
+                if (!tmp.has_gkey() && !tmp.has_matrixpart()) {
+                    throw std::invalid_argument("received a message that is not a matrix part or a gkey");
                 }
-                fill_matrix_part(task, tmp.matrixpart());
+                if (tmp.has_matrixpart()) {
+                    fill_matrix_part(task, tmp.matrixpart());
+                }
+                if (tmp.has_gkey()) {
+                    // todo: unmarshal gk.
+//                    strategy->store_galois_key()
+                }
             }
             chan.write(task);
         } catch (std::invalid_argument &e) {
