@@ -31,8 +31,8 @@ service Manager {// masterServer runs this service.
 service Client{// anyone who owns a query need to run a listener for this service.
   // once the round ends, and the server has an answer it should call upon this RPC call and send the answer
   //  to the client
-  rpc Answer(PirResponse) returns (Ack){}; //@todo fix this to acknowledge more than one ctext in answer, andmake appropriate serialization
-  rpc TellNewRound(TellNewRoundRequest) returns (Ack){};
+  rpc Answer(PirResponse) returns (Ack){};
+  rpc TellNewRound(TellNewRoundRequest) returns (WriteRequest){};
 }
 
 // facing clients, allowing them to read and write to the server.
@@ -102,8 +102,8 @@ message Plaintexts{repeated Plaintext data = 1;}
 // small:
 message WriteRequest{
   // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...
-  int64 ptxnumber = 1;
-  int32 whereinptx = 2;
+  uint64 ptxnumber = 1;
+  uint32 whereinptx = 2;
   bytes data = 3; // 288 bytes?
 };
 
@@ -123,14 +123,14 @@ message ClientRegistryRequest{
   // the port the client is listening to.
   uint32  client_port = 2;
 
-  bytes rotation_keys = 3;
+  bytes galois_keys = 3;
 }
 
 message ClientRegistryReply{
   // should be used to ensure the server knows the messages are legitimate from the client.
   bytes credentials = 1;
   uint32  num_mailboxes = 2;
-  uint32 mailbox_id = 3;
+  uint32 mailbox_id = 3;  // assume this is some number mod number of elements supported in db
 }
 
 message ClientConfigs{

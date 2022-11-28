@@ -37,7 +37,11 @@ namespace marshal {
             }
         }
 
-        // marshals seal vector to protobuf
+        /**
+         * marshals seal vector to protobuf
+         * T - type of seal object
+         * S - type of message to marshal to, assumed that it has a repeated field named data
+         **/
         template<typename T, typename S>
         void marshal_seal_vector(const std::vector<T> &in, S &out) const {
             for (std::uint64_t i = 0; i < in.size(); ++i) {
@@ -47,6 +51,11 @@ namespace marshal {
             }
         }
 
+        /**
+         * unmarshals seal vector from protobuf
+         * T - type of seal object
+         * S - type of message to marshal from, assumed that it has a repeated field named data
+         **/
         template<typename T, typename S>
         std::vector<T>
         unmarshal_seal_vector(const S &in, std::vector<T> &seal_objects) const {

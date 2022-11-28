@@ -4,6 +4,9 @@
 namespace services {
     ClientListener::ClientListener(distribicom::ClientConfigs &_client_configs): client_configs(_client_configs), mrshl(),
     enc_params(utils::setup_enc_params(_client_configs.app_configs())), round(0){
+        seal::Blake2xbPRNGFactory factory;
+        this->answering_machine = factory.create({}); // @todo maybe receive as param for testing
+
         auto app_configs = client_configs.app_configs();
         const auto& configs = app_configs.configs();
         gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
@@ -25,7 +28,7 @@ namespace services {
         distribicom::ClientRegistryRequest request;
 
         request.set_client_port(client_configs.client_port());
-        request.set_rotation_keys(galois_key);
+        request.set_galois_keys(galois_key);
 
         auto status = server_conn->RegisterAsClient(&context, request, &mail_data);
         if(!status.ok()){
@@ -36,9 +39,7 @@ namespace services {
 
     grpc::Status ClientListener::Answer(grpc::ServerContext *context, const distribicom::PirResponse *answer,
                                         distribicom::Ack *response) {
-
-        std::vector<seal::Ciphertext> ans(pir_params.expansion_ratio);
-        ans =  mrshl->unmarshal_pir_response(*answer);
+        auto ans =  mrshl->unmarshal_pir_response(*answer);
         current_answer = client->decode_reply(ans);
         response->set_success(true);
         return grpc::Status::OK;
@@ -46,10 +47,14 @@ namespace services {
 
     grpc::Status
     ClientListener::TellNewRound(grpc::ServerContext *context, const distribicom::TellNewRoundRequest *request,
-                                 distribicom::Ack *response) {
+                                 distribicom::WriteRequest *response) {
         round = request->round();
-        response->set_success(true);
-        // @todo write to db here?
+        auto msg = answering_machine->generate() % 256;
+        response->set_data(std::to_string(msg));
+        response->set_ptxnumber(client->get_fv_index(this->mail_data.mailbox_id())); // index of FV plaintext
+        response->set_whereinptx(client->get_fv_offset(this->mail_data.mailbox_id())); // offset in FV plaintext
+//        response->set_success(true);
+        // @todo maybe make msgs bigger
         return grpc::Status::OK;
     }
 
@@ -67,7 +72,7 @@ namespace services {
     }
 
     void ClientListener::Query() {
-        Query(mail_data.mailbox_id());
+        Query(client->get_fv_index(mail_data.mailbox_id()));
     }
 
 

@@ -12,6 +12,11 @@ namespace marshal{
         return std::make_shared<Marshaller>(std::move(marsh));
     }
 
+    /**
+     * marshal query vector to protobuf, deals with 1d and 2d queries
+     * @param in query
+     * @param out protobuf msg to write to
+     */
     void Marshaller::marshal_query_vector(const std::vector<std::vector<seal::Ciphertext>> &in,
                                           distribicom::ClientQueryRequest &out) const {
         for (const auto & i : in[0]) {
@@ -28,6 +33,11 @@ namespace marshal{
         }
     }
 
+    /**
+     * unmarshal query vector from protobuf, deals with 1d and 2d queries
+     * @param in marshaled query
+     * @return unmarshaled query
+     */
     std::vector<std::vector<seal::Ciphertext>>
     Marshaller::unmarshal_query_vector(const distribicom::ClientQueryRequest &in) const {
         std::vector<seal::Ciphertext> query_dim1;
@@ -54,7 +64,7 @@ namespace marshal{
     }
 
     /**
-     *
+     * marshal pir response to protobuf
      * @param in pir response to marshal
      * @param out message to marshal into
      */
@@ -64,7 +74,7 @@ namespace marshal{
     }
 
     /**
-     *
+     * unmarshal pir response from protobuf
      * @param in message to unmarshal
      * @return unmarshaled message
      */
