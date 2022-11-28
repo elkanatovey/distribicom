@@ -29,3 +29,11 @@ services::configurations::create_worker_configs(const distribicom::AppConfigs &a
     c.mutable_appconfigs()->CopyFrom(app_configs);
     return c;
 }
+
+distribicom::ClientConfigs
+services::configurations::create_client_configs(const distribicom::AppConfigs &app_configs, int client_port) {
+    distribicom::ClientConfigs c;
+    c.set_client_port(client_port);
+    c.mutable_app_configs()->CopyFrom(app_configs);
+    return c;
+}

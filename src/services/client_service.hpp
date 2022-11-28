@@ -23,7 +23,7 @@ namespace services {
         std::uint32_t round;
 
     public:
-        explicit ClientListener(distribicom::ClientConfigs &_client_configs);
+        explicit ClientListener(distribicom::ClientConfigs &&_client_configs);
 
         /**
          *  called by main server when answer to pir query is ready

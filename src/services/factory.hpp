@@ -12,4 +12,6 @@ namespace services::configurations {
     create_app_configs(const std::string &server_hostname, int poly_deg, int logt, int rows, int cols);
 
     distribicom::WorkerConfigs create_worker_configs(const distribicom::AppConfigs &app_configs, int worker_port);
+
+    distribicom::ClientConfigs create_client_configs(const distribicom::AppConfigs &app_configs, int client_port);
 }
