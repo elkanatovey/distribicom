@@ -12,6 +12,7 @@ namespace services {
         // used for tests
         DB<seal::Plaintext> db;
         DB<seal::Ciphertext> queries;
+        DB<seal::GaloisKeys> gal_keys;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;
@@ -19,13 +20,14 @@ namespace services {
 
     public:
         explicit FullServer(const distribicom::AppConfigs &app_configs) :
-                db(0, 0), queries(0, 0), manager(app_configs) {};
+                db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs) {};
 
         // mainly for testing.
         FullServer(math_utils::matrix<seal::Plaintext> &db,
                    math_utils::matrix<seal::Ciphertext> &queries,
+                   math_utils::matrix<seal::GaloisKeys> &gal_keys,
                    const distribicom::AppConfigs &app_configs) :
-                db(db), queries(queries), manager(app_configs) {};
+                db(db), queries(queries), gal_keys(gal_keys), manager(app_configs) {};
 
         grpc::Service *get_manager_service() {
             return (grpc::Service *) (&manager);

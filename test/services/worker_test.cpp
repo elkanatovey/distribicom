@@ -93,17 +93,22 @@ services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
     auto n = 5;
     math_utils::matrix<seal::Plaintext> db(n, n);
-    math_utils::matrix<seal::Ciphertext> queries(n, n);
-    for (auto &q: queries.data) {
-        q = all->random_ciphertext();
-    }
-
+    // a single row of ctxs and their respective gal_key.
+    math_utils::matrix<seal::Ciphertext> queries(1, n);
+    math_utils::matrix<seal::GaloisKeys> gal_keys(1, n);
     for (auto &p: db.data) {
         p = all->random_plaintext();
     }
 
+    for (auto &q: queries.data) {
+        q = all->random_ciphertext();
+    }
 
-    return {db, queries, configs};
+    for (auto &g: gal_keys.data) {
+        g = all->gal_keys;
+    }
+
+    return {db, queries, gal_keys, configs};
 }
 
 

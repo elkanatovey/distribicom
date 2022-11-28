@@ -23,9 +23,11 @@ namespace services {
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::unique_ptr<std::thread> t;
-        std::shared_ptr<work_strategy::RowMultiplicationStrategy> strategy;
 
     public:
+        // making this public for now, so that we can test it.
+        std::shared_ptr<work_strategy::RowMultiplicationStrategy> strategy;
+
 
         explicit Worker(distribicom::WorkerConfigs &&wcnfgs);
 
