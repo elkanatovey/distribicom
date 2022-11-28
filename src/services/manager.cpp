@@ -25,8 +25,16 @@ namespace services {
                     )
             ));
 
-            std::lock_guard<std::mutex> lock(mtx);
-            worker_stubs.insert(std::make_pair(requesting_worker, std::move(worker_conn)));
+            auto add = 0;
+
+            mtx.lock();
+            if (worker_stubs.find(requesting_worker) == worker_stubs.end()) {
+                worker_stubs.insert({requesting_worker, std::move(worker_conn)});
+                add = 1;
+            }
+            mtx.unlock();
+
+            worker_counter.add(add);
 
         } catch (std::exception &e) {
             std::cout << "Error: " << e.what() << std::endl;
@@ -109,6 +117,10 @@ namespace services {
             }
         }
         return ledger;
+    }
+
+    void Manager::wait_for_workers(int i) {
+        worker_counter.wait_for(i);
     }
 
 }
