@@ -47,6 +47,19 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
+        // mat = matrix<n,j>;
+        // while (reader->Read(&tmp)) {
+        //      tmp == [ctx, 0, j]
+        //       mat[0,j] = ctx;;
+        // }
+
+        // A
+        // B
+        // C
+
+        // Frievalds(A, B, C)
+        // Frievalds: DB[:, :]
+
         return Service::ReturnLocalWork(context, reader, response);
     }
 
@@ -73,6 +86,7 @@ namespace services {
                       const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                       grpc::ClientContext &context) {
 
+        // TODO: write into map
         auto ledger = std::make_unique<WorkDistributionLedger>();
         ledger->worker_list = std::vector<std::string>(worker_stubs.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
