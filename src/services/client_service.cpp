@@ -2,9 +2,8 @@
 #include "utils.hpp"
 
 namespace services {
-    ClientListener::ClientListener(distribicom::ClientConfigs &&_client_configs): client_configs
-    (std::move(_client_configs)), mrshl(),
-    enc_params(utils::setup_enc_params(_client_configs.app_configs())), round(0){
+    ClientListener::ClientListener(distribicom::ClientConfigs &&_client_configs): client_configs(std::move(_client_configs)){
+        enc_params = utils::setup_enc_params(client_configs.app_configs());
         seal::Blake2xbPRNGFactory factory;
         this->answering_machine = factory.create({}); // @todo maybe receive as param for testing
 

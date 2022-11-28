@@ -20,7 +20,7 @@ namespace services {
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
         seal::Plaintext current_answer;
-        std::uint32_t round;
+        std::uint32_t round=0;
 
     public:
         explicit ClientListener(distribicom::ClientConfigs &&_client_configs);

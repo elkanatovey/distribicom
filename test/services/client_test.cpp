@@ -5,56 +5,57 @@
 #include "client_service.hpp"
 #include <grpc++/grpc++.h>
 
-constexpr std::string_view server_port = "5051";
-constexpr std::string_view worker_port = "52100";
-constexpr std::string_view client_port = "521001";
+constexpr std::string_view server_port_client_test = "5051";
+constexpr std::string_view worker_port_client_test = "52100";
+constexpr std::string_view client_port_client_test = "521001";
 
-std::thread runFullServer(concurrency::WaitGroup &wg, services::FullServer &f);
+std::thread startFullServer(concurrency::WaitGroup &wg, services::FullServer &f);
 
-std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs);
+std::thread startupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs);
 
 std::thread setupClient(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs);
 
 services::FullServer
-full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs);
+full_server_struct(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs);
 
-void sleep(int n_seconds) { std::this_thread::sleep_for(std::chrono::milliseconds(n_seconds * 1000)); }
+void sleep_client_test(int n_seconds) { std::this_thread::sleep_for(std::chrono::milliseconds(n_seconds * 1000)); }
 
 
 int client_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     auto cfgs = services::configurations::create_app_configs(
-            "localhost:" + std::string(server_port),
+            "localhost:" + std::string(server_port_client_test),
             int(all->encryption_params.poly_modulus_degree()),
             20,
             50,
-            50
+            50,
+            256
     );
-    services::FullServer fs = full_server_instance(all, cfgs);
+    services::FullServer fs = full_server_struct(all, cfgs);
 
     concurrency::WaitGroup wg;
     wg.add(1); // will tell the servers when to quit.
 
     std::vector<std::thread> threads;
-    threads.emplace_back(runFullServer(wg, fs));
+    threads.emplace_back(startFullServer(wg, fs));
 
     std::cout << "setting up manager and client services." << std::endl;
-    sleep(3);
+    sleep_client_test(3);
 
     std::cout << "setting up worker-service" << std::endl;
-    threads.emplace_back(setupWorker(wg, cfgs));
-    sleep(3);
+    threads.emplace_back(startupWorker(wg, cfgs));
+    sleep_client_test(3);
 
     std::cout << "setting up client-service" << std::endl;
     threads.emplace_back(setupClient(wg, cfgs));
-    sleep(3);
+    sleep_client_test(3);
     fs.distribute_work();
 
 
 
 //    distribicom::Worker::Stub client(
-//            grpc::CreateChannel("localhost:" + std::string(worker_port), grpc::InsecureChannelCredentials()));
+//            grpc::CreateChannel("localhost:" + std::string(worker_port_client_test), grpc::InsecureChannelCredentials()));
 //
 //    grpc::ClientContext context;
 //    distribicom::Ack response;
@@ -100,7 +101,7 @@ int client_test(int, char *[]) {
 }
 
 services::FullServer
-full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
+full_server_struct(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
     auto n = 5;
     math_utils::matrix<seal::Plaintext> db(n, n);
     math_utils::matrix<seal::Ciphertext> queries(n, n);
@@ -123,13 +124,13 @@ std::thread setupClient(concurrency::WaitGroup &wg, distribicom::AppConfigs &con
             services::ClientListener client(
                     services::configurations::create_client_configs(
                             configs,
-                            std::stoi(std::string(client_port))
+                            std::stoi(std::string(client_port_client_test))
                     )
             );
 
             grpc::ServerBuilder builder;
 
-            std::string server_address("0.0.0.0:" + std::string(client_port));
+            std::string server_address("0.0.0.0:" + std::string(client_port_client_test));
             builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
             builder.RegisterService(&client);
 
@@ -145,19 +146,19 @@ std::thread setupClient(concurrency::WaitGroup &wg, distribicom::AppConfigs &con
 
 
 // assumes that configs are not freed until we copy it inside the thread!
-std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs) {
+std::thread startupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
             services::Worker worker(
                     services::configurations::create_worker_configs(
                             configs,
-                            std::stoi(std::string(worker_port))
+                            std::stoi(std::string(worker_port_client_test))
                     )
             );
 
             grpc::ServerBuilder builder;
 
-            std::string server_address("0.0.0.0:" + std::string(worker_port));
+            std::string server_address("0.0.0.0:" + std::string(worker_port_client_test));
             builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
             builder.RegisterService(&worker);
 
@@ -166,14 +167,14 @@ std::thread setupWorker(concurrency::WaitGroup &wg, distribicom::AppConfigs &con
             wg.wait();
             server->Shutdown();
         } catch (std::exception &e) {
-            std::cerr << "setupWorker :: exception: " << e.what() << std::endl;
+            std::cerr << "startupWorker :: exception: " << e.what() << std::endl;
         }
     });
 }
 
-std::thread runFullServer(concurrency::WaitGroup &wg, services::FullServer &f) {
+std::thread startFullServer(concurrency::WaitGroup &wg, services::FullServer &f) {
     return std::thread([&] {
-        std::string server_address("0.0.0.0:" + std::string(server_port));
+        std::string server_address("0.0.0.0:" + std::string(server_port_client_test));
 
 
         grpc::ServerBuilder builder;
