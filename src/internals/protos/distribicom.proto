@@ -88,6 +88,7 @@ message QueryCiphertext{
 message GaloisKeys{
   bytes keys = 1;
   // should point to the matching ciphertext.
+  int64 key_pos = 2;
 }
 
 message Ciphertext{bytes data = 1;}

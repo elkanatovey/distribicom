@@ -25,8 +25,16 @@ namespace services {
                     )
             ));
 
-            std::lock_guard<std::mutex> lock(mtx);
-            worker_stubs.insert(std::make_pair(requesting_worker, std::move(worker_conn)));
+            auto add = 0;
+
+            mtx.lock();
+            if (worker_stubs.find(requesting_worker) == worker_stubs.end()) {
+                worker_stubs.insert({requesting_worker, std::move(worker_conn)});
+                add = 1;
+            }
+            mtx.unlock();
+
+            worker_counter.add(add);
 
         } catch (std::exception &e) {
             std::cout << "Error: " << e.what() << std::endl;
@@ -39,6 +47,19 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
+        // mat = matrix<n,j>;
+        // while (reader->Read(&tmp)) {
+        //      tmp == [ctx, 0, j]
+        //       mat[0,j] = ctx;;
+        // }
+
+        // A
+        // B
+        // C
+
+        // Frievalds(A, B, C)
+        // Frievalds: DB[:, :]
+
         return Service::ReturnLocalWork(context, reader, response);
     }
 
@@ -65,6 +86,7 @@ namespace services {
                       const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                       grpc::ClientContext &context) {
 
+        // TODO: write into map
         auto ledger = std::make_unique<WorkDistributionLedger>();
         ledger->worker_list = std::vector<std::string>(worker_stubs.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
@@ -109,6 +131,43 @@ namespace services {
             }
         }
         return ledger;
+    }
+
+    void Manager::wait_for_workers(int i) {
+        worker_counter.wait_for(i);
+    }
+
+    void Manager::send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix) {
+        grpc::ClientContext context;
+
+        utils::add_metadata_size(context, services::constants::size_md, int(matrix.cols));
+        // todo: specify epoch!
+        utils::add_metadata_size(context, services::constants::round_md, 1);
+        utils::add_metadata_size(context, services::constants::epoch_md, 1);
+
+        distribicom::Ack response;
+        distribicom::WorkerTaskPart prt;
+        std::unique_lock lock(mtx);
+
+        for (auto &worker: worker_stubs) {
+            { // this stream is released at the end of this scope.
+                auto stream = worker.second->SendTask(&context, &response);
+                for (int i = 0; i < int(matrix.cols); ++i) {
+                    prt.mutable_gkey()->set_key_pos(i);
+                    prt.mutable_gkey()->mutable_keys()->assign(
+                            marshal->marshal_seal_object(matrix(0, i))
+                    );
+                    stream->Write(prt);
+                }
+                stream->WritesDone();
+                auto status = stream->Finish();
+                if (!status.ok()) {
+                    std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
+                              " failed: " << status.error_message() << std::endl;
+                    continue;
+                }
+            }
+        }
     }
 
 }

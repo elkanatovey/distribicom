@@ -10,4 +10,7 @@ namespace services::constants {
     constexpr metadata round_md = "round";
     // defines the epoch number.
     constexpr metadata epoch_md = "epoch";
+
+    // defines the max message size a server expects: 5mb.
+    constexpr int max_message_size = 1024 * 1024 * 5;
 }

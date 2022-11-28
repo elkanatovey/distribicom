@@ -67,6 +67,17 @@ namespace TestUtils {
             encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
             decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
             encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
+        //stoeln from seal pir. the needed rotation keys are generated here.
+        std::vector<uint32_t> galois_elts;
+        int N = encryption_params.poly_modulus_degree();
+        int logN = seal::util::get_power_of_two(N);
+
+        // cout << "printing galois elements...";
+        for (int i = 0; i < logN; i++) {
+            galois_elts.push_back((N + seal::util::exponentiate_uint(2, i)) /
+                                  seal::util::exponentiate_uint(2, i));
+        }
+        keygen.create_galois_keys(galois_elts, gal_keys);
 
         w_evaluator = math_utils::EvaluatorWrapper::Create(encryption_params);
     }
@@ -119,6 +130,6 @@ namespace TestUtils {
     }
 
     void time_func_print(const std::string &name, const std::function<void()> &f) {
-        std::cout << name << ": " << time_func(f)/1000000 << "ms" << std::endl;
+        std::cout << name << ": " << time_func(f) / 1000000 << "ms" << std::endl;
     }
 }
