@@ -106,6 +106,113 @@ void ciphertext_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
     }
 }
 
+void query_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                             std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random ciphertexts
+    std::vector<seal::Ciphertext> ctxs(100);
+    for (auto &ctx: ctxs) {
+        ctx = all->random_ciphertext();
+    }
+    std::vector<std::vector<seal::Ciphertext>> query_vec;
+    query_vec.push_back(ctxs);
+
+    distribicom::ClientQueryRequest marshalled_query;
+    m->marshal_query_vector(query_vec, marshalled_query);
+    auto query_vec_unmarshalled= m->unmarshal_query_vector(marshalled_query);
+
+    // check 1 dim version
+    for (std::uint64_t i = 0; i < query_vec[0].size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(query_vec_unmarshalled[0][i], query_vec[0][i]);
+        assert(query_vec_unmarshalled[0][i].is_transparent());
+    }
+
+    auto d2_query_vec = query_vec;
+
+    // check two dim version
+    std::vector<seal::Ciphertext> d2_ctxs(105);
+    for (auto &ctx: d2_ctxs) {
+        ctx = all->random_ciphertext();
+    }
+    d2_query_vec.push_back(d2_ctxs);
+
+    distribicom::ClientQueryRequest d2_marsh_query;
+    m->marshal_query_vector(d2_query_vec, d2_marsh_query);
+    auto d2_unmarsh_query= m->unmarshal_query_vector(d2_marsh_query);
+
+    for (std::uint64_t i = 0; i < d2_query_vec[0].size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(d2_unmarsh_query[0][i], d2_query_vec[0][i]);
+        assert(d2_unmarsh_query[0][i].is_transparent());
+    }
+
+    for (std::uint64_t i = 0; i < d2_query_vec[1].size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(d2_unmarsh_query[1][i], d2_query_vec[1][i]);
+        assert(d2_unmarsh_query[1][i].is_transparent());
+    }
+
+
+
+}
+
+
+void seal_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                        std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random ciphertexts
+    std::vector<seal::Ciphertext> ctxs(100);
+    for (auto &ctx: ctxs) {
+        ctx = all->random_ciphertext();
+    }
+
+    distribicom::Ciphertexts marshalled_ctxs;
+    m->marshal_seal_vector(ctxs, marshalled_ctxs);
+
+    std::vector<seal::Ciphertext> unmarshalled_ctxs;
+    m->unmarshal_seal_vector(marshalled_ctxs, unmarshalled_ctxs);
+
+    for (std::uint64_t i = 0; i < ctxs.size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(ctxs[i], unmarshalled_ctxs[i]);
+        assert(ctxs[i].is_transparent());
+    }
+
+    // ptx version
+    std::vector<seal::Plaintext> ptxs(100);
+    for (auto &ptx: ptxs) {
+        ptx = all->random_plaintext();
+    }
+
+    distribicom::Plaintexts marshalled_ptxs;
+    m->marshal_seal_vector(ptxs, marshalled_ptxs);
+
+    std::vector<seal::Plaintext> unmarshalled_ptxs;
+    m->unmarshal_seal_vector(marshalled_ptxs, unmarshalled_ptxs);
+
+    for (std::uint64_t i = 0; i < ptxs.size(); ++i) {
+        assert(ptxs[i].to_string() == unmarshalled_ptxs[i].to_string());
+    }
+
+}
+
+
+void pir_response_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
+                       std::shared_ptr<marshal::Marshaller> &m) {
+    // creating random ciphertexts
+    std::vector<seal::Ciphertext> ctxs(100);
+    for (auto &ctx: ctxs) {
+        ctx = all->random_ciphertext();
+    }
+
+    distribicom::PirResponse marshalled_ctxs;
+    m->marshal_pir_response(ctxs, marshalled_ctxs);
+
+    auto unmarshalled_ctxs = m->unmarshal_pir_response(marshalled_ctxs);
+
+    for (std::uint64_t i = 0; i < ctxs.size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(ctxs[i], unmarshalled_ctxs[i]);
+        assert(ctxs[i].is_transparent());
+    }
+
+}
+
+
 int all_functions_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
@@ -117,5 +224,9 @@ int all_functions_test(int, char *[]) {
 
     plaintext_vector_check(all, m);
     ciphertext_vector_check(all, m);
+    query_vector_check(all, m);
+    seal_vector_check(all, m);
+    pir_response_check(all, m);
+
     return 0;
 }

@@ -24,7 +24,8 @@ int worker_test(int, char *[]) {
             int(all->encryption_params.poly_modulus_degree()),
             20,
             50,
-            50
+            50,
+            256
     );
     services::FullServer fs = full_server_instance(all, cfgs);
 
