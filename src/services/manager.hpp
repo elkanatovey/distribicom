@@ -6,7 +6,7 @@
 #include "../math_utils/matrix.h"
 
 #include "marshal/marshal.hpp"
-#include "concurrency/channel.hpp"
+#include "concurrency/concurrency.h"
 #include "utils.hpp"
 
 
@@ -41,6 +41,7 @@ namespace services {
         std::mutex mtx;
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
         std::shared_ptr<marshal::Marshaller> marshal;
+        concurrency::Counter worker_counter;
 
     public:
         explicit Manager() {};
@@ -77,6 +78,10 @@ namespace services {
         std::unique_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
                                                          const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                                                          grpc::ClientContext &context);
+
+        void wait_for_workers(int i);
+
+        void send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix);
     };
 }
 

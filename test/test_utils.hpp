@@ -49,6 +49,7 @@ namespace TestUtils {
         seal::Encryptor encryptor;
         seal::Decryptor decryptor;
         seal::BatchEncoder encoder;
+        seal::GaloisKeys gal_keys;
 
         seal::Plaintext random_plaintext();
 

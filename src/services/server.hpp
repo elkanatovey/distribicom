@@ -12,6 +12,7 @@ namespace services {
         // used for tests
         DB<seal::Plaintext> db;
         DB<seal::Ciphertext> queries;
+        DB<seal::GaloisKeys> gal_keys;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;
@@ -19,13 +20,14 @@ namespace services {
 
     public:
         explicit FullServer(const distribicom::AppConfigs &app_configs) :
-                db(0, 0), queries(0, 0), manager(app_configs) {};
+                db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs) {};
 
         // mainly for testing.
         FullServer(math_utils::matrix<seal::Plaintext> &db,
                    math_utils::matrix<seal::Ciphertext> &queries,
+                   math_utils::matrix<seal::GaloisKeys> &gal_keys,
                    const distribicom::AppConfigs &app_configs) :
-                db(db), queries(queries), manager(app_configs) {};
+                db(db), queries(queries), gal_keys(gal_keys), manager(app_configs) {};
 
         grpc::Service *get_manager_service() {
             return (grpc::Service *) (&manager);
@@ -47,6 +49,17 @@ namespace services {
             ledger->done.read_for(std::chrono::milliseconds(1000)); // todo: set specific timeout..
             // i don't want to wait on a timeout!
             return ledger;
+        }
+
+        void wait_for_workers(int i) {
+            manager.wait_for_workers(i);
+        }
+
+        void start_epoch() {
+            //todo: start epoch for registered clients as well -> make them send queries.
+            auto handle = gal_keys.many_reads();
+            manager.send_galois_keys(handle.mat);
+//            wait_for_workers(0); todo: wait for app_configs.num_workers
         }
     };
 }

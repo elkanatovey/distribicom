@@ -1,5 +1,6 @@
 #include "worker.hpp"
 #include "utils.hpp"
+#include "distribicom.pb.h"
 #include <grpc++/grpc++.h>
 
 class NotImplemented : public std::logic_error {
@@ -12,16 +13,15 @@ namespace services {
 
     // todo: take a const ref of the app_configs:
     Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
-            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl(), query_expander() {
+            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
         inspect_configs();
         seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
 
         mrshl = marshal::Marshaller::Create(enc_params);
-        query_expander = math_utils::QueryExpander::Create(enc_params);
 
 
         // todo: put in a different function.
-        manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
+        auto manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
                 grpc::CreateChannel(
                         cnfgs.appconfigs().main_server_hostname(),
                         grpc::InsecureChannelCredentials()
@@ -35,6 +35,19 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
+        strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(enc_params, std::move(manager_conn));
+        t = std::make_unique<std::thread>(
+                [&]() {
+                    std::cout << "worker main thread: running" << std::endl;
+                    for (;;) {
+                        auto task = chan.read();
+                        if (!task.ok) {
+                            std::cout << "worker main thread: stopping execution" << std::endl;
+                            break;
+                        }
+                        strategy->process_task(std::move(task.answer));
+                    }
+                });
     }
 
     void Worker::inspect_configs() const {
@@ -53,17 +66,33 @@ namespace services {
 
     grpc::Status
     Worker::SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
-                     distribicom::Ack *response) {
+                     distribicom::Ack *_) {
         try {
             WorkerServiceTask task(context, cnfgs.appconfigs().configs());
 
             distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
-                if (!tmp.has_matrixpart()) {
-                    // TODO update the worker's galois keys perhaps?
-                    throw NotImplemented("receiving GaloisKey not implemented yet.");
+
+                switch (tmp.part_case()) {
+                    case distribicom::WorkerTaskPart::PartCase::kGkey:
+                        strategy->store_galois_key(
+                                mrshl->unmarshal_seal_object<seal::GaloisKeys>(tmp.gkey().keys()),
+                                int(tmp.gkey().key_pos())
+                        );
+
+                        break;
+
+                    case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
+                        fill_matrix_part(task, tmp.matrixpart());
+
+                        break;
+
+                    default:
+                        throw std::invalid_argument("received a message that is not a matrix part or a gkey");
+
                 }
-                fill_matrix_part(task, tmp.matrixpart());
+
+                tmp.clear_part();
             }
             chan.write(task);
         } catch (std::invalid_argument &e) {
@@ -100,10 +129,14 @@ namespace services {
         if (!task.ctx_cols.contains(col)) {
             task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
         }
-        if (row >= 1) {
-            throw std::invalid_argument("should receive at most one compressed ciphertext");
-        }
-        task.ctx_cols[col][row] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+
+        task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+    }
+
+    void Worker::close() {
+        chan.close();
+        t->join();
+
     }
 
     WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :

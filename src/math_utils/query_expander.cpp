@@ -17,7 +17,7 @@ namespace math_utils {
      * @return
      */
     std::vector<seal::Ciphertext>
-    QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey) {
+    QueryExpander::expand_query(Query query_i, std::uint64_t n_i, seal::GaloisKeys &galkey) const {
         std::vector<seal::Ciphertext> expanded_query;
         auto N = enc_params_.poly_modulus_degree();
 
@@ -54,7 +54,7 @@ namespace math_utils {
     inline std::vector<seal::Ciphertext>
     QueryExpander::__expand_query(const seal::Ciphertext &encrypted,
                                   uint32_t m,
-                                  seal::GaloisKeys &galkey) {
+                                  seal::GaloisKeys &galkey) const {
 
 
         // Assume that m is a power of 2. If not, round it to the next power of 2.
@@ -127,8 +127,7 @@ namespace math_utils {
                 evaluator_->multiply_plain(temp[a], two,
                                            newtemp[a]); // plain multiplication by 2.
                 // cout << client.decryptor_->invariant_noise_budget(newtemp[a]) << ", ";
-            }
-            else {
+            } else {
                 evaluator_->apply_galois(temp[a], galois_elts[logm - 1], galkey,
                                          tempctxt_rotated);
                 evaluator_->add(temp[a], tempctxt_rotated, newtemp[a]);
@@ -148,7 +147,7 @@ namespace math_utils {
 
     inline void QueryExpander::multiply_power_of_X(const seal::Ciphertext &encrypted,
                                                    seal::Ciphertext &destination,
-                                                   uint32_t index) {
+                                                   uint32_t index) const {
 
         auto coeff_mod_count = enc_params_.coeff_modulus().size() - 1;
         auto coeff_count = enc_params_.poly_modulus_degree();
