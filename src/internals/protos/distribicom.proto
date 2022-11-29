@@ -1,165 +1,166 @@
 syntax = "proto3";
+
 // Namespace
 package distribicom;
 
 
 // all services assumes configs: (DistribicomConfigs)
 service Worker {// anyone who wishes to work runs this services.
-  /*
-    Send task is a stream that runs each round until all information in regards to the task is done.
-    The manager initialize the stream once the round begins, and pushes all ctxs and ptxs the worker should
-    use in the mat-mul operation.
-    once the server is done sending the data, it should close the stream.
+    /*
+      Send task is a stream that runs each round until all information in regards to the task is done.
+      The manager initialize the stream once the round begins, and pushes all ctxs and ptxs the worker should
+      use in the mat-mul operation.
+      once the server is done sending the data, it should close the stream.
 
-    Metadata, like round number ETC should be sent inside the stream context.
-   */
-  rpc SendTask(stream WorkerTaskPart) returns (Ack){};
+      Metadata, like round number ETC should be sent inside the stream context.
+     */
+    rpc SendTask (stream WorkerTaskPart) returns (Ack) {};
 }
 
 
 // facing workers, pub/sub of work that should be done.
 service Manager {// masterServer runs this service.
 
-  // PartialWorkStream i save this on my server map.
-  rpc RegisterAsWorker(WorkerRegistryRequest) returns (Ack){};
+    // PartialWorkStream i save this on my server map.
+    rpc RegisterAsWorker (WorkerRegistryRequest) returns (Ack) {};
 
-  // a worker should send its work, along with credentials of what it sent.
-  rpc ReturnLocalWork(stream MatrixPart) returns (Ack){};
+    // a worker should send its work, along with credentials of what it sent.
+    rpc ReturnLocalWork (stream MatrixPart) returns (Ack) {};
 }
 
 
-service Client{// anyone who owns a query need to run a listener for this service.
+service Client {// anyone who owns a query need to run a listener for this service.
   // once the round ends, and the server has an answer it should call upon this RPC call and send the answer
   //  to the client
-  rpc Answer(PirResponse) returns (Ack){};
-  rpc TellNewRound(TellNewRoundRequest) returns (WriteRequest){};
+    rpc Answer (PirResponse) returns (Ack) {};
+    rpc TellNewRound (TellNewRoundRequest) returns (WriteRequest) {};
 }
 
 // facing clients, allowing them to read and write to the server.
 service Server {// masterServer runs this service.
-  /*
-  Assumes this cannot be called in the middle of a round.
+    /*
+    Assumes this cannot be called in the middle of a round.
 
-  We assume this connection is performed with a TLS secured channel to the server.
+    We assume this connection is performed with a TLS secured channel to the server.
 
-   Upon receiving this call, the server should create a Client instance so it'll be able to answer the client
-   using the `Answer` RPC call once the round is over.
-   Should contact this given client according to its IP.
-   Should contact the client with MAC with a MAC using the clients given request key.
-   */
-  rpc RegisterAsClient(ClientRegistryRequest) returns (ClientRegistryReply){};
+     Upon receiving this call, the server should create a Client instance so it'll be able to answer the client
+     using the `Answer` RPC call once the round is over.
+     Should contact this given client according to its IP.
+     Should contact the client with MAC with a MAC using the clients given request key.
+     */
+    rpc RegisterAsClient (ClientRegistryRequest) returns (ClientRegistryReply) {};
 
-  /*
-   Once the client is done sending to the server, it should close the connection.
-   */
-  rpc StoreQuery(ClientQueryRequest) returns (Ack){};
-  /*
-    Anyone can write to the DB, on an unsecured channel.
-    Need to avoid malicious users from writing to all cells in the DB.
-    the server must ensure any writing is done once per
-    client though. (TODO: think of the proper way to do that in our system).
-   */
-  rpc WriteToDB(WriteRequest) returns (Ack){};
+    /*
+     Once the client is done sending to the server, it should close the connection.
+     */
+    rpc StoreQuery (ClientQueryRequest) returns (Ack) {};
+    /*
+      Anyone can write to the DB, on an unsecured channel.
+      Need to avoid malicious users from writing to all cells in the DB.
+      the server must ensure any writing is done once per
+      client though. (TODO: think of the proper way to do that in our system).
+     */
+    rpc WriteToDB (WriteRequest) returns (Ack) {};
 }
 
 
-message Ack{
-  bool success = 1; // states whether the client received all messages correctly.
+message Ack {
+    bool success = 1; // states whether the client received all messages correctly.
 }
 message WorkerTaskPart {
-  oneof part {
-    MatrixPart matrixPart = 1;
-    GaloisKeys gkey = 3;
-  }
+    oneof part {
+        MatrixPart matrixPart = 1;
+        GaloisKeys gkey = 3;
+    }
 }
 message MatrixPart {
-  oneof data{
-    Ciphertext ctx = 1;
-    Plaintext ptx = 2;
-  }
+    oneof data {
+        Ciphertext ctx = 1;
+        Plaintext ptx = 2;
+    }
 
-  int32 row = 3;
-  int32 col = 4;
+    int32 row = 3;
+    int32 col = 4;
 }
 
-message QueryCiphertext{
-  bytes data = 1;
+message QueryCiphertext {
+    bytes data = 1;
 }
 
-message GaloisKeys{
-  bytes keys = 1;
-  // should point to the matching ciphertext.
+message GaloisKeys {
+    bytes keys = 1;
+    // should point to the matching ciphertext.
 }
 
-message Ciphertext{bytes data = 1;}
+message Ciphertext {bytes data = 1;}
 
-message Ciphertexts{repeated Ciphertext data = 1;}
+message Ciphertexts {repeated Ciphertext data = 1;}
 
-message Plaintext{bytes data = 1;}
+message Plaintext {bytes data = 1;}
 
-message Plaintexts{repeated Plaintext data = 1;}
+message Plaintexts {repeated Plaintext data = 1;}
 
 // small:
-message WriteRequest{
-  // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...
-  uint64 ptxnumber = 1;
-  uint32 whereinptx = 2;
-  bytes data = 3; // 288 bytes?
+message WriteRequest {
+    // todo: should it be stated as row,col,ptx-part in the DB's matrix? I think it is easier to work like that...
+    uint64 ptxnumber = 1;
+    uint32 whereinptx = 2;
+    bytes data = 3; // 288 bytes?
 };
 
-message PirResponse{
-  repeated Ciphertext data  = 1;
+message PirResponse {
+    repeated Ciphertext data = 1;
 }
 
-message ClientQueryRequest{
-  repeated Ciphertext query_dim1  = 1;
-  repeated Ciphertext query_dim2 = 2;
+message ClientQueryRequest {
+    repeated Ciphertext query_dim1 = 1;
+    repeated Ciphertext query_dim2 = 2;
 }
 
-message ClientRegistryRequest{
-  // should be used to ensure the client knows the messages are legitimate from the server.
-  bytes credentials = 1;
+message ClientRegistryRequest {
+    // should be used to ensure the client knows the messages are legitimate from the server.
+    bytes credentials = 1;
 
-  // the port the client is listening to.
-  uint32  client_port = 2;
+    // the port the client is listening to.
+    uint32 client_port = 2;
 
-  bytes galois_keys = 3;
+    bytes galois_keys = 3;
 }
 
-message ClientRegistryReply{
-  // should be used to ensure the server knows the messages are legitimate from the client.
-  bytes credentials = 1;
-  uint32  num_mailboxes = 2;
-  uint32 mailbox_id = 3;  // assume this is some number mod number of elements supported in db
+message ClientRegistryReply {
+    // should be used to ensure the server knows the messages are legitimate from the client.
+    bytes credentials = 1;
+    uint32 num_mailboxes = 2;
+    uint32 mailbox_id = 3;  // assume this is some number mod number of elements supported in db
 }
 
-message ClientConfigs{
-  AppConfigs app_configs = 1;
+message ClientConfigs {
+    AppConfigs app_configs = 1;
 
-  // the port the client is listening to.
-  uint32  client_port = 2;
+    // the port the client is listening to.
+    uint32 client_port = 2;
 };
 
 
-message TellNewRoundRequest{
-  int32 round = 1;
+message TellNewRoundRequest {
+    int32 round = 1;
 }
 
-message WorkerRegistryRequest{
-  // should be used to ensure the worker knows the messages are legitimate from the server.
-  bytes credentials = 1;
+message WorkerRegistryRequest {
+    // should be used to ensure the worker knows the messages are legitimate from the server.
+    bytes credentials = 1;
 
-  // the port the worker is listening to.
-  uint32  workerPort = 2;
+    // the port the worker is listening to.
+    uint32 workerPort = 2;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
 // are secure
-message Subscriber{
-  // TODO consider how to use. probably only need the sym_key.
-  bytes secretKey = 1;
-  bytes publicKey = 2;
-  bytes sym_key = 3;
+message Subscriber {
+    // TODO consider how to use. probably only need the sym_key.
+    bytes secretKey = 1;
+    bytes publicKey = 2;
+    bytes sym_key = 3;
 }
 
 
@@ -167,39 +168,39 @@ message Subscriber{
 /// configurations:
 
 message Configs {
-  // encryption params
-  string scheme = 1;
-  uint32 polynomial_degree = 2;
+    // encryption params
+    string scheme = 1;
+    uint32 polynomial_degree = 2;
 
-  uint32 logarithm_plaintext_coefficient = 3; //logt
+    uint32 logarithm_plaintext_coefficient = 3; //logt
 
-  // for PIR params
-  uint32 db_rows = 4;
-  uint32 db_cols = 5;
-  uint32 size_per_element = 6; // element represents a position inside the plaintext that a user can write to.
-  uint32 dimensions = 7; // in our case defaults eqauls to 2.
+    // for PIR params
+    uint32 db_rows = 4;
+    uint32 db_cols = 5;
+    uint32 size_per_element = 6; // element represents a position inside the plaintext that a user can write to.
+    uint32 dimensions = 7; // in our case defaults eqauls to 2.
 
 
-  // legacy from sealpir
-  uint32 number_of_elements = 8; //number of elements packed in ptx, referred to as items in sealpir
-  bool use_symmetric = 9;
-  bool use_batching = 10;
-  bool use_recursive_mod_switching = 11;
+    // legacy from sealpir
+    uint32 number_of_elements = 8; //number of elements packed in ptx, referred to as items in sealpir
+    bool use_symmetric = 9;
+    bool use_batching = 10;
+    bool use_recursive_mod_switching = 11;
 };
 
 // all configs necessary for individual client/worker ?
 
-message AppConfigs{
-  Configs configs = 1;
+message AppConfigs {
+    Configs configs = 1;
 
-  //every worker/ client will need to register to the following address:
-  string main_server_hostname = 2;
-  bytes main_server_cert = 3; // TODO: use for TLS connection.
+    //every worker/ client will need to register to the following address:
+    string main_server_hostname = 2;
+    bytes main_server_cert = 3; // TODO: use for TLS connection.
 };
 
-message WorkerConfigs{
-  AppConfigs appConfigs = 1;
+message WorkerConfigs {
+    AppConfigs appConfigs = 1;
 
-  // the port the worker is listening to.
-  uint32  workerPort = 2;
+    // the port the worker is listening to.
+    uint32 workerPort = 2;
 };

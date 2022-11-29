@@ -60,7 +60,7 @@ namespace marshal {
         std::vector<T>
         unmarshal_seal_vector(const S &in, std::vector<T> &seal_objects) const {
             seal_objects.reserve((in.data_size()));
-            for(std::uint64_t i = 0; i < in.data_size(); i++) {
+            for (std::uint64_t i = 0; i < in.data_size(); i++) {
                 auto current_obj = unmarshal_seal_object<T>(in.data(i).data());
                 seal_objects.push_back(std::move(current_obj));
             }
@@ -71,14 +71,15 @@ namespace marshal {
         /**
          * vector of vectors serialisation into protobuf
          */
-        void marshal_query_vector(const std::vector<std::vector<seal::Ciphertext>> &in, distribicom::ClientQueryRequest &out)
+        void
+        marshal_query_vector(const std::vector<std::vector<seal::Ciphertext>> &in, distribicom::ClientQueryRequest &out)
         const;
 
         /**
          * vector of vector serialisation into protobuf
          */
         void marshal_pir_response(const std::vector<seal::Ciphertext> &in,
-                                   distribicom::PirResponse &out)const;
+                                  distribicom::PirResponse &out) const;
 
 
         /**

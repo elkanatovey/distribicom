@@ -16,7 +16,7 @@ distribicom::Configs services::configurations::create_configs(int poly_deg, int 
     c.set_size_per_element(ele_size);
 
     auto num_elements_in_ptx = elements_per_ptxt(logt, poly_deg, ele_size);
-    auto num_elements = rows*cols*num_elements_in_ptx;
+    auto num_elements = rows * cols * num_elements_in_ptx;
     c.set_number_of_elements(num_elements);
     c.set_use_batching(true);
     c.set_use_recursive_mod_switching(false);
