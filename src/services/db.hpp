@@ -2,60 +2,97 @@
 
 #include "math_utils/matrix.h"
 #include "seal/seal.h"
+#include "distribicom.grpc.pb.h"
 #include <mutex>
+#include <utility>
+#include "pir_client.hpp"
 
+namespace pir_primitives{
+    // This class is a wrapper for a matrix that ensures the access to the matrix is thread safe.
+    template<typename T>
+    class DB {
 
-// This class is a wrapper for a matrix that ensures the access to the matrix is thread safe.
-template<typename T>
-class DB {
+        // a proper way to receive a matrix from the DB for multiple reads. upon scope exit the DB's lock will be released.
+        struct shared_mat {
+            explicit shared_mat(const math_utils::matrix<T> &mat, std::mutex &mtx) : mat(mat), lck(mtx) {}
 
-    // a proper way to receive a matrix from the DB for multiple reads. upon scope exit the DB's lock will be released.
-    struct shared_mat {
-        explicit shared_mat(const math_utils::matrix<T> &mat, std::mutex &mtx) : mat(mat), lck(mtx) {}
+            const math_utils::matrix<T> &mat;
+        private:
+            std::lock_guard<std::mutex> lck;
+        };
 
-        const math_utils::matrix<T> &mat;
-    private:
-        std::lock_guard<std::mutex> lck;
-    };
+        math_utils::matrix<T> memory_matrix;
+        std::mutex mtx;
 
-    math_utils::matrix<T> memory_matrix;
-    std::mutex mtx;
+    public:
+        // TODO: add a proper way to create PIR DB.
+        explicit DB(const int a, const int b) : memory_matrix(), mtx() {}
 
-public:
-    // TODO: add a proper way to create PIR DB.
-    explicit DB(const int a, const int b) : memory_matrix(), mtx() {}
+        // used mainly for testing.
+        explicit DB(math_utils::matrix<T> &mat) : memory_matrix(mat), mtx() {}
 
-    // used mainly for testing.
-    explicit DB(math_utils::matrix<T> &mat) : memory_matrix(mat), mtx() {}
-
-    // gives access to a locked reference of the matrix.
-    // as long as the shared_mat instance is not destroyed the DB remains locked.
-    // useful for distributing the DB, or going over multiple rows.
-    shared_mat many_reads() {
-        return shared_mat(memory_matrix, mtx);
-    }
-
-    void write(const T &t, const int row, const int col) {
-        mtx.lock();
-        memory_matrix(row, col) = t;
-        mtx.unlock();
-    }
-
-    // todo: add special write function - for the DB<seal::Plaintext> case - where we can write to specific part
-    //  of a plaintext.
-    void write() {
-
-    }
-
-    // mainly used for testing.
-    bool try_write() {
-        auto success = mtx.try_lock();
-        if (!success) {
-            return false;
+        // gives access to a locked reference of the matrix.
+        // as long as the shared_mat instance is not destroyed the DB remains locked.
+        // useful for distributing the DB, or going over multiple rows.
+        shared_mat many_reads() {
+            return shared_mat(memory_matrix, mtx);
         }
-        mtx.unlock();
-        return true;
+
+        void write(const T &t, const int row, const int col) {
+            mtx.lock();
+            memory_matrix(row, col) = t;
+            mtx.unlock();
+        }
+
+        void
+        write(const std::vector<uint64_t> &new_element, const int ptx_num, uint64_t offset, PIRClient
+        replacer_machine);
+
+
+
+    //    void write(const std::vector<uint64_t>& new_element, const int ptx_num, uint64_t offset, PIRClient replacer_machine) {
+    //        mtx.lock();
+    //        if constexpr (std::is_same<T, seal::Plaintext>::value){
+    //            memory_matrix.data[ptx_num] = replacer_machine.replace_element(memory_matrix.data[ptx_num], new_element, offset);
+    //            mtx.unlock();
+    //        }
+    //        else {
+    //            mtx.unlock();
+    //            throw std::runtime_error("unsupported type"); }
+    //    }
+
+        // todo: add special write function - for the DB<seal::Plaintext> case - where we can write to specific part
+        //  of a plaintext.
+        void write() {
+
+        }
+
+        // mainly used for testing.
+        bool try_write() {
+            auto success = mtx.try_lock();
+            if (!success) {
+                return false;
+            }
+            mtx.unlock();
+            return true;
+        };
     };
+
+    template<>
+    void DB<seal::Plaintext>::write(const vector<uint64_t> &new_element, const int ptx_num, uint64_t offset,
+                                       PIRClient replacer_machine) {
+        mtx.lock();
+        memory_matrix.data[ptx_num] = replacer_machine.replace_element(memory_matrix.data[ptx_num], new_element,
+                                                                       offset);
+        mtx.unlock();
+    }
+
+    template<typename T>
+    void
+    DB<T>::write(const vector<uint64_t> &new_element, const int ptx_num, uint64_t offset, PIRClient replacer_machine) {
+        throw std::runtime_error("unsupported type");
+    }
+
 };
 
 

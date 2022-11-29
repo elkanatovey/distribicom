@@ -1,10 +1,11 @@
 #include "../test_utils.hpp"
 #include "db.hpp"
+#include "factory.hpp"
 
 
 int db_many_reads_test(int, char *[]) {
     math_utils::matrix<seal::Plaintext> mat(10, 10);
-    DB<seal::Plaintext> db(mat);
+    pir_primitives::DB<seal::Plaintext> db(mat);
 
     {
         auto shared_mat = db.many_reads();
