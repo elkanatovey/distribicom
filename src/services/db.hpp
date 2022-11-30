@@ -46,7 +46,7 @@ namespace pir_primitives{
 
         void
         write(const std::vector<uint64_t> &new_element, const int ptx_num, uint64_t offset, PIRClient
-        replacer_machine);
+        *replacer_machine);
 
 
 
