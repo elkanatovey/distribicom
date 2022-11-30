@@ -205,3 +205,10 @@ message WorkerConfigs {
     // the port the worker is listening to.
     uint32 workerPort = 2;
 };
+
+// used to group info at server to send onward to client
+message QueryInfo {
+    uint32 client_mailbox = 1;
+    bytes galois_keys = 2;
+    ClientQueryRequest query = 3; // this is single ctx for now
+};

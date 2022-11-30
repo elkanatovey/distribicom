@@ -66,7 +66,7 @@ namespace services {
         // todo:
 //        void distribute_work(const math_utils::matrix<seal::Plaintext> &db);
 
-        // todo:
+        // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
         std::unique_ptr<WorkDistributionLedger> distribute_work(
                 const math_utils::matrix<seal::Plaintext> &db,
