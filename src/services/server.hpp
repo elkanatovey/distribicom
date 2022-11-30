@@ -9,6 +9,16 @@
 #include <future>
 
 namespace services {
+    /**
+ * ClientInfo stores objects related to an individual client
+ */
+    struct ClientInfo {
+        distribicom::QueryInfo client_info_marshaled;
+        std::string stub_id;
+        PirQuery query;
+        seal::GaloisKeys galois_keys;
+    };
+
     // uses both the Manager and the Server services to complete a full distribicom server.
     class FullServer final : public distribicom::Server::Service{
         // used for tests
@@ -25,6 +35,15 @@ namespace services {
         std::unique_ptr<PIRClient> client;
 
         // concurrency stuff
+        std::map<std::string, std::unique_ptr<distribicom::Client::Stub>> client_stubs;
+        std::map<std::string, std::uint32_t> id_to_mailbox;
+        std::map<std::uint32_t, std::unique_ptr<ClientInfo>> query_bookeeper;
+        std::mutex registration_mutex;
+        std::uint64_t client_counter=0;
+
+
+
+
         std::vector<std::future<int>> db_write_requests;
 
     public:

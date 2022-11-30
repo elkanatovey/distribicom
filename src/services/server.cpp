@@ -32,13 +32,58 @@ void services::FullServer::finish_construction(const distribicom::AppConfigs &ap
 grpc::Status
 services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request,
                                        distribicom::ClientRegistryReply *response) {
-    return Service::RegisterAsClient(context, request, response);
+
+
+    try {
+
+        auto requesting_client = utils::extract_ipv4(context);
+        std::string subscribing_client_address = context->auth_context()->GetPeerIdentityPropertyName(); //@todo see if valid
+
+        // creating stub to the client:
+        auto client_conn = std::make_unique<distribicom::Client::Stub>(distribicom::Client::Stub(
+                grpc::CreateChannel(
+                        subscribing_client_address,
+                        grpc::InsecureChannelCredentials()
+                )
+        ));
+        auto client_info = std::make_unique<services::ClientInfo>(ClientInfo());
+        client_info->client_info_marshaled.set_galois_keys(request->galois_keys());
+
+        registration_mutex.lock();
+        if (client_stubs.find(requesting_client) == client_stubs.end()) {
+            client_info->client_info_marshaled.set_client_mailbox(client_counter);
+            id_to_mailbox.insert({requesting_client ,client_counter});
+            query_bookeeper.insert({client_counter, std::move(client_info)});
+
+            client_stubs.insert({requesting_client, std::move(client_conn)});
+            response->set_mailbox_id(client_counter);
+            client_counter+=1;
+
+
+        }
+        registration_mutex.unlock();
+
+
+    } catch (std::exception &e) {
+        std::cout << "Error: " << e.what() << std::endl;
+        return {grpc::StatusCode::INTERNAL, e.what()};
+    }
+
+    response->set_num_mailboxes(pir_configs.number_of_elements());
+
+    return grpc::Status::OK;
 }
 
+//@todo this assumes that no one is registering, very dangerous
 grpc::Status
 services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
                                  distribicom::Ack *response) {
-    return Service::StoreQuery(context, request, response);
+
+    auto id = context->auth_context()->GetPeerIdentityPropertyName();
+    auto num_id = id_to_mailbox[id];
+    query_bookeeper[num_id]->client_info_marshaled.CopyFrom(*request);
+    response->set_success(true);
+    return grpc::Status::OK;
 }
 
 //@todo fix this to translate bytes to coeffs properly when writing
