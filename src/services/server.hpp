@@ -6,10 +6,11 @@
 #include "manager.hpp"
 #include "db.hpp"
 #include "pir_client.hpp"
+#include <future>
 
 namespace services {
     // uses both the Manager and the Server services to complete a full distribicom server.
-    class FullServer {
+    class FullServer final : public distribicom::Server::Service{
         // used for tests
         pir_primitives::DB<seal::Plaintext> db;
         pir_primitives::DB<seal::Ciphertext> queries;
@@ -23,32 +24,31 @@ namespace services {
         seal::EncryptionParameters enc_params;
         std::unique_ptr<PIRClient> client;
 
+        // concurrency stuff
+        std::vector<std::future<int>> db_write_requests;
+
     public:
-        explicit FullServer( const distribicom::AppConfigs& app_configs) :
-                db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs)  {
-            finish_construction(app_configs);
+        explicit FullServer( const distribicom::AppConfigs& app_configs);
 
-        }
 
-        void finish_construction(const distribicom::AppConfigs &app_configs) {
-            pir_configs = app_configs.configs();
-            enc_params = utils::setup_enc_params(app_configs);
-            const auto& configs = app_configs.configs();
-            gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
-                           configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
-                           configs.use_batching(), configs.use_recursive_mod_switching());
-            client = make_unique<PIRClient>(PIRClient(enc_params, pir_params));
-        };
 
         // mainly for testing.
-        FullServer(math_utils::matrix<seal::Plaintext> &db,
+        explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
                    math_utils::matrix<seal::Ciphertext> &queries,
                    math_utils::matrix<seal::GaloisKeys> &gal_keys,
-                   const distribicom::AppConfigs &app_configs) :
-                db(db), queries(queries), gal_keys(gal_keys), manager(app_configs) {
-            finish_construction(app_configs);
+                   const distribicom::AppConfigs &app_configs);;
 
-        };
+        grpc::Status
+        RegisterAsClient(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request,
+                     distribicom::ClientRegistryReply *response) override;
+
+        grpc::Status
+        StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
+                         distribicom::Ack *response) override;
+
+        grpc::Status
+        WriteToDB(grpc::ServerContext *context, const distribicom::WriteRequest *request,
+                   distribicom::Ack *response) override;
 
         grpc::Service *get_manager_service() {
             return (grpc::Service *) (&manager);
@@ -82,5 +82,8 @@ namespace services {
             manager.send_galois_keys(handle.mat);
 //            wait_for_workers(0); todo: wait for app_configs.num_workers
         }
+
+    private:
+        void finish_construction(const distribicom::AppConfigs &app_configs);;
     };
 }

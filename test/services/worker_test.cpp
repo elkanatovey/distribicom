@@ -75,7 +75,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
         g = all->gal_keys;
     }
 
-    return {db, queries, gal_keys, configs};
+    return services::FullServer(db, queries, gal_keys, configs);
 }
 
 

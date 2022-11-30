@@ -119,7 +119,7 @@ full_server_struct(std::shared_ptr<TestUtils::CryptoObjects> &all, const distrib
         g = all->gal_keys;
     }
 
-    return {db, queries, gal_keys, configs};
+    return services::FullServer(db, queries, gal_keys, configs);
 }
 
 // assumes that configs are not freed until we copy it inside the thread!
