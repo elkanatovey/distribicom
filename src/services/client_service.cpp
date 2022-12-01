@@ -63,6 +63,7 @@ namespace services {
         auto query = client->generate_query(desiredIndex);
         distribicom::ClientQueryRequest request;
         mrshl->marshal_query_vector(query, request);
+        request.set_mailbox_id(mail_data.mailbox_id());
         grpc::ClientContext context;
         distribicom::Ack ack;
 

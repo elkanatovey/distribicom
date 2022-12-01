@@ -116,6 +116,7 @@ message PirResponse {
 message ClientQueryRequest {
     repeated Ciphertext query_dim1 = 1;
     repeated Ciphertext query_dim2 = 2;
+    uint32 mailbox_id = 3;
 }
 
 message ClientRegistryRequest {

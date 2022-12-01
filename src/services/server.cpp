@@ -37,7 +37,7 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
     try {
 
         auto requesting_client = utils::extract_ipv4(context);
-        std::string subscribing_client_address = context->auth_context()->GetPeerIdentityPropertyName(); //@todo see if valid
+        std::string subscribing_client_address = requesting_client + ":" + std::to_string(request->client_port());
 
         // creating stub to the client:
         auto client_conn = std::make_unique<distribicom::Client::Stub>(distribicom::Client::Stub(

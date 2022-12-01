@@ -13,7 +13,7 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::unique_ptr<distribicom::Server::Stub> server_conn;
         std::unique_ptr<PIRClient> client;
-        distribicom::ClientRegistryReply mail_data;
+        distribicom::ClientRegistryReply mail_data;  //this contains clients id
 
         std::shared_ptr<seal::UniformRandomGenerator> answering_machine; // for testing
 
