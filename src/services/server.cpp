@@ -47,21 +47,17 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
                 )
         ));
         auto client_info = std::make_unique<services::ClientInfo>(ClientInfo());
-        client_info->client_info_marshaled.set_galois_keys(request->galois_keys());
+        client_info->galois_keys_marshaled.set_keys(request->galois_keys());
+        client_info->client_stub = std::move(client_conn);
 
-        registration_mutex.lock();
-        if (client_stubs.find(requesting_client) == client_stubs.end()) {
-            client_info->client_info_marshaled.set_client_mailbox(client_counter);
-            id_to_mailbox.insert({requesting_client ,client_counter});
-            query_bookeeper.insert({client_counter, std::move(client_info)});
+        { // this scope is for the unique lock do not delete!
+            std::unique_lock lock(client_query_manager.ledger_mutex);
 
-            client_stubs.insert({requesting_client, std::move(client_conn)});
-            response->set_mailbox_id(client_counter);
-            client_counter+=1;
-
-
+            client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
+            client_query_manager.client_query_info.insert({client_query_manager.client_counter, std::move(client_info)});
+            response->set_mailbox_id(client_query_manager.client_counter);
+            client_query_manager.client_counter+=1;
         }
-        registration_mutex.unlock();
 
 
     } catch (std::exception &e) {
@@ -79,9 +75,12 @@ grpc::Status
 services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
                                  distribicom::Ack *response) {
 
-    auto id = context->auth_context()->GetPeerIdentityPropertyName();
-    auto num_id = id_to_mailbox[id];
-    query_bookeeper[num_id]->client_info_marshaled.CopyFrom(*request);
+    auto id = request->mailbox_id();
+
+    { // this scope is for the shared lock do not delete!
+        std::shared_lock lock(client_query_manager.ledger_mutex);
+        client_query_manager.client_query_info[id]->query_info_marshaled.CopyFrom(*request);
+    }
     response->set_success(true);
     return grpc::Status::OK;
 }
