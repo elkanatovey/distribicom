@@ -101,3 +101,34 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
 
     return grpc::Status::OK;
 }
+
+std::unique_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
+    std::unique_ptr<services::WorkDistributionLedger> ledger;
+
+    // block is to destroy the db and querries handles.
+    {
+        auto db_handle = db.many_reads();
+        auto queries_handle = queries.many_reads();
+        // todo: set specific round and handle.
+        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1);
+    }
+    // todo, should behave as a promise.
+    ledger->done.read_for(std::chrono::milliseconds(1000)); // todo: set specific timeout..
+    // i don't want to wait on a timeout!
+    return ledger;
+}
+
+void services::FullServer::start_epoch() {
+    //todo: start epoch for registered clients as well -> make them send queries.
+    auto handle = gal_keys.many_reads();
+    manager.send_galois_keys(handle.mat);
+//            wait_for_workers(0); todo: wait for app_configs.num_workers
+}
+
+void services::FullServer::wait_for_workers(int i) {
+    manager.wait_for_workers(i);
+}
+
+grpc::Service *services::FullServer::get_manager_service() {
+    return (grpc::Service *) (&manager);
+}
