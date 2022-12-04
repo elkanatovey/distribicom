@@ -10,6 +10,7 @@
 #include "marshal/marshal.hpp"
 #include "concurrency/concurrency.h"
 #include "utils.hpp"
+#include "client_context.hpp"
 
 
 namespace services {
@@ -120,6 +121,8 @@ namespace services {
 
         // assumes num workers map well to db and queries
         void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
+
+        void send_galois_keys( ClientDB &all_clients);
     };
 }
 

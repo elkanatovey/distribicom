@@ -3,6 +3,7 @@
 //
 
 #include "server.hpp"
+#include "client_context.hpp"
 
 
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, math_utils::matrix<seal::Ciphertext> &queries,
@@ -47,7 +48,7 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
                 )
         ));
 
-        auto client_info = std::make_unique<services::ClientInfo>(ClientInfo());
+        auto client_info = std::make_unique<ClientInfo>(ClientInfo());
         client_info->galois_keys_marshaled.set_keys(request->galois_keys());
         client_info->client_stub = std::move(client_conn);
 

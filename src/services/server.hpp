@@ -6,26 +6,10 @@
 #include "manager.hpp"
 #include "db.hpp"
 #include "pir_client.hpp"
+#include "client_context.hpp"
 #include <future>
 
 namespace services {
-    /**
- * ClientInfo stores objects related to an individual client
- */
-    struct ClientInfo {
-        distribicom::ClientQueryRequest query_info_marshaled;
-        distribicom::GaloisKeys galois_keys_marshaled;
-
-        PirQuery query;
-        seal::GaloisKeys galois_keys;
-        std::unique_ptr<distribicom::Client::Stub> client_stub;
-    };
-
-    struct ClientDB {
-        std::shared_mutex mutex;
-        std::map<std::uint32_t, std::unique_ptr<ClientInfo>> id_to_info;
-        std::uint64_t client_counter=0;
-    };
 
 
     // uses both the Manager and the Server services to complete a full distribicom server.
