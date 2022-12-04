@@ -47,6 +47,55 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
+        auto sending_worker = utils::extract_ipv4(context);
+
+        mtx.lock();
+        auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
+        mtx.unlock();
+
+        if (!exists) {
+            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
+        }
+
+        auto round = utils::extract_size_from_metadata(context->client_metadata(), constants::round_md);
+        auto epoch = utils::extract_size_from_metadata(context->client_metadata(), constants::epoch_md);
+
+        mtx.lock();
+        exists = ledgers.find({round, epoch}) != ledgers.end();
+        auto ledger = ledgers[{round, epoch}];
+        mtx.unlock();
+
+        if (!exists) {
+            return {
+                    grpc::StatusCode::INVALID_ARGUMENT,
+                    "ledger not found in {round,epoch}" + std::to_string(round) + "," + std::to_string(epoch)
+            };
+        }
+
+        // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
+        distribicom::MatrixPart tmp;
+        while (reader->Read(&tmp)) {
+            int row = tmp.row();
+            int col = tmp.col();
+
+#ifdef DISTRIBICOM_DEBUG
+            matops->w_evaluator->evaluator->sub_inplace(
+                    ledger->result_mat(row, col),
+                    marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
+            assert(ledger->result_mat(row, col).is_transparent());
+#endif
+        }
+
+        ledger->mtx.lock();
+        ledger->contributed.insert(sending_worker);
+        auto n_contributions = ledger->contributed.size();
+        ledger->mtx.unlock();
+
+        // signal done:
+        if (n_contributions == ledger->worker_list.size()) {
+            ledger->done.close();
+        }
+
         // mat = matrix<n,j>;
         // while (reader->Read(&tmp)) {
         //      tmp == [ctx, 0, j]
@@ -60,13 +109,17 @@ namespace services {
         // Frievalds(A, B, C)
         // Frievalds: DB[:, :]
 
-        return Service::ReturnLocalWork(context, reader, response);
+        return {};
     }
 
-    std::unique_ptr<WorkDistributionLedger>
+    std::shared_ptr<WorkDistributionLedger>
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                             int rnd, int epoch) {
+                             int rnd, int epoch,
+#ifdef DISTRIBICOM_DEBUG
+                             const seal::GaloisKeys &expansion_key
+#endif
+    ) {
         // TODO: should set up a `promise` channel specific to the round and channel, anyone requesting info should get
         //   it through the channel.
         grpc::ClientContext context;
@@ -77,20 +130,60 @@ namespace services {
 
         // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
         std::lock_guard<std::mutex> lock(mtx);
-
-        return sendtask(db, compressed_queries, context);
-    }
-
-    std::unique_ptr<WorkDistributionLedger>
-    Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
-                      const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                      grpc::ClientContext &context) {
-
-        // TODO: write into map
-        auto ledger = std::make_unique<WorkDistributionLedger>();
-        ledger->worker_list = std::vector<std::string>(worker_stubs.size());
+        auto ledger = std::make_shared<WorkDistributionLedger>();
+        ledgers.insert({{rnd, epoch}, ledger});
+        ledger->worker_list = std::vector<std::string>();
+        ledger->worker_list.reserve(worker_stubs.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
                 db.cols, compressed_queries.data.size());
+        for (auto &worker: worker_stubs) {
+            ledger->worker_list.push_back(worker.first);
+        }
+
+#ifdef DISTRIBICOM_DEBUG
+        create_res_matrix(db, compressed_queries, expansion_key, ledger);
+#endif
+
+        sendtask(db, compressed_queries, context, ledger);
+        return ledger;
+    }
+
+
+    void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
+                                    const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                                    const seal::GaloisKeys &expansion_key,
+                                    std::shared_ptr<WorkDistributionLedger> &ledger) const {
+#ifdef DISTRIBICOM_DEBUG
+        auto exp = expansion_key;
+        auto expand_sz = db.cols;
+        math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, compressed_queries.data.size());
+        auto col = -1;
+        for (auto &c_query: compressed_queries.data) {
+            col++;
+            std::vector<seal::Ciphertext> quer(1);
+            quer[0] = c_query;
+            auto expanded = expander->expand_query(quer, expand_sz, exp);
+
+            for (uint64_t i = 0; i < expanded.size(); ++i) {
+                query_mat(i, col) = expanded[i];
+            }
+        }
+
+        matops->to_ntt(query_mat.data);
+
+        math_utils::matrix<seal::Ciphertext> res;
+        matops->multiply(db, query_mat, res);
+        ledger->result_mat = res;
+#endif
+    }
+
+    std::shared_ptr<WorkDistributionLedger>
+    Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
+                      const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                      grpc::ClientContext &context, std::shared_ptr<WorkDistributionLedger> ledger) {
+
+        // TODO: write into map
+
 
         distribicom::Ack response;
         distribicom::WorkerTaskPart part;
@@ -98,7 +191,7 @@ namespace services {
             { // this stream is released at the end of this scope.
                 auto stream = worker.second->SendTask(&context, &response);
                 for (int i = 0; i < int(db.rows); ++i) {
-                    for (int j = 0; i < int(db.cols); ++i) {
+                    for (int j = 0; j < int(db.cols); ++j) {
                         std::string payload = marshal->marshal_seal_object(db(i, j));
 
                         part.mutable_matrixpart()->set_row(i);
@@ -111,6 +204,7 @@ namespace services {
                 }
 
                 for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
+
                     std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
                     part.mutable_matrixpart()->set_row(0);
                     part.mutable_matrixpart()->set_col(i);
@@ -118,6 +212,7 @@ namespace services {
 
                     stream->Write(part);
                     part.mutable_matrixpart()->clear_ctx();
+
                 }
 
                 stream->WritesDone();
@@ -127,7 +222,6 @@ namespace services {
                               " failed: " << status.error_message() << std::endl;
                     continue;
                 }
-                ledger->worker_list.push_back(worker.first);
             }
         }
         return ledger;

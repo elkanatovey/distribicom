@@ -1,6 +1,7 @@
 #include "matrix_operations.hpp"
 #include "defines.h"
 #include <execution>
+#include <latch>
 
 #define PTX_CTX_MUL 0
 namespace math_utils {
@@ -125,7 +126,7 @@ namespace math_utils {
 
     void MatrixOperations::left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
                                          std::vector<seal::Ciphertext> &matrix, std::vector<seal::Ciphertext>
-                                          &result) {
+                                         &result) {
 
         for (uint64_t k = 0; k < dims[COL]; k++) {
             for (uint64_t j = 0; j < dims[ROW]; j++) {
@@ -147,7 +148,7 @@ namespace math_utils {
 
     void MatrixOperations::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
-                                           &result) {
+                                          &result) {
 #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
         for (auto &ptx: matrix) {
@@ -176,7 +177,7 @@ namespace math_utils {
 
     void MatrixOperations::right_multiply(std::vector<std::uint64_t> &dims, std::vector<seal::Ciphertext> &matrix,
                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
-                                           &result) {
+                                          &result) {
 #ifdef DISTRIBICOM_DEBUG
         // everything needs to be in NTT!
         for (auto &ctx: matrix) {
@@ -259,9 +260,7 @@ namespace math_utils {
         verify_spltptx_ctx_mat_mul_args(left_ntt, right);
         verify_correct_dimension(left_ntt, right);
 
-        auto wg = std::make_shared<concurrency::WaitGroup>();
-        wg->add(int(left_ntt.rows * right.cols));
-
+        auto wg = std::make_shared<std::latch>(int(left_ntt.rows * right.cols));
         for (uint64_t i = 0; i < left_ntt.rows; i++) {
             for (uint64_t j = 0; j < right.cols; j++) {
 
@@ -351,7 +350,7 @@ namespace math_utils {
                     // perform the correct multiplication here:
                     if (r.answer.task_type == 1) {
                         // TODO: proper task type...
-                        r.answer.wg->done();
+                        r.answer.wg->count_down();
                         continue;
                     }
 
@@ -371,7 +370,7 @@ namespace math_utils {
 
                     (*result)(row, col) = tmp_result;
 
-                    r.answer.wg->done();
+                    r.answer.wg->count_down();
                 }
             });
         }

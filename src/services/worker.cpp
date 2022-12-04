@@ -35,7 +35,10 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
-        strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(enc_params, std::move(manager_conn));
+        strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
+                enc_params,
+                mrshl, std::move(manager_conn)
+        );
         t = std::make_unique<std::thread>(
                 [&]() {
                     std::cout << "worker main thread: running" << std::endl;
@@ -70,6 +73,8 @@ namespace services {
         try {
             WorkerServiceTask task(context, cnfgs.appconfigs().configs());
 
+            int n_matrix_parts = 0;
+
             distribicom::WorkerTaskPart tmp;
             while (reader->Read(&tmp)) {
 
@@ -83,6 +88,7 @@ namespace services {
                         break;
 
                     case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
+                        n_matrix_parts += 1;
                         fill_matrix_part(task, tmp.matrixpart());
 
                         break;
@@ -94,7 +100,11 @@ namespace services {
 
                 tmp.clear_part();
             }
-            chan.write(task);
+
+            if (n_matrix_parts != 0) {
+                chan.write(task);
+            }
+
         } catch (std::invalid_argument &e) {
             std::cout << "Worker::SendTask::Exception: " << e.what() << std::endl;
             return {grpc::StatusCode::INVALID_ARGUMENT, e.what()};

@@ -5,6 +5,8 @@
 #include "distribicom.grpc.pb.h"
 #include "../math_utils/matrix.h"
 
+#include "math_utils/matrix_operations.hpp"
+#include "math_utils/query_expander.hpp"
 #include "marshal/marshal.hpp"
 #include "concurrency/concurrency.h"
 #include "utils.hpp"
@@ -38,17 +40,30 @@ namespace services {
     private:
         distribicom::AppConfigs app_configs;
 
-        std::mutex mtx;
+        std::mutex mtx; // todo: use shared_mtx
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
         std::shared_ptr<marshal::Marshaller> marshal;
         concurrency::Counter worker_counter;
+        std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
+
+#ifdef DISTRIBICOM_DEBUG
+        std::shared_ptr<math_utils::MatrixOperations> matops;
+        std::shared_ptr<math_utils::QueryExpander> expander;
+#endif
+
 
     public:
         explicit Manager() {};
 
         explicit Manager(const distribicom::AppConfigs &app_configs) :
                 app_configs(app_configs),
-                marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))) {};
+                marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
+#ifdef DISTRIBICOM_DEBUG
+                matops(math_utils::MatrixOperations::Create(
+                        math_utils::EvaluatorWrapper::Create(utils::setup_enc_params(app_configs)))),
+                expander(math_utils::QueryExpander::Create(utils::setup_enc_params(app_configs)))
+#endif
+        {};
 
         // PartialWorkStream i save this on my server map.
         ::grpc::Status
@@ -68,20 +83,31 @@ namespace services {
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
-        std::unique_ptr<WorkDistributionLedger> distribute_work(
+        std::shared_ptr<WorkDistributionLedger> distribute_work(
                 const math_utils::matrix<seal::Plaintext> &db,
                 const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                 int rnd,
-                int epoch
+                int epoch,
+#ifdef DISTRIBICOM_DEBUG
+                const seal::GaloisKeys &expansion_key
+#endif
         );
 
-        std::unique_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
+        std::shared_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
                                                          const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                                                         grpc::ClientContext &context);
+                                                         grpc::ClientContext &context,
+                                                         std::shared_ptr<WorkDistributionLedger> ptr);
 
         void wait_for_workers(int i);
 
         void send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix);
+
+
+        void create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
+                               const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                               const seal::GaloisKeys &expansion_key,
+                               std::shared_ptr<WorkDistributionLedger> &ledger) const;
+
     };
 }
 

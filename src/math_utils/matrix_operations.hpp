@@ -1,9 +1,9 @@
 #pragma once
 
+#include <latch>
 #include "evaluator_wrapper.hpp"
 #include "matrix.h"
 #include "concurrency/channel.hpp"
-#include "concurrency/waitgroup.hpp"
 
 
 namespace math_utils {
@@ -24,7 +24,7 @@ namespace math_utils {
     struct task {
         MultTaskType task_type;
         // the WaitGroup that the issuer of the task is waiting on.
-        std::shared_ptr<concurrency::WaitGroup> wg;
+        std::shared_ptr<std::latch> wg;
         // compute details.
         std::uint64_t row;
         std::uint64_t col;
@@ -42,13 +42,19 @@ namespace math_utils {
 
     class MatrixOperations {
     protected:
-        std::shared_ptr<EvaluatorWrapper> w_evaluator;
+
     private:
         std::shared_ptr<concurrency::Channel<task>> chan;
         std::vector<std::thread> threads;
 
-
+#ifdef DISTRIBICOM_DEBUG
     public:
+        std::shared_ptr<EvaluatorWrapper> w_evaluator;
+#else
+        std::shared_ptr<EvaluatorWrapper> w_evaluator;
+        public:
+#endif
+
         explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
         ~MatrixOperations() {

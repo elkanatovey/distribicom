@@ -55,6 +55,8 @@ namespace math_utils {
 
         inline void assert_pos(std::uint64_t row, std::uint64_t col) const {
 #ifdef DISTRIBICOM_DEBUG
+            assert(col >= 0 || row >= 0);
+
             if (row + col * rows >= data.size()) {
                 std::cout << std::endl;
             }
