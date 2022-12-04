@@ -21,9 +21,9 @@ namespace services {
         std::unique_ptr<distribicom::Client::Stub> client_stub;
     };
 
-    struct ClientQueryLedger {
-        std::shared_mutex ledger_mutex;
-        std::map<std::uint32_t, std::unique_ptr<ClientInfo>> client_query_info;
+    struct ClientDB {
+        std::shared_mutex mutex;
+        std::map<std::uint32_t, std::unique_ptr<ClientInfo>> id_to_info;
         std::uint64_t client_counter=0;
     };
 
@@ -44,7 +44,7 @@ namespace services {
         std::unique_ptr<PIRClient> client;
 
         // concurrency stuff
-        ClientQueryLedger client_query_manager;
+        ClientDB client_query_manager;
 
 
 
