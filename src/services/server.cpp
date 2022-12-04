@@ -51,9 +51,9 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
         client_info->galois_keys_marshaled.set_keys(request->galois_keys());
         client_info->client_stub = std::move(client_conn);
 
-        std::unique_lock lock(client_query_manager.ledger_mutex);
+        std::unique_lock lock(client_query_manager.mutex);
         client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
-        client_query_manager.client_query_info.insert(
+        client_query_manager.id_to_info.insert(
                 {client_query_manager.client_counter, std::move(client_info)});
         response->set_mailbox_id(client_query_manager.client_counter);
         client_query_manager.client_counter += 1;
@@ -75,12 +75,12 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 
     auto id = request->mailbox_id();
 
-    std::unique_lock lock(client_query_manager.ledger_mutex);
-    if (client_query_manager.client_query_info.find(id) == client_query_manager.client_query_info.end()) {
+    std::unique_lock lock(client_query_manager.mutex);
+    if (client_query_manager.id_to_info.find(id) == client_query_manager.id_to_info.end()) {
         return {grpc::StatusCode::NOT_FOUND, "Client not found"};
     }
 
-    client_query_manager.client_query_info[id]->query_info_marshaled.CopyFrom(*request);
+    client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
     response->set_success(true);
     return grpc::Status::OK;
 }
