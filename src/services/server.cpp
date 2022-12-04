@@ -46,20 +46,17 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
                         grpc::InsecureChannelCredentials()
                 )
         ));
+
         auto client_info = std::make_unique<services::ClientInfo>(ClientInfo());
         client_info->galois_keys_marshaled.set_keys(request->galois_keys());
         client_info->client_stub = std::move(client_conn);
 
-        { // this scope is for the unique lock do not delete!
-            std::unique_lock lock(client_query_manager.ledger_mutex);
-
-            client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
-            client_query_manager.client_query_info.insert(
-                    {client_query_manager.client_counter, std::move(client_info)});
-            response->set_mailbox_id(client_query_manager.client_counter);
-            client_query_manager.client_counter += 1;
-        }
-
+        std::unique_lock lock(client_query_manager.ledger_mutex);
+        client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
+        client_query_manager.client_query_info.insert(
+                {client_query_manager.client_counter, std::move(client_info)});
+        response->set_mailbox_id(client_query_manager.client_counter);
+        client_query_manager.client_counter += 1;
 
     } catch (std::exception &e) {
         std::cout << "Error: " << e.what() << std::endl;
@@ -137,5 +134,5 @@ void services::FullServer::wait_for_workers(int i) {
 }
 
 grpc::Service *services::FullServer::get_manager_service() {
-    return (grpc::Service *) (&manager);
+    return (grpc::Service * )(&manager);
 }
