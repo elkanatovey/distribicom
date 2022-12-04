@@ -1,5 +1,5 @@
 #include "db.hpp"
-namespace pir_primitives{
+namespace services{
     template<>
     void DB<seal::Plaintext>::write(const vector<uint64_t> &new_element, const int ptx_num, uint64_t offset,
                                     PIRClient *replacer_machine) {

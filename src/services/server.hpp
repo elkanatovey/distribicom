@@ -31,9 +31,9 @@ namespace services {
     // uses both the Manager and the Server services to complete a full distribicom server.
     class FullServer final : public distribicom::Server::Service{
         // used for tests
-        pir_primitives::DB<seal::Plaintext> db;
-        pir_primitives::DB<seal::Ciphertext> queries;
-        pir_primitives::DB<seal::GaloisKeys> gal_keys;
+        services::DB<seal::Plaintext> db;
+        services::DB<seal::Ciphertext> queries;
+        services::DB<seal::GaloisKeys> gal_keys;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;

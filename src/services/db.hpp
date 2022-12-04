@@ -7,7 +7,7 @@
 #include <utility>
 #include "pir_client.hpp"
 
-namespace pir_primitives{
+namespace services{
     // This class is a wrapper for a matrix that ensures the access to the matrix is thread safe.
     template<typename T>
     class DB {
