@@ -89,18 +89,18 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 //@todo fix this to translate bytes to coeffs properly when writing
 grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const distribicom::WriteRequest *request,
                                              distribicom::Ack *response) {
-    this->db.write();
-    db_write_requests.push_back(std::async(
-            [&](distribicom::WriteRequest request) {
-                std::uint8_t msg = std::stoi(request.data());
-                std::vector<uint64_t> msg1 = {msg};
-                db.write(msg1, request.ptxnumber(), request.whereinptx(), this->client.get());
-                return 0;
-            },
-            *request
-    ));
+//    this->db.write();
+//    db_write_requests.push_back(std::async(
+//            [&](distribicom::WriteRequest request) {
+//                std::uint8_t msg = std::stoi(request.data());
+//                std::vector<uint64_t> msg1 = {msg};
+//                db.write(msg1, request.ptxnumber(), request.whereinptx(), this->client.get());
+//                return 0;
+//            },
+//            *request
+//    ));
 
-    return grpc::Status::OK;
+    return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
 std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
