@@ -5,7 +5,7 @@
 
 int db_many_reads_test(int, char *[]) {
     math_utils::matrix<seal::Plaintext> mat(10, 10);
-    pir_primitives::DB<seal::Plaintext> db(mat);
+    services::DB<seal::Plaintext> db(mat);
 
     {
         auto shared_mat = db.many_reads();
