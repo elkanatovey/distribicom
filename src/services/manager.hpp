@@ -13,6 +13,14 @@
 
 
 namespace services {
+
+    struct WorkerInfo {
+        std::uint64_t worker_number;
+        std::uint64_t query_range_start;
+        std::uint64_t query_range_end;
+        std::uint64_t db_row;
+    };
+
     /**
  * WorkDistributionLedger keeps track on a distributed task.
  * it should keep hold on a working task.
@@ -42,6 +50,8 @@ namespace services {
 
         std::mutex mtx; // todo: use shared_mtx
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
+        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
+
         std::shared_ptr<marshal::Marshaller> marshal;
         concurrency::Counter worker_counter;
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
@@ -108,6 +118,8 @@ namespace services {
                                const seal::GaloisKeys &expansion_key,
                                std::shared_ptr<WorkDistributionLedger> &ledger) const;
 
+        // assumes num workers map well to db and queries
+        void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
     };
 }
 
