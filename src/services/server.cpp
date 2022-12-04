@@ -75,10 +75,12 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 
     auto id = request->mailbox_id();
 
-    { // this scope is for the shared lock do not delete!
-        std::shared_lock lock(client_query_manager.ledger_mutex);
-        client_query_manager.client_query_info[id]->query_info_marshaled.CopyFrom(*request);
+    std::unique_lock lock(client_query_manager.ledger_mutex);
+    if (client_query_manager.client_query_info.find(id) == client_query_manager.client_query_info.end()) {
+        return {grpc::StatusCode::NOT_FOUND, "Client not found"};
     }
+
+    client_query_manager.client_query_info[id]->query_info_marshaled.CopyFrom(*request);
     response->set_success(true);
     return grpc::Status::OK;
 }
