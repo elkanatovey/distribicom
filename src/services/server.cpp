@@ -14,7 +14,7 @@ services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, math_u
 }
 
 services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
-        db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs)  {
+        db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs) {
     finish_construction(app_configs);
 
 }
@@ -22,7 +22,7 @@ services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
 void services::FullServer::finish_construction(const distribicom::AppConfigs &app_configs) {
     pir_configs = app_configs.configs();
     enc_params = utils::setup_enc_params(app_configs);
-    const auto& configs = app_configs.configs();
+    const auto &configs = app_configs.configs();
     gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
                    configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
                    configs.use_batching(), configs.use_recursive_mod_switching());
@@ -54,9 +54,10 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
             std::unique_lock lock(client_query_manager.ledger_mutex);
 
             client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
-            client_query_manager.client_query_info.insert({client_query_manager.client_counter, std::move(client_info)});
+            client_query_manager.client_query_info.insert(
+                    {client_query_manager.client_counter, std::move(client_info)});
             response->set_mailbox_id(client_query_manager.client_counter);
-            client_query_manager.client_counter+=1;
+            client_query_manager.client_counter += 1;
         }
 
 
@@ -89,8 +90,8 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const distribicom::WriteRequest *request,
                                              distribicom::Ack *response) {
     this->db.write();
-    db_write_requests.push_back( std::async(
-            [&]( distribicom::WriteRequest request) {
+    db_write_requests.push_back(std::async(
+            [&](distribicom::WriteRequest request) {
                 std::uint8_t msg = std::stoi(request.data());
                 std::vector<uint64_t> msg1 = {msg};
                 db.write(msg1, request.ptxnumber(), request.whereinptx(), this->client.get());
@@ -102,15 +103,21 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
     return grpc::Status::OK;
 }
 
-std::unique_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
-    std::unique_ptr<services::WorkDistributionLedger> ledger;
+std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
+    std::shared_ptr<services::WorkDistributionLedger> ledger;
 
     // block is to destroy the db and querries handles.
     {
         auto db_handle = db.many_reads();
         auto queries_handle = queries.many_reads();
         // todo: set specific round and handle.
-        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1);
+
+
+        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
+#ifdef DISTRIBICOM_DEBUG
+                                         gal_keys.many_reads().mat.data[0]
+#endif
+        );
     }
     // todo, should behave as a promise.
     ledger->done.read_for(std::chrono::milliseconds(1000)); // todo: set specific timeout..

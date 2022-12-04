@@ -4,7 +4,7 @@
 #include "distribicom.grpc.pb.h"
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
-// TODO: reconsider class name
+#include "marshal/marshal.hpp"
 
 namespace services {
 
@@ -40,20 +40,15 @@ namespace services::work_strategy {
     class WorkerStrategy {
 
     private:
-        std::future<int>
-        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
+
 
     protected:
         // TODO: make a unique ptr!
         std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::shared_ptr<math_utils::MatrixOperations> matops;
-        std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
         std::map<int, seal::GaloisKeys> gkeys;
         std::shared_mutex mu;
         std::unique_ptr<distribicom::Manager::Stub> manager_conn;
-
-
-        void expand_queries(WorkerServiceTask &task);
 
     public:
         explicit WorkerStrategy(const seal::EncryptionParameters &enc_params,
@@ -72,15 +67,39 @@ namespace services::work_strategy {
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
+        std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
+        math_utils::matrix<seal::Ciphertext> query_mat;
+        std::map<int, int> col_to_query_index;
+        std::shared_ptr<marshal::Marshaller> mrshl;
+
+        std::future<int>
+        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
+
+
+        void expand_queries(WorkerServiceTask &task);
+
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
+                                           std::shared_ptr<marshal::Marshaller> &m,
                                            std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) :
-                WorkerStrategy(enc_params, std::move(manager_conn)) {};
+                WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m) {
+        };
 
+        math_utils::matrix<seal::Ciphertext> multiply_rows(WorkerServiceTask &task);
+
+        void send_response(const WorkerServiceTask &task,
+                           math_utils::matrix<seal::Ciphertext> &computed);
+
+// assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
             // expand all queries.
             expand_queries(task);
 
+            auto answer = multiply_rows(task);
+
+            send_response(task, answer);
         }
+
+        void queries_to_mat(const WorkerServiceTask &task);
     };
 }
