@@ -264,4 +264,35 @@ namespace services {
         }
     }
 
+    std::uint64_t get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows){
+        auto row_id = id%num_rows;
+        return row_id;
+    }
+
+    std::pair<std::uint64_t, std::uint64_t> get_query_range_to_work_with(std::uint64_t worker_id, std::uint64_t num_queries, std::uint64_t num_queries_per_worker){
+        auto range_id = worker_id / num_queries;
+        auto range_start = num_queries_per_worker * range_id;
+        auto range_end = range_start + num_queries_per_worker;
+        return {range_start, range_end};
+    }
+
+    void Manager::map_workers_to_responsibilities(std::uint64_t num_rows,  std::uint64_t num_queries) {
+        int i = 0;
+        std::unique_lock lock(mtx);
+        auto num_workers_per_row = worker_stubs.size()/num_rows;
+        auto num_queries_per_worker = num_queries / num_workers_per_row;
+
+        for(auto &worker: worker_stubs){
+            this->worker_name_to_work_responsible_for[worker.first].worker_number = i;
+            this->worker_name_to_work_responsible_for[worker.first].db_row = get_row_id_to_work_with(i, num_rows);
+            auto query_range = get_query_range_to_work_with(i, num_queries, num_queries_per_worker);
+
+            this->worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
+            this->worker_name_to_work_responsible_for[worker.first].query_range_end = query_range.second;
+
+            i+=1;
+        }
+    }
+
+
 }
