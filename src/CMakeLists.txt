@@ -14,6 +14,8 @@ target_link_libraries(distribicom_cpp marshal_package multiplication_utils sealp
 
 
 add_executable(main1 main.cpp)
+add_executable(main_server server.cpp)
+
 set_target_properties(
         main1
         PROPERTIES
@@ -21,3 +23,4 @@ set_target_properties(
 )
 #target_include_directories(main1 PUBLIC ${com_sealpir_SOURCE_DIR}/src)
 target_link_libraries(main1 distribicom_cpp)
+target_link_libraries(main_server distribicom_cpp)

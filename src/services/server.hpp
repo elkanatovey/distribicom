@@ -13,7 +13,7 @@ namespace services {
 
 
     // uses both the Manager and the Server services to complete a full distribicom server.
-    class FullServer final : public distribicom::Server::Service{
+    class FullServer final : public distribicom::Server::Service {
         // used for tests
         services::DB<seal::Plaintext> db;
         services::DB<seal::Ciphertext> queries;
@@ -31,32 +31,29 @@ namespace services {
         ClientDB client_query_manager;
 
 
-
-
         std::vector<std::future<int>> db_write_requests;
 
     public:
-        explicit FullServer( const distribicom::AppConfigs& app_configs);
-
+        explicit FullServer(const distribicom::AppConfigs &app_configs);
 
 
         // mainly for testing.
         explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
-                   math_utils::matrix<seal::Ciphertext> &queries,
-                   math_utils::matrix<seal::GaloisKeys> &gal_keys,
-                   const distribicom::AppConfigs &app_configs);;
+                            math_utils::matrix<seal::Ciphertext> &queries,
+                            math_utils::matrix<seal::GaloisKeys> &gal_keys,
+                            const distribicom::AppConfigs &app_configs);;
 
         grpc::Status
         RegisterAsClient(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request,
-                     distribicom::ClientRegistryReply *response) override;
+                         distribicom::ClientRegistryReply *response) override;
 
         grpc::Status
         StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
-                         distribicom::Ack *response) override;
+                   distribicom::Ack *response) override;
 
         grpc::Status
         WriteToDB(grpc::ServerContext *context, const distribicom::WriteRequest *request,
-                   distribicom::Ack *response) override;
+                  distribicom::Ack *response) override;
 
         grpc::Service *get_manager_service();
 
@@ -67,6 +64,18 @@ namespace services {
         void wait_for_workers(int i);
 
         void start_epoch();
+
+        void publish_galois_keys();
+
+        void tell_new_round();
+
+        void publish_answers();
+
+        void send_stop_signal();
+
+        void learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>);
+
+        void run_step_2(std::shared_ptr<WorkDistributionLedger>);
 
     private:
         void finish_construction(const distribicom::AppConfigs &app_configs);

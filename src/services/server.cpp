@@ -119,9 +119,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 #endif
         );
     }
-    // todo, should behave as a promise.
-    ledger->done.read_for(std::chrono::milliseconds(1000)); // todo: set specific timeout..
-    // i don't want to wait on a timeout!
+
     return ledger;
 }
 
@@ -141,5 +139,29 @@ void services::FullServer::wait_for_workers(int i) {
 }
 
 grpc::Service *services::FullServer::get_manager_service() {
-    return (grpc::Service * )(&manager);
+    return (grpc::Service *) (&manager);
+}
+
+void services::FullServer::publish_galois_keys() {
+    throw std::logic_error("not implemented");
+}
+
+void services::FullServer::publish_answers() {
+    throw std::logic_error("not implemented");
+}
+
+void services::FullServer::send_stop_signal() {
+    throw std::logic_error("not implemented");
+}
+
+void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>) {
+    throw std::logic_error("not implemented");
+}
+
+void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {
+    throw std::logic_error("not implemented");
+}
+
+void services::FullServer::tell_new_round() {
+    throw std::logic_error("not implemented");
 }

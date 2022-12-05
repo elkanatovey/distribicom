@@ -5,4 +5,4 @@ add_library(services worker_strategy.hpp worker_strategy.cpp worker.hpp factory.
 target_include_directories(services PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(services PRIVATE ${com_sealpir_SOURCE_DIR}/src)
 
-target_link_libraries(services distribicom_grpc boot_grpc SEAL::seal multiplication_utils marshal_package)
+target_link_libraries(services distribicom_grpc boot_grpc SEAL::seal multiplication_utils marshal_package sealpir)
