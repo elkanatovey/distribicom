@@ -19,7 +19,7 @@ namespace services {
         std::uint64_t worker_number;
         std::uint64_t query_range_start;
         std::uint64_t query_range_end;
-        std::uint64_t db_row;
+        std::vector<std::uint64_t> db_rows;
     };
 
     /**
@@ -130,25 +130,3 @@ namespace services {
         void send_queries(const ClientDB &all_clients, grpc::ClientContext &context);
     };
 }
-
-
-
-//for (auto &worker: worker_stubs) {
-//{ // this stream is released at the end of this scope.
-//auto stream = worker.second->SendTask(&context, &response);
-//auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
-//auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
-//
-//for (std::uint64_t i = range_start; i < range_end; ++i) {
-//prt.mutable_gkey()->CopyFrom(all_clients.id_to_info[i]->galois_keys_marshaled);
-//stream->Write(prt);
-//}
-//stream->WritesDone();
-//auto status = stream->Finish();
-//if (!status.ok()) {
-//std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
-//" failed: " << status.error_message() << std::endl;
-//continue;
-//}
-//}
-//}

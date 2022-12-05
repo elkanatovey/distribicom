@@ -22,6 +22,8 @@ namespace concurrency {
         void add(int delta);
 
         void wait_for(int c);
+
+        int val();
     };
 
 }

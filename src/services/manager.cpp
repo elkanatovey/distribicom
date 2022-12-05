@@ -197,18 +197,20 @@ namespace services {
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
                 auto stream = worker.second->SendTask(&context, &response);
-                auto db_row = worker_name_to_work_responsible_for[worker.first].db_row;
+                auto db_rows = worker_name_to_work_responsible_for[worker.first].db_rows;
 
-                // first send db
-                for (int j = 0; j < int(db.cols); ++j) {
-                    std::string payload = marshalled_db(db_row, j);
+                for(const auto &db_row: db_rows) {
+                    // first send db
+                    for (int j = 0; j < int(db.cols); ++j) {
+                        std::string payload = marshalled_db(db_row, j);
 
-                    part.mutable_matrixpart()->set_row(db_row);
-                    part.mutable_matrixpart()->set_col(j);
-                    part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
+                        part.mutable_matrixpart()->set_row(db_row);
+                        part.mutable_matrixpart()->set_col(j);
+                        part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
 
-                    stream->Write(part);
-                    part.mutable_matrixpart()->clear_ptx();
+                        stream->Write(part);
+                        part.mutable_matrixpart()->clear_ptx();
+                    }
                 }
                 stream->WritesDone();
                 auto status = stream->Finish();
@@ -390,9 +392,9 @@ namespace services {
         }
     }
 
-    std::uint64_t get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows){
+    std::vector<std::uint64_t> get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows){
         auto row_id = id%num_rows;
-        return row_id;
+        return {row_id};
     }
 
     std::pair<std::uint64_t, std::uint64_t> get_query_range_to_work_with(std::uint64_t worker_id, std::uint64_t num_queries, std::uint64_t num_queries_per_worker){
@@ -403,6 +405,12 @@ namespace services {
     }
 
     std::uint64_t query_count_per_worker(std::uint64_t num_workers, std::uint64_t num_rows, std::uint64_t num_queries){
+#ifdef DISTRIBICOM_DEBUG
+        if(num_workers==1){
+            std::cout<<"Manager: using only 1 worker"<<std::endl;
+            return num_queries;}
+#endif
+
         auto num_workers_per_row = num_workers/num_rows;
         auto num_queries_per_worker = num_queries / num_workers_per_row;
         return num_queries_per_worker;
@@ -415,7 +423,19 @@ namespace services {
 
         for(auto &worker: worker_stubs){
             this->worker_name_to_work_responsible_for[worker.first].worker_number = i;
-            this->worker_name_to_work_responsible_for[worker.first].db_row = get_row_id_to_work_with(i, num_rows);
+            this->worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
+#ifdef DISTRIBICOM_DEBUG
+            if(worker_stubs.size()==1){
+                std::vector<std::uint64_t> temp(num_rows);
+                for(int j=0; j<num_rows; j++){
+                    temp[j] =j;
+                }
+                this->worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);
+                this->worker_name_to_work_responsible_for[worker.first].query_range_start = 0;
+                this->worker_name_to_work_responsible_for[worker.first].query_range_end = num_queries;
+                return;
+                }
+#endif
             auto query_range = get_query_range_to_work_with(i, num_queries, num_queries_per_worker);
 
             this->worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
