@@ -37,6 +37,24 @@ namespace marshal {
             }
         }
 
+        template<typename T>
+        std::vector<std::string> marshal_seal_vector(const std::vector<T> &in) const {
+            std::vector<std::string> marshaled_vec(in.size());
+            for (std::uint64_t i = 0; i < in.size(); ++i) {
+                marshaled_vec[i] = marshal_seal_object(in[i]);
+            }
+            return marshaled_vec;
+        }
+
+        template<typename T>
+        std::vector<T> unmarshal_seal_vector(const std::vector<std::string> &in) const {
+            std::vector<T> unmarshaled_vec(in.size());
+            for (std::uint64_t i = 0; i < in.size(); i++) {
+                unmarshaled_vec[i] = unmarshal_seal_object<T>(in[i]);
+            }
+            return unmarshaled_vec;
+        }
+
         /**
          * marshals seal vector to protobuf
          * T - type of seal object

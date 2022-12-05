@@ -85,6 +85,14 @@ void plaintext_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
     for (std::uint64_t i = 0; i < unmarshaled_ptxs.size(); ++i) {
         assert(unmarshaled_ptxs[i].to_string() == ptxs[i].to_string());
     }
+    auto temp = m->marshal_seal_vector(ptxs);
+    auto unmarshaled_temp = m->unmarshal_seal_vector<seal::Plaintext>(temp);
+    for (std::uint64_t i = 0; i < unmarshaled_temp.size(); ++i) {
+        assert(unmarshaled_temp[i].to_string() == ptxs[i].to_string());
+    }
+
+
+
 }
 
 void ciphertext_vector_check(std::shared_ptr<TestUtils::CryptoObjects> &all,
