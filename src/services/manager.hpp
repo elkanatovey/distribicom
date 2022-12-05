@@ -123,9 +123,11 @@ namespace services {
         // assumes num workers map well to db and queries
         void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
 
-        void send_galois_keys( ClientDB &all_clients);
+        void send_galois_keys(const ClientDB &all_clients);
 
         void send_db(const math_utils::matrix<seal::Plaintext> &db, grpc::ClientContext &context);
+
+        void send_queries(const ClientDB &all_clients, grpc::ClientContext &context);
     };
 }
 

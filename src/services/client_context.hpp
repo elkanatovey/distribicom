@@ -17,12 +17,12 @@ namespace services {
 
         PirQuery query;
         seal::GaloisKeys galois_keys;
-        unique_ptr<distribicom::Client::Stub> client_stub;
+        std::unique_ptr<distribicom::Client::Stub> client_stub;
     };
     struct ClientDB {
-        shared_mutex mutex;
-        map<uint32_t, unique_ptr<ClientInfo>> id_to_info;
-        uint64_t client_counter = 0;
+        mutable std::shared_mutex mutex;
+        std::map<uint32_t, std::unique_ptr<ClientInfo>> id_to_info;
+        std::uint64_t client_counter = 0;
     };
 }
 

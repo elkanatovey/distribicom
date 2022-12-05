@@ -223,41 +223,45 @@ namespace services {
 
 
 
-//    void
-//    Manager::send_queries( const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-//                          grpc::ClientContext &context) {
-//
-//        // TODO: write into map
-//
-//
-//        distribicom::Ack response;
-//        distribicom::WorkerTaskPart part;
-//        for (auto &worker: worker_stubs) {
-//            { // this stream is released at the end of this scope.
-//                auto stream = worker.second->SendTask(&context, &response);
-//
-//                for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
-//
-//                    std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
-//                    part.mutable_matrixpart()->set_row(0);
-//                    part.mutable_matrixpart()->set_col(i);
-//                    part.mutable_matrixpart()->mutable_ctx()->set_data(payload);
-//
-//                    stream->Write(part);
-//                    part.mutable_matrixpart()->clear_ctx();
-//
-//                }
-//
-//                stream->WritesDone();
-//                auto status = stream->Finish();
-//                if (!status.ok()) {
-//                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
-//                              " failed: " << status.error_message() << std::endl;
-//                    continue;
-//                }
-//            }
-//        }
-//    }
+    void
+    Manager::send_queries( const ClientDB &all_clients,
+                          grpc::ClientContext &context) {
+
+        // TODO: write into map
+
+
+        distribicom::Ack response;
+        distribicom::WorkerTaskPart part;
+        std::shared_lock client_db_lock(all_clients.mutex);
+        std::unique_lock lock(mtx);
+        for (auto &worker: worker_stubs) {
+            { // this stream is released at the end of this scope.
+                auto stream = worker.second->SendTask(&context, &response);
+                auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
+                auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
+
+                for (std::uint64_t i = range_start; i < range_end; ++i) { //@todo cuurently assume that query has one ctext in dim
+                    auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0);
+
+                    part.mutable_matrixpart()->set_row(0);
+                    part.mutable_matrixpart()->set_col(i);
+                    part.mutable_matrixpart()->mutable_ctx()->CopyFrom(payload);
+
+                    stream->Write(part);
+                    part.mutable_matrixpart()->clear_ctx();
+
+                }
+
+                stream->WritesDone();
+                auto status = stream->Finish();
+                if (!status.ok()) {
+                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
+                              " failed: " << status.error_message() << std::endl;
+                    continue;
+                }
+            }
+        }
+    }
 
 
     std::shared_ptr<WorkDistributionLedger>
@@ -314,7 +318,7 @@ namespace services {
         worker_counter.wait_for(i);
     }
 
-    void Manager::send_galois_keys( ClientDB &all_clients) {
+    void Manager::send_galois_keys(const ClientDB &all_clients) {
         grpc::ClientContext context;
 
         std::shared_lock client_db_lock(all_clients.mutex);
@@ -339,7 +343,7 @@ namespace services {
                 auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
 
                 for (std::uint64_t i = range_start; i < range_end; ++i) {
-                    prt.mutable_gkey()->CopyFrom(all_clients.id_to_info[i]->galois_keys_marshaled);
+                    prt.mutable_gkey()->CopyFrom(all_clients.id_to_info.at(i)->galois_keys_marshaled);
                     stream->Write(prt);
                 }
                 stream->WritesDone();
