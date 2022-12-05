@@ -11,3 +11,8 @@ void concurrency::Counter::add(int delta) {
     count += delta;
     cv.notify_all();
 }
+
+int concurrency::Counter::val() {
+    std::lock_guard<std::mutex> lock(m);
+    return count;
+}

@@ -125,7 +125,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
 void services::FullServer::start_epoch() {
     client_query_manager.mutex.lock_shared();
-    manager.map_workers_to_responsibilities(client_query_manager.client_counter, pir_configs.db_rows());
+    manager.map_workers_to_responsibilities(pir_configs.db_rows(), client_query_manager.client_counter);
     client_query_manager.mutex.unlock_shared();
 
     //todo: start epoch for registered clients as well -> make them send queries.
