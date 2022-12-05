@@ -34,6 +34,10 @@ namespace services {
         std::vector<std::future<int>> db_write_requests;
 
     public:
+        explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
+                   std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db,
+                   const distribicom::AppConfigs &app_configs);
+
         explicit FullServer(const distribicom::AppConfigs &app_configs);
 
 
