@@ -49,13 +49,14 @@ namespace services {
     private:
         distribicom::AppConfigs app_configs;
 
-        std::mutex mtx; // todo: use shared_mtx
+        std::mutex mtx; // todo: use shared_mtx,
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
-        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
 
-        std::shared_ptr<marshal::Marshaller> marshal;
+        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
         concurrency::Counter worker_counter;
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
+
+        std::shared_ptr<marshal::Marshaller> marshal;
 
 #ifdef DISTRIBICOM_DEBUG
         std::shared_ptr<math_utils::MatrixOperations> matops;
@@ -123,6 +124,29 @@ namespace services {
         void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
 
         void send_galois_keys( ClientDB &all_clients);
+
+        void send_db(const math_utils::matrix<seal::Plaintext> &db, grpc::ClientContext &context);
     };
 }
 
+
+
+//for (auto &worker: worker_stubs) {
+//{ // this stream is released at the end of this scope.
+//auto stream = worker.second->SendTask(&context, &response);
+//auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
+//auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
+//
+//for (std::uint64_t i = range_start; i < range_end; ++i) {
+//prt.mutable_gkey()->CopyFrom(all_clients.id_to_info[i]->galois_keys_marshaled);
+//stream->Write(prt);
+//}
+//stream->WritesDone();
+//auto status = stream->Finish();
+//if (!status.ok()) {
+//std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
+//" failed: " << status.error_message() << std::endl;
+//continue;
+//}
+//}
+//}

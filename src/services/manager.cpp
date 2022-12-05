@@ -180,6 +180,86 @@ namespace services {
 #endif
     }
 
+    void
+    Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
+                      grpc::ClientContext &context) {
+
+        auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
+        auto marshalled_db = math_utils::matrix<std::string>(db.rows, db.cols, std::move(marshaled_db_vec));
+
+        // TODO: write into map
+
+
+        distribicom::Ack response;
+        distribicom::WorkerTaskPart part;
+        std::unique_lock lock(mtx);
+
+        for (auto &worker: worker_stubs) {
+            { // this stream is released at the end of this scope.
+                auto stream = worker.second->SendTask(&context, &response);
+                auto db_row = worker_name_to_work_responsible_for[worker.first].db_row;
+
+                // first send db
+                for (int j = 0; j < int(db.cols); ++j) {
+                    std::string payload = marshalled_db(db_row, j);
+
+                    part.mutable_matrixpart()->set_row(db_row);
+                    part.mutable_matrixpart()->set_col(j);
+                    part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
+
+                    stream->Write(part);
+                    part.mutable_matrixpart()->clear_ptx();
+                }
+                stream->WritesDone();
+                auto status = stream->Finish();
+                if (!status.ok()) {
+                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
+                              " failed: " << status.error_message() << std::endl;
+                    continue;
+                }
+            }
+        }
+    }
+
+
+
+//    void
+//    Manager::send_queries( const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+//                          grpc::ClientContext &context) {
+//
+//        // TODO: write into map
+//
+//
+//        distribicom::Ack response;
+//        distribicom::WorkerTaskPart part;
+//        for (auto &worker: worker_stubs) {
+//            { // this stream is released at the end of this scope.
+//                auto stream = worker.second->SendTask(&context, &response);
+//
+//                for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
+//
+//                    std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
+//                    part.mutable_matrixpart()->set_row(0);
+//                    part.mutable_matrixpart()->set_col(i);
+//                    part.mutable_matrixpart()->mutable_ctx()->set_data(payload);
+//
+//                    stream->Write(part);
+//                    part.mutable_matrixpart()->clear_ctx();
+//
+//                }
+//
+//                stream->WritesDone();
+//                auto status = stream->Finish();
+//                if (!status.ok()) {
+//                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
+//                              " failed: " << status.error_message() << std::endl;
+//                    continue;
+//                }
+//            }
+//        }
+//    }
+
+
     std::shared_ptr<WorkDistributionLedger>
     Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
                       const math_utils::matrix<seal::Ciphertext> &compressed_queries,
