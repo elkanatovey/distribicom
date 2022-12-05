@@ -14,6 +14,16 @@ services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, math_u
 
 }
 
+services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
+                                 std::unique_ptr<services::ClientInfo>> &client_db,
+                                 const distribicom::AppConfigs &app_configs) :
+        db(db),queries(0, 0), gal_keys(0, 0), manager(app_configs) {
+    this->client_query_manager.client_counter = client_db.size();
+    this->client_query_manager.id_to_info = std::move(client_db);
+    finish_construction(app_configs);
+
+}
+
 services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
         db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs) {
     finish_construction(app_configs);

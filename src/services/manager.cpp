@@ -8,9 +8,6 @@ namespace services {
 // fulfilled... the map can be refered to using a round, and an epoch as its key.
 // upon completion of a task it should go back to the map and state all workers have freaking completed their tasks.
 
-    std::uint64_t query_count_per_worker(std::uint64_t num_workers, std::uint64_t num_rows, std::uint64_t num_queries);
-
-
     ::grpc::Status
     Manager::RegisterAsWorker(::grpc::ServerContext *context,
                               const ::distribicom::WorkerRegistryRequest *request,
@@ -123,11 +120,8 @@ namespace services {
                              const seal::GaloisKeys &expansion_key
 #endif
     ) {
-        // TODO: should set up a `promise` channel specific to the round and channel, anyone requesting info should get
-        //   it through the channel.
         grpc::ClientContext context;
 
-        utils::add_metadata_size(context, services::constants::size_md, int(db.cols));
         utils::add_metadata_size(context, services::constants::round_md, rnd);
         utils::add_metadata_size(context, services::constants::epoch_md, epoch);
 
@@ -187,9 +181,6 @@ namespace services {
         auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
         auto marshalled_db = math_utils::matrix<std::string>(db.rows, db.cols, std::move(marshaled_db_vec));
 
-        // TODO: write into map
-
-
         distribicom::Ack response;
         distribicom::WorkerTaskPart part;
         std::unique_lock lock(mtx);
@@ -229,9 +220,6 @@ namespace services {
     Manager::send_queries( const ClientDB &all_clients,
                           grpc::ClientContext &context) {
 
-        // TODO: write into map
-
-
         distribicom::Ack response;
         distribicom::WorkerTaskPart part;
         std::shared_lock client_db_lock(all_clients.mutex);
@@ -239,10 +227,12 @@ namespace services {
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
                 auto stream = worker.second->SendTask(&context, &response);
-                auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
-                auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
 
-                for (std::uint64_t i = range_start; i < range_end; ++i) { //@todo cuurently assume that query has one ctext in dim
+                auto current_worker_info = worker_name_to_work_responsible_for[worker.first];
+                auto range_start = current_worker_info.query_range_start;
+                auto  range_end = current_worker_info.query_range_end;
+
+                for (std::uint64_t i = range_start; i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
                     auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0);
 
                     part.mutable_matrixpart()->set_row(0);
@@ -251,7 +241,6 @@ namespace services {
 
                     stream->Write(part);
                     part.mutable_matrixpart()->clear_ctx();
-
                 }
 
                 stream->WritesDone();
@@ -323,20 +312,15 @@ namespace services {
     void Manager::send_galois_keys(const ClientDB &all_clients) {
         grpc::ClientContext context;
 
-        std::shared_lock client_db_lock(all_clients.mutex);
-        auto num_clients = all_clients.client_counter;
-        auto num_rows = app_configs.configs().db_rows();
 
-        std::unique_lock lock(mtx);
-        auto num_queries_per_worker = query_count_per_worker(worker_stubs.size(), num_rows, num_clients);
-
-        utils::add_metadata_size(context, services::constants::size_md, int(num_queries_per_worker));
-        // todo: specify epoch!
         utils::add_metadata_size(context, services::constants::round_md, 1);
         utils::add_metadata_size(context, services::constants::epoch_md, 1);
 
         distribicom::Ack response;
         distribicom::WorkerTaskPart prt;
+
+        std::shared_lock client_db_lock(all_clients.mutex);
+        std::unique_lock lock(mtx);
 
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
@@ -362,8 +346,6 @@ namespace services {
     void Manager::send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix) {
         grpc::ClientContext context;
 
-        utils::add_metadata_size(context, services::constants::size_md, int(matrix.cols));
-        // todo: specify epoch!
         utils::add_metadata_size(context, services::constants::round_md, 1);
         utils::add_metadata_size(context, services::constants::epoch_md, 1);
 

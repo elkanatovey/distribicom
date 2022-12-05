@@ -40,9 +40,10 @@ int worker_test(int, char *[]) {
 
     std::cout << "setting up worker-service" << std::endl;
     threads.emplace_back(setupWorker(wg, cfgs));
-    sleep(2);
+    sleep(4);
 
     fs.wait_for_workers(1);
+    sleep(3);
     fs.start_epoch();
     fs.distribute_work();
 
@@ -54,6 +55,30 @@ int worker_test(int, char *[]) {
     }
     sleep(5);
     return 0;
+}
+
+std::map<uint32_t, std::unique_ptr<services::ClientInfo>> create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all){
+    auto m = marshal::Marshaller::Create(all->encryption_params);
+    std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
+    for(int i=0;i<size;i++) {
+        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
+        auto gkey = all->gal_keys;
+        client_info->galois_keys = gkey;
+        auto gkey_serialised = m->marshal_seal_object(gkey);
+        client_info->galois_keys_marshaled.set_keys(gkey_serialised);
+        client_info->galois_keys_marshaled.set_key_pos(i);
+        std::vector<std::vector<seal::Ciphertext>> query = {{all->random_ciphertext()},
+                                                            {all->random_ciphertext()}};
+        distribicom::ClientQueryRequest query_marshaled;
+        m->marshal_query_vector(query, query_marshaled);
+        client_info->query_info_marshaled.CopyFrom(query_marshaled);
+        client_info->query_info_marshaled.set_mailbox_id(i);
+        client_info->query = std::move(query);
+
+        cdb.insert(
+                {i, std::move(client_info)});
+    }
+    return cdb;
 }
 
 services::FullServer
@@ -74,6 +99,9 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
     for (auto &g: gal_keys.data) {
         g = all->gal_keys;
     }
+    auto cdb = create_client_db(n, all);
+    auto foo = services::FullServer(db, cdb, configs);
+
 
     return services::FullServer(db, queries, gal_keys, configs);
 }
