@@ -1,4 +1,4 @@
-add_library(marshal_package marshal.hpp marshal.cpp)
+add_library(marshal_package marshal.hpp marshal.cpp local_storage.hpp local_storage.cpp)
 
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH MY_PARENT_DIR)
 
