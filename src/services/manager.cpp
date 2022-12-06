@@ -14,8 +14,8 @@ namespace services {
                               ::distribicom::Ack *response) {
         try {
 
-            auto requesting_worker = utils::extract_ip(context);
-            std::string subscribing_worker_address = requesting_worker + ":" + std::to_string(request->workerport());
+            auto requesting_worker =  utils::extract_ip(context);
+            std::string subscribing_worker_address = "localhost:52100";
 
             // creating client to the worker:
             auto worker_conn = std::make_unique<distribicom::Worker::Stub>(distribicom::Worker::Stub(
@@ -114,7 +114,7 @@ namespace services {
 
     std::shared_ptr<WorkDistributionLedger>
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
-                             const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                             const ClientDB &all_clients,
                              int rnd, int epoch,
 #ifdef DISTRIBICOM_DEBUG
                              const seal::GaloisKeys &expansion_key
@@ -131,31 +131,40 @@ namespace services {
         ledgers.insert({{rnd, epoch}, ledger});
         ledger->worker_list = std::vector<std::string>();
         ledger->worker_list.reserve(worker_stubs.size());
+        all_clients.mutex.lock_shared();
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                db.cols, compressed_queries.data.size());
+                db.cols, all_clients.client_counter);
+        all_clients.mutex.unlock_shared();
         for (auto &worker: worker_stubs) {
             ledger->worker_list.push_back(worker.first);
         }
 
 #ifdef DISTRIBICOM_DEBUG
-        create_res_matrix(db, compressed_queries, expansion_key, ledger);
+        create_res_matrix(db, all_clients, expansion_key, ledger);
 #endif
+        if(rnd==1){
+            send_queries(all_clients, context);
+        }
 
-        sendtask(db, compressed_queries, context, ledger);
+        send_db(db, context);
+
         return ledger;
     }
 
 
     void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
-                                    const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                                    const ClientDB &all_clients,
                                     const seal::GaloisKeys &expansion_key,
                                     std::shared_ptr<WorkDistributionLedger> &ledger) const {
 #ifdef DISTRIBICOM_DEBUG
         auto exp = expansion_key;
         auto expand_sz = db.cols;
-        math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, compressed_queries.data.size());
+
+        all_clients.mutex.lock_shared();
+        math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
         auto col = -1;
-        for (auto &c_query: compressed_queries.data) {
+        for (const auto &client: all_clients.id_to_info) {
+            auto c_query = client.second->query[0][0];
             col++;
             std::vector<seal::Ciphertext> quer(1);
             quer[0] = c_query;
@@ -165,6 +174,7 @@ namespace services {
                 query_mat(i, col) = expanded[i];
             }
         }
+        all_clients.mutex.unlock_shared();
 
         matops->to_ntt(query_mat.data);
 
