@@ -26,7 +26,7 @@ namespace services{
 
     public:
         // TODO: add a proper way to create PIR DB.
-        explicit DB(const int a, const int b) : memory_matrix(), mtx() {}
+        explicit DB(const std::uint32_t a, const std::uint32_t b) : memory_matrix(), mtx() {}
 
         // used mainly for testing.
         explicit DB(math_utils::matrix<T> &mat) : memory_matrix(mat), mtx() {}
@@ -38,14 +38,14 @@ namespace services{
             return shared_mat(memory_matrix, mtx);
         }
 
-        void write(const T &t, const int row, const int col) {
+        void write(const T &t, const std::uint32_t row, const std::uint32_t col) {
             mtx.lock();
             memory_matrix(row, col) = t;
             mtx.unlock();
         }
 
         void
-        write(const std::vector<uint64_t> &new_element, const int ptx_num, uint64_t offset, PIRClient
+        write(const std::vector<uint64_t> &new_element, const std::uint32_t ptx_num, uint64_t offset, PIRClient
         *replacer_machine);
 
 

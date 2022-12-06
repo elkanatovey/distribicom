@@ -16,8 +16,6 @@ namespace services {
     class FullServer final : public distribicom::Server::Service {
         // used for tests
         services::DB<seal::Plaintext> db;
-        services::DB<seal::Ciphertext> queries;
-        services::DB<seal::GaloisKeys> gal_keys;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;
@@ -34,6 +32,7 @@ namespace services {
         std::vector<std::future<int>> db_write_requests;
 
     public:
+        // mainly for testing.
         explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
                    std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db,
                    const distribicom::AppConfigs &app_configs);
@@ -41,11 +40,6 @@ namespace services {
         explicit FullServer(const distribicom::AppConfigs &app_configs);
 
 
-        // mainly for testing.
-        explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
-                            math_utils::matrix<seal::Ciphertext> &queries,
-                            math_utils::matrix<seal::GaloisKeys> &gal_keys,
-                            const distribicom::AppConfigs &app_configs);;
 
         grpc::Status
         RegisterAsClient(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request,
