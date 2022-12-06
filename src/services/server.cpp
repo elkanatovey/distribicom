@@ -15,9 +15,9 @@ services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, math_u
 }
 
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
-                                 std::unique_ptr<services::ClientInfo>> &client_db,
+        std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-        db(db),queries(0, 0), gal_keys(0, 0), manager(app_configs) {
+        db(db), queries(0, 0), gal_keys(0, 0), manager(app_configs) {
     this->client_query_manager.client_counter = client_db.size();
     this->client_query_manager.id_to_info = std::move(client_db);
     finish_construction(app_configs);
@@ -117,20 +117,24 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
     std::shared_ptr<services::WorkDistributionLedger> ledger;
 
     // block is to destroy the db and querries handles.
-    {
-        auto db_handle = db.many_reads();
-        auto queries_handle = queries.many_reads();
-        // todo: set specific round and handle.
+//    {
+//        auto db_handle = db.many_reads();
+//        auto queries_handle = queries.many_reads();
+//        // todo: set specific round and handle.
+//
+//
+//        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
+//#ifdef DISTRIBICOM_DEBUG
+//                                         gal_keys.many_reads().mat.data[0]
+//#endif
+//        );
+//return
+//ledger;
+    distribicom::WorkerTaskPart tmp;
+    manager.hnl[0]->NextWrite(tmp);
+    return nullptr;
 
 
-        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
-#ifdef DISTRIBICOM_DEBUG
-                                         gal_keys.many_reads().mat.data[0]
-#endif
-        );
-    }
-
-    return ledger;
 }
 
 void services::FullServer::start_epoch() {

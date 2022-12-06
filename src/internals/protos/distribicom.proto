@@ -22,7 +22,7 @@ service Worker {// anyone who wishes to work runs this services.
 service Manager {// masterServer runs this service.
 
   // PartialWorkStream i save this on my server map.
-  rpc RegisterAsWorker (WorkerRegistryRequest) returns (Ack) {};
+  rpc RegisterAsWorker (WorkerRegistryRequest) returns (stream WorkerTaskPart) {};
 
   // a worker should send its work, along with credentials of what it sent.
   rpc ReturnLocalWork (stream MatrixPart) returns (Ack) {};

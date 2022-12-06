@@ -8,41 +8,41 @@ namespace services {
 // fulfilled... the map can be refered to using a round, and an epoch as its key.
 // upon completion of a task it should go back to the map and state all workers have freaking completed their tasks.
 
-    ::grpc::Status
-    Manager::RegisterAsWorker(::grpc::ServerContext *context,
-                              const ::distribicom::WorkerRegistryRequest *request,
-                              ::distribicom::Ack *response) {
-        try {
-
-            auto requesting_worker = utils::extract_ip(context);
-            std::string subscribing_worker_address = requesting_worker + ":" + std::to_string(request->workerport());
-
-            // creating client to the worker:
-            auto worker_conn = std::make_unique<distribicom::Worker::Stub>(distribicom::Worker::Stub(
-                    grpc::CreateChannel(
-                            subscribing_worker_address,
-                            grpc::InsecureChannelCredentials()
-                    )
-            ));
-
-            auto add = 0;
-
-            mtx.lock();
-            if (worker_stubs.find(requesting_worker) == worker_stubs.end()) {
-                worker_stubs.insert({requesting_worker, std::move(worker_conn)});
-                add = 1;
-            }
-            mtx.unlock();
-
-            worker_counter.add(add);
-
-        } catch (std::exception &e) {
-            std::cout << "Error: " << e.what() << std::endl;
-            return {grpc::StatusCode::INTERNAL, e.what()};
-        }
-
-        return {};
-    }
+//    ::grpc::Status
+//    Manager::RegisterAsWorker(::grpc::ServerContext *context,
+//                              const ::distribicom::WorkerRegistryRequest *request,
+//                              ::distribicom::MatrixPart *response) {
+//        try {
+//
+//            auto requesting_worker = utils::extract_ip(context);
+//            std::string subscribing_worker_address = requesting_worker + ":" + std::to_string(request->workerport());
+//
+//            // creating client to the worker:
+//            auto worker_conn = std::make_unique<distribicom::Worker::Stub>(distribicom::Worker::Stub(
+//                    grpc::CreateChannel(
+//                            subscribing_worker_address,
+//                            grpc::InsecureChannelCredentials()
+//                    )
+//            ));
+//
+//            auto add = 0;
+//
+//            mtx.lock();
+//            if (worker_stubs.find(requesting_worker) == worker_stubs.end()) {
+//                worker_stubs.insert({requesting_worker, std::move(worker_conn)});
+//                add = 1;
+//            }
+//            mtx.unlock();
+//
+//            worker_counter.add(add);
+//
+//        } catch (std::exception &e) {
+//            std::cout << "Error: " << e.what() << std::endl;
+//            return {grpc::StatusCode::INTERNAL, e.what()};
+//        }
+//
+//        return {};
+//    }
 
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,

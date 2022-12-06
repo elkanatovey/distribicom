@@ -45,7 +45,27 @@ namespace services {
     // should be able to give a Promise for a specific round and fullfill it once all workers have sent their jobs.
     // can use Frievalds to verify their work.
 
-    class Manager : public distribicom::Manager::Service {
+    class WorkStream : public grpc::ServerWriteReactor<distribicom::WorkerTaskPart> {
+    public:
+        void OnDone() override {
+            std::cout << "God damn it" << std::endl;
+            delete this;
+            // mark
+        }
+
+        void OnWriteDone(bool) override {
+            std::cout << "write done!" << std::endl;
+            // probably should ? only write when you have many things to write.
+        }
+
+        void NextWrite(const distribicom::WorkerTaskPart &tsk) {
+            this->StartWrite(&tsk);
+        }
+
+    };
+
+
+    class Manager : public distribicom::Manager::CallbackService::WithCallbackMethod_RegisterAsWorker {
     private:
         distribicom::AppConfigs app_configs;
 
@@ -80,7 +100,7 @@ namespace services {
         // PartialWorkStream i save this on my server map.
         ::grpc::Status
         RegisterAsWorker(::grpc::ServerContext *context, const ::distribicom::WorkerRegistryRequest *request,
-                         ::distribicom::Ack *response) override;
+                         ::distribicom::MatrixPart *response);
 
         // a worker should send its work, along with credentials of what it sent.
         ::grpc::Status
@@ -128,5 +148,15 @@ namespace services {
         void send_db(const math_utils::matrix<seal::Plaintext> &db, grpc::ClientContext &context);
 
         void send_queries(const ClientDB &all_clients, grpc::ClientContext &context);
+
+        std::vector<WorkStream *> hnl;
+
+        ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *RegisterAsWorker(
+                ::grpc::CallbackServerContext *ctx/*context*/,
+                const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override {
+            std::cout << "Welp?<<" << std::endl;
+            hnl.push_back(new WorkStream());
+            return hnl[hnl.size() - 1];
+        }
     };
 }

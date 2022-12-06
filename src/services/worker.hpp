@@ -23,7 +23,8 @@ namespace services {
 
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
-        std::unique_ptr<std::thread> t;
+        std::vector<std::thread> threads;
+        std::unique_ptr<::grpc::ClientReader<::distribicom::WorkerTaskPart>> handle;
 
     public:
         // making this public for now, so that we can test it.
@@ -41,5 +42,7 @@ namespace services {
         void inspect_configs() const;
 
         void close();
+
+        void setup();
     };
 }

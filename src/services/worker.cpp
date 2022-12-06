@@ -34,12 +34,12 @@ namespace services {
 
         request.set_workerport(cnfgs.workerport());
 
-        manager_conn->RegisterAsWorker(&context, request, &response);
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
                 enc_params,
                 mrshl, std::move(manager_conn)
         );
-        t = std::make_unique<std::thread>(
+
+        threads.emplace_back(
                 [&]() {
                     std::cout << "worker main thread: running" << std::endl;
                     for (;;) {
@@ -51,6 +51,8 @@ namespace services {
                         strategy->process_task(std::move(task.answer));
                     }
                 });
+
+        setup();
     }
 
     void Worker::inspect_configs() const {
@@ -145,8 +147,9 @@ namespace services {
 
     void Worker::close() {
         chan.close();
-        t->join();
-
+        for (auto &t: threads) {
+            t.join();
+        }
     }
 
     WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :
@@ -162,6 +165,61 @@ namespace services {
         if (round < 0) {
             throw std::invalid_argument("round must be positive");
         }
+    }
+
+    void Worker::setup() {
+//        threads.emplace_back(std::thread([&] {
+            auto stub = distribicom::Manager::NewStub(grpc::CreateChannel(
+                    cnfgs.appconfigs().main_server_hostname(),
+                    grpc::InsecureChannelCredentials()
+            ));
+
+            class Reader : public grpc::ClientReadReactor<distribicom::WorkerTaskPart> {
+            public:
+                Reader(std::unique_ptr<distribicom::Manager::Stub> &&stub) : stub(std::move(stub)) {
+                    distribicom::WorkerRegistryRequest rqst;
+                    this->stub->async()->RegisterAsWorker(&context_, &rqst, this);
+
+                    StartRead(&tsk_); // queueing a read request.
+                    StartCall();
+                }
+
+                void OnReadDone(bool ok) override {
+                    if (ok) {
+                        std::cout << "READ my first thing yo!";
+                    }
+
+                    StartRead(&tsk_);// queue the next read request.
+                }
+
+                // call Await to receive Finish from server.
+                void OnDone(const grpc::Status &s) override {
+                    std::unique_lock<std::mutex> l(mu_);
+                    status_ = s;
+                    done_ = true;
+                    cv_.notify_one();
+                }
+
+                grpc::Status Await() {
+                    std::unique_lock<std::mutex> l(mu_);
+                    cv_.wait(l, [this] { return done_; });
+                    return std::move(status_);
+                }
+
+            private:
+                std::unique_ptr<distribicom::Manager::Stub> stub;
+                grpc::ClientContext context_;
+                distribicom::WorkerTaskPart tsk_;
+                std::mutex mu_;
+                std::condition_variable cv_;
+                grpc::Status status_;
+                bool done_ = false;
+            };
+
+            Reader reader(std::move(stub));
+            reader.Await();
+//        }));
+//        sleep(2);
     }
 }
 
