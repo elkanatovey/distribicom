@@ -34,9 +34,10 @@ services::configurations::create_app_configs(const std::string &server_hostname,
 }
 
 distribicom::WorkerConfigs
-services::configurations::create_worker_configs(const distribicom::AppConfigs &app_configs, int worker_port) {
+services::configurations::create_worker_configs(const distribicom::AppConfigs &app_configs, int worker_port, std::string worker_hostname) {
     distribicom::WorkerConfigs c;
     c.set_workerport(worker_port);
+    c.set_worker_ip(worker_hostname);
     c.mutable_appconfigs()->CopyFrom(app_configs);
     return c;
 }
