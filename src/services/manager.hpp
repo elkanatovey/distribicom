@@ -49,7 +49,7 @@ namespace services {
     private:
         distribicom::AppConfigs app_configs;
 
-        std::mutex mtx; // todo: use shared_mtx,
+        std::shared_mutex mtx; // todo: use shared_mtx,
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
 
         std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
@@ -120,7 +120,9 @@ namespace services {
                                const seal::GaloisKeys &expansion_key,
                                std::shared_ptr<WorkDistributionLedger> &ledger) const;
 
-        // assumes num workers map well to db and queries
+        /**
+         *  assumes num workers map well to db and queries
+         */
         void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
 
         void send_galois_keys(const ClientDB &all_clients);
