@@ -47,7 +47,7 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
 
     try {
 
-        auto requesting_client = utils::extract_ipv4(context);
+        auto requesting_client = utils::extract_ip(context);
         std::string subscribing_client_address = requesting_client + ":" + std::to_string(request->client_port());
 
         // creating stub to the client:
