@@ -2,7 +2,7 @@
 #include <charconv>
 
 namespace services::utils {
-    int extract_size_from_metadata(const std::multimap <grpc::string_ref, grpc::string_ref> &mp,
+    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
                                    const services::constants::metadata &md) {
         auto ntmp = mp.find(std::string(md));
         return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
@@ -49,8 +49,12 @@ namespace services::utils {
         return decoded.str();
     }
 
+
     std::string extract_ip(grpc::ServerContext *pContext) {
-        auto fullip = std::string(pContext->peer());
+        return extract_ip(std::string(pContext->peer()));
+    }
+
+    std::string extract_ip(std::string fullip) {
 
         if (fullip.find(ipv4) != std::string::npos) {
             fullip.erase(0, fullip.find(ipv4) + ipv4.length());

@@ -13,6 +13,7 @@ namespace services::utils {
     void add_metadata_size(grpc::ClientContext &context, const services::constants::metadata &md, int size);
 
     std::string extract_ip(grpc::ServerContext *pContext);
+    std::string extract_ip(std::string peer);
 
     seal::EncryptionParameters setup_enc_params(const distribicom::AppConfigs &cnfgs);
 }
