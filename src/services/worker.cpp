@@ -33,6 +33,7 @@ namespace services {
         distribicom::WorkerRegistryRequest request;
 
         request.set_workerport(cnfgs.workerport());
+        request.set_worker_ip(cnfgs.worker_ip());
 
         manager_conn->RegisterAsWorker(&context, request, &response);
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(

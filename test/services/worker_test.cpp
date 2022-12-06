@@ -103,7 +103,8 @@ std::thread setupWorker(std::latch &wg, distribicom::AppConfigs &configs) {
             services::Worker worker(
                     services::configurations::create_worker_configs(
                             configs,
-                            std::stoi(std::string(worker_port))
+                            std::stoi(std::string(worker_port)),
+                            "0.0.0.0"
                     )
             );
 
