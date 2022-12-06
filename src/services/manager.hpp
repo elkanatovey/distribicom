@@ -49,7 +49,7 @@ namespace services {
     private:
         distribicom::AppConfigs app_configs;
 
-        std::shared_mutex mtx; // todo: use shared_mtx,
+        std::shared_mutex mtx;
         std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
 
         std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
@@ -87,11 +87,6 @@ namespace services {
         ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                         ::distribicom::Ack *response) override;
 
-        // This one is the holder of the DB.
-
-
-        // todo:
-//        void distribute_work(const math_utils::matrix<seal::Plaintext> &db);
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
@@ -105,14 +100,7 @@ namespace services {
 #endif
         );
 
-        std::shared_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
-                                                         const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                                                         grpc::ClientContext &context,
-                                                         std::shared_ptr<WorkDistributionLedger> ptr);
-
         void wait_for_workers(int i);
-
-        void send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix);
 
 
         void create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,

@@ -51,7 +51,7 @@ namespace services {
 
         mtx.lock_shared();
         auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
-        mtx.lock_shared();
+        mtx.unlock_shared();
 
         if (!exists) {
             return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
@@ -75,8 +75,8 @@ namespace services {
         // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
         distribicom::MatrixPart tmp;
         while (reader->Read(&tmp)) {
-            int row = tmp.row();
-            int col = tmp.col();
+            std::uint32_t row = tmp.row();
+            std::uint32_t col = tmp.col();
 
 #ifdef DISTRIBICOM_DEBUG
             matops->w_evaluator->evaluator->sub_inplace(
@@ -207,7 +207,7 @@ namespace services {
 
                 for(const auto &db_row: db_rows) {
                     // first send db
-                    for (int j = 0; j < int(db.cols); ++j) {
+                    for (std::uint32_t j = 0; j < db.cols; ++j) {
                         std::string payload = marshalled_db(db_row, j);
 
                         part.mutable_matrixpart()->set_row(db_row);
@@ -270,56 +270,6 @@ namespace services {
     }
 
 
-    std::shared_ptr<WorkDistributionLedger>
-    Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
-                      const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                      grpc::ClientContext &context, std::shared_ptr<WorkDistributionLedger> ledger) {
-
-        // TODO: write into map
-
-
-        distribicom::Ack response;
-        distribicom::WorkerTaskPart part;
-        for (auto &worker: worker_stubs) {
-            { // this stream is released at the end of this scope.
-                auto stream = worker.second->SendTask(&context, &response);
-                for (int i = 0; i < int(db.rows); ++i) {
-                    for (int j = 0; j < int(db.cols); ++j) {
-                        std::string payload = marshal->marshal_seal_object(db(i, j));
-
-                        part.mutable_matrixpart()->set_row(i);
-                        part.mutable_matrixpart()->set_col(j);
-                        part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
-
-                        stream->Write(part);
-                        part.mutable_matrixpart()->clear_ptx();
-                    }
-                }
-
-                for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
-
-                    std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
-                    part.mutable_matrixpart()->set_row(0);
-                    part.mutable_matrixpart()->set_col(i);
-                    part.mutable_matrixpart()->mutable_ctx()->set_data(payload);
-
-                    stream->Write(part);
-                    part.mutable_matrixpart()->clear_ctx();
-
-                }
-
-                stream->WritesDone();
-                auto status = stream->Finish();
-                if (!status.ok()) {
-                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
-                              " failed: " << status.error_message() << std::endl;
-                    continue;
-                }
-            }
-        }
-        return ledger;
-    }
-
     void Manager::wait_for_workers(int i) {
         worker_counter.wait_for(i);
     }
@@ -358,36 +308,6 @@ namespace services {
         }
     }
 
-    void Manager::send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix) {
-        grpc::ClientContext context;
-
-        utils::add_metadata_size(context, services::constants::round_md, 1);
-        utils::add_metadata_size(context, services::constants::epoch_md, 1);
-
-        distribicom::Ack response;
-        distribicom::WorkerTaskPart prt;
-        std::unique_lock lock(mtx);
-
-        for (auto &worker: worker_stubs) {
-            { // this stream is released at the end of this scope.
-                auto stream = worker.second->SendTask(&context, &response);
-                for (int i = 0; i < int(matrix.cols); ++i) {
-                    prt.mutable_gkey()->set_key_pos(i);
-                    prt.mutable_gkey()->mutable_keys()->assign(
-                            marshal->marshal_seal_object(matrix(0, i))
-                    );
-                    stream->Write(prt);
-                }
-                stream->WritesDone();
-                auto status = stream->Finish();
-                if (!status.ok()) {
-                    std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
-                              " failed: " << status.error_message() << std::endl;
-                    continue;
-                }
-            }
-        }
-    }
 
     std::vector<std::uint64_t> get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows){
         auto row_id = id%num_rows;
@@ -414,7 +334,7 @@ namespace services {
     }
 
     void Manager::map_workers_to_responsibilities(std::uint64_t num_rows,  std::uint64_t num_queries) {
-        int i = 0;
+        std::uint32_t i = 0;
         std::shared_lock lock(mtx);
         auto num_queries_per_worker = query_count_per_worker(worker_stubs.size(), num_rows, num_queries);
 
@@ -424,7 +344,7 @@ namespace services {
 #ifdef DISTRIBICOM_DEBUG
             if(worker_stubs.size()==1){
                 std::vector<std::uint64_t> temp(num_rows);
-                for(int j=0; j<num_rows; j++){
+                for(std::uint32_t j=0; j<num_rows; j++){
                     temp[j] =j;
                 }
                 this->worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);

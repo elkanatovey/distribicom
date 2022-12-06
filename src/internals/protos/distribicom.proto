@@ -79,8 +79,8 @@ message MatrixPart {
     Plaintext ptx = 2;
   }
 
-  int32 row = 3;
-  int32 col = 4;
+  uint32 row = 3;
+  uint32 col = 4;
 }
 
 message QueryCiphertext {
@@ -90,7 +90,7 @@ message QueryCiphertext {
 message GaloisKeys{
   bytes keys = 1;
   // should point to the matching ciphertext.
-  int64 key_pos = 2;
+  uint64 key_pos = 2;
 }
 
 message Ciphertext {bytes data = 1;}
@@ -145,7 +145,7 @@ message ClientConfigs {
 
 
 message TellNewRoundRequest {
-  int32 round = 1;
+  uint32 round = 1;
 }
 
 message WorkerRegistryRequest {
