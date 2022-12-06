@@ -14,7 +14,7 @@ namespace services {
                               ::distribicom::Ack *response) {
         try {
 
-            auto requesting_worker = utils::extract_ipv4(context);
+            auto requesting_worker = utils::extract_ip(context);
             std::string subscribing_worker_address = requesting_worker + ":" + std::to_string(request->workerport());
 
             // creating client to the worker:
@@ -47,7 +47,7 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
-        auto sending_worker = utils::extract_ipv4(context);
+        auto sending_worker = utils::extract_ip(context);
 
         mtx.lock();
         auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();

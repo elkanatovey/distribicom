@@ -1,7 +1,8 @@
 #include "utils.hpp"
+#include <charconv>
 
-namespace services::utils{
-    int extract_size_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
+namespace services::utils {
+    int extract_size_from_metadata(const std::multimap <grpc::string_ref, grpc::string_ref> &mp,
                                    const services::constants::metadata &md) {
         auto ntmp = mp.find(std::string(md));
         return std::stoi(std::string(ntmp->second.data(), ntmp->second.size()));
@@ -11,11 +12,63 @@ namespace services::utils{
         context.AddMetadata(std::string(md), std::to_string(size));
     }
 
-    std::string extract_ipv4(grpc::ServerContext *pContext) {
+    const std::string ipv4("ipv4:");
+    const std::string ipv6("ipv6:");
+
+    char from_hex(char ch) {
+        return isdigit(ch) ? char(ch - '0') : char(tolower(ch) - 'a' + 10);
+    }
+
+    // help understanding in: https://stackoverflow.com/questions/154536/encode-decode-urls-in-c
+    std::string url_decode(std::string text) {
+
+        std::ostringstream decoded;
+        for (auto i = text.begin(), end = text.end(); i != end; ++i) {
+            std::string::value_type c = (*i);
+
+            switch (c) {
+                case '%':
+                    if (i + 1 == end || i + 2 == end) {
+                        return decoded.str();
+                    }
+
+                    // decoding from 2 hex values into a single char:
+                    decoded << char(from_hex(i[1]) << 4 | from_hex(i[2]));
+                    i += 2;
+
+                    break;
+                case '+':
+                    decoded << ' ';
+                    break;
+                default:
+                    decoded << c;
+            }
+
+        }
+
+        return decoded.str();
+    }
+
+    std::string extract_ip(grpc::ServerContext *pContext) {
         auto fullip = std::string(pContext->peer());
-        const std::string delimiter("ipv4:");
-        fullip.erase(0, fullip.find(delimiter) + delimiter.length());
-        return fullip.substr(0, fullip.find(':'));
+
+        if (fullip.find(ipv4) != std::string::npos) {
+            fullip.erase(0, fullip.find(ipv4) + ipv4.length());
+            return fullip.substr(0, fullip.find(':'));
+        }
+
+        // assuming ipv6:
+        fullip = url_decode(fullip);
+
+        fullip.erase(0, fullip.find(ipv6) + ipv6.length());
+        fullip.substr(0, fullip.find(':'));
+
+        if (fullip.find(']') != std::string::npos) {
+            fullip.erase(fullip.find(']'), fullip.length());
+            fullip.erase(0, fullip.find('[') + 1);
+        }
+
+        return fullip;
     }
 
     seal::EncryptionParameters setup_enc_params(const distribicom::AppConfigs &cnfgs) {
