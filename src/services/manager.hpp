@@ -71,8 +71,10 @@ namespace services {
         }
 
         // after each succsessful write, pops from the queue, then attempts to do the next write.
-        void OnWriteDone(bool) override {
-
+        void OnWriteDone(bool ok) override {
+            if (!ok) {
+                std::cout << "Bad write" << std::endl;
+            }
             // probably should ? only write when you have many things to write.
             mtx.lock();
             to_write.pop();

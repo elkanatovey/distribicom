@@ -92,12 +92,21 @@ namespace services::work_strategy {
 
 // assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
-            // expand all queries.
-            expand_queries(task);
+            try {
 
-            auto answer = multiply_rows(task);
 
-            send_response(task, answer);
+                // expand all queries.
+                expand_queries(task);
+
+                if (task.ptx_rows.empty()) {
+                    return;
+                }
+                auto answer = multiply_rows(task);
+
+                send_response(task, answer);
+            } catch (std::exception &e) {
+                std::cout << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
+            }
         }
 
         void queries_to_mat(const WorkerServiceTask &task);

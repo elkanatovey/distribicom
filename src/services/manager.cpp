@@ -4,45 +4,6 @@
 
 
 namespace services {
-// i want the manager to have a map with running tasks. these tasks should be some kind of struc with a channel waiting to be
-// fulfilled... the map can be refered to using a round, and an epoch as its key.
-// upon completion of a task it should go back to the map and state all workers have freaking completed their tasks.
-
-//    ::grpc::Status
-//    Manager::RegisterAsWorker(::grpc::ServerContext *context,
-//                              const ::distribicom::WorkerRegistryRequest *request,
-//                              ::distribicom::MatrixPart *response) {
-//        try {
-//
-//            auto requesting_worker = utils::extract_ip(context);
-//            std::string subscribing_worker_address = requesting_worker + ":" + std::to_string(request->workerport());
-//
-//            // creating client to the worker:
-//            auto worker_conn = std::make_unique<distribicom::Worker::Stub>(distribicom::Worker::Stub(
-//                    grpc::CreateChannel(
-//                            subscribing_worker_address,
-//                            grpc::InsecureChannelCredentials()
-//                    )
-//            ));
-//
-//            auto add = 0;
-//
-//            mtx.lock();
-//            if (worker_stubs.find(requesting_worker) == worker_stubs.end()) {
-//                worker_stubs.insert({requesting_worker, std::move(worker_conn)});
-//                add = 1;
-//            }
-//            mtx.unlock();
-//
-//            worker_counter.add(add);
-//
-//        } catch (std::exception &e) {
-//            std::cout << "Error: " << e.what() << std::endl;
-//            return {grpc::StatusCode::INTERNAL, e.what()};
-//        }
-//
-//        return {};
-//    }
 
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
@@ -291,7 +252,8 @@ namespace services {
                     worker.second->add_task_to_write(std::move(part));
 
                 }
-
+                auto empty_task = std::make_unique<distribicom::WorkerTaskPart>();
+                worker.second->add_task_to_write(std::move(empty_task));
                 worker.second->write_next();
                 worker.second->wait_();
                 std::cout << "done writing" << std::endl;
