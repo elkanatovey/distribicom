@@ -49,9 +49,9 @@ namespace services {
                                             ::distribicom::Ack *response) {
         auto sending_worker = utils::extract_ip(context);
 
-        mtx.lock();
+        mtx.lock_shared();
         auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
-        mtx.unlock();
+        mtx.lock_shared();
 
         if (!exists) {
             return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
@@ -120,33 +120,38 @@ namespace services {
                              const seal::GaloisKeys &expansion_key
 #endif
     ) {
-        grpc::ClientContext context;
 
-        utils::add_metadata_size(context, services::constants::round_md, rnd);
-        utils::add_metadata_size(context, services::constants::epoch_md, epoch);
-
-        // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
-        std::lock_guard<std::mutex> lock(mtx);
         auto ledger = std::make_shared<WorkDistributionLedger>();
-        ledgers.insert({{rnd, epoch}, ledger});
-        ledger->worker_list = std::vector<std::string>();
-        ledger->worker_list.reserve(worker_stubs.size());
-        all_clients.mutex.lock_shared();
-        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                db.cols, all_clients.client_counter);
-        all_clients.mutex.unlock_shared();
-        for (auto &worker: worker_stubs) {
-            ledger->worker_list.push_back(worker.first);
+        {
+            // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
+            std::shared_lock lock(mtx);
+            ledgers.insert({{rnd, epoch}, ledger});
+            ledger->worker_list = std::vector<std::string>();
+            ledger->worker_list.reserve(worker_stubs.size());
+            all_clients.mutex.lock_shared();
+            ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
+                    db.cols, all_clients.client_counter);
+            all_clients.mutex.unlock_shared();
+            for (auto &worker: worker_stubs) {
+                ledger->worker_list.push_back(worker.first);
+            }
         }
-
 #ifdef DISTRIBICOM_DEBUG
         create_res_matrix(db, all_clients, expansion_key, ledger);
 #endif
         if(rnd==1){
+            grpc::ClientContext context;
+            utils::add_metadata_size(context, services::constants::round_md, rnd);
+            utils::add_metadata_size(context, services::constants::epoch_md, epoch);
+
             send_queries(all_clients, context);
         }
 
-        send_db(db, context);
+        grpc::ClientContext context1;
+        utils::add_metadata_size(context1, services::constants::round_md, rnd);
+        utils::add_metadata_size(context1, services::constants::epoch_md, epoch);
+
+        send_db(db, context1);
 
         return ledger;
     }
@@ -193,7 +198,7 @@ namespace services {
 
         distribicom::Ack response;
         distribicom::WorkerTaskPart part;
-        std::unique_lock lock(mtx);
+        std::shared_lock lock(mtx);
 
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
@@ -233,7 +238,7 @@ namespace services {
         distribicom::Ack response;
         distribicom::WorkerTaskPart part;
         std::shared_lock client_db_lock(all_clients.mutex);
-        std::unique_lock lock(mtx);
+        std::shared_lock lock(mtx);
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
                 auto stream = worker.second->SendTask(&context, &response);
@@ -330,7 +335,7 @@ namespace services {
         distribicom::WorkerTaskPart prt;
 
         std::shared_lock client_db_lock(all_clients.mutex);
-        std::unique_lock lock(mtx);
+        std::shared_lock lock(mtx);
 
         for (auto &worker: worker_stubs) {
             { // this stream is released at the end of this scope.
@@ -410,7 +415,7 @@ namespace services {
 
     void Manager::map_workers_to_responsibilities(std::uint64_t num_rows,  std::uint64_t num_queries) {
         int i = 0;
-        std::unique_lock lock(mtx);
+        std::shared_lock lock(mtx);
         auto num_queries_per_worker = query_count_per_worker(worker_stubs.size(), num_rows, num_queries);
 
         for(auto &worker: worker_stubs){

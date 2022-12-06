@@ -125,7 +125,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
         ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1,
 #ifdef DISTRIBICOM_DEBUG
-                                         gal_keys.many_reads().mat.data[0]
+                                         client_query_manager.id_to_info.begin()->second->galois_keys
 #endif
         );
     }

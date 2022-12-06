@@ -94,7 +94,7 @@ namespace services::work_strategy {
         void process_task(WorkerServiceTask &&task) override {
             // expand all queries.
             expand_queries(task);
-
+            if(task.ptx_rows.empty()){ return;}
             auto answer = multiply_rows(task);
 
             send_response(task, answer);
