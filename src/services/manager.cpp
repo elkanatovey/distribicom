@@ -154,11 +154,10 @@ namespace services {
                 for (const auto &db_row: db_rows) {
                     // first send db
                     for (int j = 0; j < int(db.cols); ++j) {
-                        std::string payload = marshalled_db(db_row, j);
 
                         part.mutable_matrixpart()->set_row(db_row);
                         part.mutable_matrixpart()->set_col(j);
-                        part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
+                        part.mutable_matrixpart()->mutable_ptx()->set_data(marshalled_db(db_row, j));
 
                         stream->Write(part);
                         part.mutable_matrixpart()->clear_ptx();
@@ -303,31 +302,19 @@ namespace services {
     void Manager::send_galois_keys(const math_utils::matrix<seal::GaloisKeys> &matrix) {
         grpc::ClientContext context;
 
-        utils::add_metadata_size(context, services::constants::round_md, 1);
-        utils::add_metadata_size(context, services::constants::epoch_md, 1);
-
-        distribicom::Ack response;
-        distribicom::WorkerTaskPart prt;
         std::unique_lock lock(mtx);
 
-        for (auto &worker: worker_stubs) {
-            { // this stream is released at the end of this scope.
-                auto stream = worker.second->SendTask(&context, &response);
-                for (int i = 0; i < int(matrix.cols); ++i) {
-                    prt.mutable_gkey()->set_key_pos(i);
-                    prt.mutable_gkey()->mutable_keys()->assign(
-                            marshal->marshal_seal_object(matrix(0, i))
-                    );
-                    stream->Write(prt);
-                }
-                stream->WritesDone();
-                auto status = stream->Finish();
-                if (!status.ok()) {
-                    std::cout << "manager:: distribute_work:: transmitting galois gal_key to " << worker.first <<
-                              " failed: " << status.error_message() << std::endl;
-                    continue;
-                }
+        for (auto &worker: work_streams) {
+            for (int i = 0; i < int(matrix.cols); ++i) {
+                auto prt = std::make_unique<distribicom::WorkerTaskPart>();
+                prt->mutable_gkey()->set_key_pos(i);
+                prt->mutable_gkey()->mutable_keys()->assign(
+                        marshal->marshal_seal_object(matrix(0, i))
+                );
+                worker.second->add_task_to_write(std::move(prt));
             }
+            worker.second->write_next();
+            worker.second->wait_();
         }
     }
 

@@ -100,14 +100,17 @@ namespace services {
 
 
     void Worker::OnReadDone(bool ok) {
-
         try {
             if (!ok) {
+                // bad read might mean data too big.
+                // bad read might mean closed stream.
+                // todo: find proper way to find out the error!
                 throw std::runtime_error("bad read");
             }
 
             switch (read_val.part_case()) {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
+                    std::cout << "writing galois keys" << std::endl;
                     strategy->store_galois_key(
                             mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
                             int(read_val.gkey().key_pos())
@@ -128,6 +131,9 @@ namespace services {
                     }
             }
         } catch (std::exception &e) {
+            read_val.clear_part();
+            read_val.clear_gkey();
+            read_val.clear_matrixpart();
             std::cout << "Worker::OnReadDone: failure: " << e.what() << std::endl;
         }
 
@@ -160,11 +166,19 @@ namespace services {
         // TODO: setup any value that we need in our stream here:
 
         task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+
+
         threads.emplace_back([&]() {
-            this->stub = distribicom::Manager::NewStub(grpc::CreateChannel(
-                    cnfgs.appconfigs().main_server_hostname(),
-                    grpc::InsecureChannelCredentials()
-            ));
+            grpc::ChannelArguments ch_args;
+            ch_args.SetMaxReceiveMessageSize(constants::max_message_size);
+            ch_args.SetMaxSendMessageSize(constants::max_message_size);
+            this->stub = distribicom::Manager::NewStub(
+                    grpc::CreateCustomChannel(
+                            cnfgs.appconfigs().main_server_hostname(),
+                            grpc::InsecureChannelCredentials(),
+                            ch_args
+                    )
+            );
 
             distribicom::WorkerRegistryRequest rqst;
             this->stub->async()->RegisterAsWorker(&context_, &rqst, this);
