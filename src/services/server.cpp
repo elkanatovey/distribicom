@@ -119,11 +119,11 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
     // block is to destroy the db and querries handles.
     {
         auto db_handle = db.many_reads();
-        auto queries_handle = queries.many_reads();
-        // todo: set specific round and handle.
+//        auto queries_handle = queries.many_reads();
+//        // todo: set specific round and handle.
 
 
-        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
+        ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1,
 #ifdef DISTRIBICOM_DEBUG
                                          gal_keys.many_reads().mat.data[0]
 #endif
@@ -140,7 +140,8 @@ void services::FullServer::start_epoch() {
 
     //todo: start epoch for registered clients as well -> make them send queries.
     auto handle = gal_keys.many_reads();
-    manager.send_galois_keys(handle.mat);
+    manager.send_galois_keys(client_query_manager);
+//    manager.send_galois_keys(handle.mat);
 //            wait_for_workers(0); todo: wait for app_configs.num_workers
 }
 

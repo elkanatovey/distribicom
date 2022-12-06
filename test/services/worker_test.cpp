@@ -86,24 +86,24 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
     auto n = 5;
     math_utils::matrix<seal::Plaintext> db(n, n);
     // a single row of ctxs and their respective gal_key.
-    math_utils::matrix<seal::Ciphertext> queries(1, n);
-    math_utils::matrix<seal::GaloisKeys> gal_keys(1, n);
+//    math_utils::matrix<seal::Ciphertext> queries(1, n);
+//    math_utils::matrix<seal::GaloisKeys> gal_keys(1, n);
     for (auto &p: db.data) {
         p = all->random_plaintext();
     }
 
-    for (auto &q: queries.data) {
-        q = all->random_ciphertext();
-    }
-
-    for (auto &g: gal_keys.data) {
-        g = all->gal_keys;
-    }
+//    for (auto &q: queries.data) {
+//        q = all->random_ciphertext();
+//    }
+//
+//    for (auto &g: gal_keys.data) {
+//        g = all->gal_keys;
+//    }
     auto cdb = create_client_db(n, all);
-    auto foo = services::FullServer(db, cdb, configs);
+//    auto foo = services::FullServer(db, cdb, configs);
 
 
-    return services::FullServer(db, queries, gal_keys, configs);
+    return services::FullServer(db, cdb, configs);
 }
 
 

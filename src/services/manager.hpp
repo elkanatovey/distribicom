@@ -97,7 +97,7 @@ namespace services {
 
         std::shared_ptr<WorkDistributionLedger> distribute_work(
                 const math_utils::matrix<seal::Plaintext> &db,
-                const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                const ClientDB &all_clients,
                 int rnd,
                 int epoch,
 #ifdef DISTRIBICOM_DEBUG
@@ -116,7 +116,7 @@ namespace services {
 
 
         void create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
-                               const math_utils::matrix<seal::Ciphertext> &compressed_queries,
+                               const ClientDB &all_clients,
                                const seal::GaloisKeys &expansion_key,
                                std::shared_ptr<WorkDistributionLedger> &ledger) const;
 
