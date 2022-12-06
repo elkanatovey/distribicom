@@ -49,19 +49,19 @@ namespace services {
                                             ::distribicom::Ack *response) {
         auto sending_worker = utils::extract_ip(context);
 
-        mtx.lock();
-        auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
-        mtx.unlock();
-
-        if (!exists) {
-            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
-        }
+//        mtx.lock();
+//        auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
+//        mtx.unlock();
+//
+//        if (!exists) {
+//            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
+//        }
 
         auto round = utils::extract_size_from_metadata(context->client_metadata(), constants::round_md);
         auto epoch = utils::extract_size_from_metadata(context->client_metadata(), constants::epoch_md);
 
         mtx.lock();
-        exists = ledgers.find({round, epoch}) != ledgers.end();
+        auto exists = ledgers.find({round, epoch}) != ledgers.end();
         auto ledger = ledgers[{round, epoch}];
         mtx.unlock();
 
@@ -130,7 +130,7 @@ namespace services {
         auto ledger = std::make_shared<WorkDistributionLedger>();
         ledgers.insert({{rnd, epoch}, ledger});
         ledger->worker_list = std::vector<std::string>();
-        ledger->worker_list.reserve(worker_stubs.size());
+        ledger->worker_list.reserve(work_streams.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
                 db.cols, compressed_queries.data.size());
         for (auto &worker: worker_stubs) {
@@ -176,7 +176,7 @@ namespace services {
 
     void
     Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
-                      grpc::ClientContext &context) {
+                     grpc::ClientContext &context) {
 
         auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
         auto marshalled_db = math_utils::matrix<std::string>(db.rows, db.cols, std::move(marshaled_db_vec));
@@ -190,7 +190,7 @@ namespace services {
                 auto stream = worker.second->SendTask(&context, &response);
                 auto db_rows = worker_name_to_work_responsible_for[worker.first].db_rows;
 
-                for(const auto &db_row: db_rows) {
+                for (const auto &db_row: db_rows) {
                     // first send db
                     for (int j = 0; j < int(db.cols); ++j) {
                         std::string payload = marshalled_db(db_row, j);
@@ -215,9 +215,8 @@ namespace services {
     }
 
 
-
     void
-    Manager::send_queries( const ClientDB &all_clients,
+    Manager::send_queries(const ClientDB &all_clients,
                           grpc::ClientContext &context) {
 
         distribicom::Ack response;
@@ -230,9 +229,10 @@ namespace services {
 
                 auto current_worker_info = worker_name_to_work_responsible_for[worker.first];
                 auto range_start = current_worker_info.query_range_start;
-                auto  range_end = current_worker_info.query_range_end;
+                auto range_end = current_worker_info.query_range_end;
 
-                for (std::uint64_t i = range_start; i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
+                for (std::uint64_t i = range_start;
+                     i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
                     auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0);
 
                     part.mutable_matrixpart()->set_row(0);
@@ -263,43 +263,38 @@ namespace services {
         // TODO: write into map
 
 
-        distribicom::Ack response;
-        distribicom::WorkerTaskPart part;
-        for (auto &worker: worker_stubs) {
+
+        for (auto &worker: work_streams) {
             { // this stream is released at the end of this scope.
-                auto stream = worker.second->SendTask(&context, &response);
                 for (int i = 0; i < int(db.rows); ++i) {
                     for (int j = 0; j < int(db.cols); ++j) {
                         std::string payload = marshal->marshal_seal_object(db(i, j));
 
-                        part.mutable_matrixpart()->set_row(i);
-                        part.mutable_matrixpart()->set_col(j);
-                        part.mutable_matrixpart()->mutable_ptx()->set_data(payload);
+                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
+                        part->mutable_matrixpart()->set_row(i);
+                        part->mutable_matrixpart()->set_col(j);
+                        part->mutable_matrixpart()->mutable_ptx()->set_data(payload);
 
-                        stream->Write(part);
-                        part.mutable_matrixpart()->clear_ptx();
+                        worker.second->add_task_to_write(std::move(part));
                     }
                 }
 
                 for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
 
                     std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
-                    part.mutable_matrixpart()->set_row(0);
-                    part.mutable_matrixpart()->set_col(i);
-                    part.mutable_matrixpart()->mutable_ctx()->set_data(payload);
+                    auto part = std::make_unique<distribicom::WorkerTaskPart>();
 
-                    stream->Write(part);
-                    part.mutable_matrixpart()->clear_ctx();
+                    part->mutable_matrixpart()->set_row(0);
+                    part->mutable_matrixpart()->set_col(i);
+                    part->mutable_matrixpart()->mutable_ctx()->set_data(payload);
+
+                    worker.second->add_task_to_write(std::move(part));
 
                 }
 
-                stream->WritesDone();
-                auto status = stream->Finish();
-                if (!status.ok()) {
-                    std::cout << "manager:: distribute_work:: transmitting db to " << worker.first <<
-                              " failed: " << status.error_message() << std::endl;
-                    continue;
-                }
+                worker.second->write_next();
+                worker.second->wait_();
+                std::cout << "done writing" << std::endl;
             }
         }
         return ledger;
@@ -326,7 +321,7 @@ namespace services {
             { // this stream is released at the end of this scope.
                 auto stream = worker.second->SendTask(&context, &response);
                 auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
-                auto  range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
+                auto range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
 
                 for (std::uint64_t i = range_start; i < range_end; ++i) {
                     prt.mutable_gkey()->CopyFrom(all_clients.id_to_info.at(i)->galois_keys_marshaled);
@@ -374,56 +369,59 @@ namespace services {
         }
     }
 
-    std::vector<std::uint64_t> get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows){
-        auto row_id = id%num_rows;
+    std::vector<std::uint64_t> get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows) {
+        auto row_id = id % num_rows;
         return {row_id};
     }
 
-    std::pair<std::uint64_t, std::uint64_t> get_query_range_to_work_with(std::uint64_t worker_id, std::uint64_t num_queries, std::uint64_t num_queries_per_worker){
+    std::pair<std::uint64_t, std::uint64_t>
+    get_query_range_to_work_with(std::uint64_t worker_id, std::uint64_t num_queries,
+                                 std::uint64_t num_queries_per_worker) {
         auto range_id = worker_id / num_queries;
         auto range_start = num_queries_per_worker * range_id;
         auto range_end = range_start + num_queries_per_worker;
         return {range_start, range_end};
     }
 
-    std::uint64_t query_count_per_worker(std::uint64_t num_workers, std::uint64_t num_rows, std::uint64_t num_queries){
+    std::uint64_t query_count_per_worker(std::uint64_t num_workers, std::uint64_t num_rows, std::uint64_t num_queries) {
 #ifdef DISTRIBICOM_DEBUG
-        if(num_workers==1){
-            std::cout<<"Manager: using only 1 worker"<<std::endl;
-            return num_queries;}
+        if (num_workers == 1) {
+            std::cout << "Manager: using only 1 worker" << std::endl;
+            return num_queries;
+        }
 #endif
 
-        auto num_workers_per_row = num_workers/num_rows;
+        auto num_workers_per_row = num_workers / num_rows;
         auto num_queries_per_worker = num_queries / num_workers_per_row;
         return num_queries_per_worker;
     }
 
-    void Manager::map_workers_to_responsibilities(std::uint64_t num_rows,  std::uint64_t num_queries) {
+    void Manager::map_workers_to_responsibilities(std::uint64_t num_rows, std::uint64_t num_queries) {
         int i = 0;
         std::unique_lock lock(mtx);
         auto num_queries_per_worker = query_count_per_worker(worker_stubs.size(), num_rows, num_queries);
 
-        for(auto &worker: worker_stubs){
+        for (auto &worker: worker_stubs) {
             this->worker_name_to_work_responsible_for[worker.first].worker_number = i;
             this->worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
 #ifdef DISTRIBICOM_DEBUG
-            if(worker_stubs.size()==1){
+            if (worker_stubs.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
-                for(int j=0; j<num_rows; j++){
-                    temp[j] =j;
+                for (int j = 0; j < num_rows; j++) {
+                    temp[j] = j;
                 }
                 this->worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);
                 this->worker_name_to_work_responsible_for[worker.first].query_range_start = 0;
                 this->worker_name_to_work_responsible_for[worker.first].query_range_end = num_queries;
                 return;
-                }
+            }
 #endif
             auto query_range = get_query_range_to_work_with(i, num_queries, num_queries_per_worker);
 
             this->worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
             this->worker_name_to_work_responsible_for[worker.first].query_range_end = query_range.second;
 
-            i+=1;
+            i += 1;
         }
     }
 

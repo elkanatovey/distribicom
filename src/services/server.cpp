@@ -116,25 +116,21 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
 std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
     std::shared_ptr<services::WorkDistributionLedger> ledger;
 
-    // block is to destroy the db and querries handles.
-//    {
-//        auto db_handle = db.many_reads();
-//        auto queries_handle = queries.many_reads();
-//        // todo: set specific round and handle.
-//
-//
-//        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
-//#ifdef DISTRIBICOM_DEBUG
-//                                         gal_keys.many_reads().mat.data[0]
-//#endif
-//        );
-//return
-//ledger;
-    distribicom::WorkerTaskPart tmp;
-    manager.hnl[0]->NextWrite(tmp);
-    return nullptr;
+//     block is to destroy the db and querries handles.
+    {
+        auto db_handle = db.many_reads();
+        auto queries_handle = queries.many_reads();
+        // todo: set specific round and handle.
 
 
+        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
+#ifdef DISTRIBICOM_DEBUG
+                                         gal_keys.many_reads().mat.data[0]
+#endif
+        );
+    }
+
+    return ledger;
 }
 
 void services::FullServer::start_epoch() {
