@@ -82,10 +82,6 @@ namespace services {
                              const seal::GaloisKeys &expansion_key
 #endif
     ) {
-        grpc::ClientContext context;
-
-        utils::add_metadata_size(context, services::constants::round_md, rnd);
-        utils::add_metadata_size(context, services::constants::epoch_md, epoch);
 
         // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
         std::lock_guard<std::mutex> lock(mtx);
@@ -103,7 +99,7 @@ namespace services {
         create_res_matrix(db, compressed_queries, expansion_key, ledger);
 #endif
 
-        sendtask(db, compressed_queries, context, ledger);
+        sendtask(db, compressed_queries, rnd, epoch, ledger);
         return ledger;
     }
 
@@ -219,45 +215,49 @@ namespace services {
     std::shared_ptr<WorkDistributionLedger>
     Manager::sendtask(const math_utils::matrix<seal::Plaintext> &db,
                       const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                      grpc::ClientContext &context, std::shared_ptr<WorkDistributionLedger> ledger) {
-
-        // TODO: write into map
-
+                      int rnd, int epoch, std::shared_ptr<WorkDistributionLedger> ledger) {
 
 
         for (auto &worker: work_streams) {
-            { // this stream is released at the end of this scope.
-                for (int i = 0; i < int(db.rows); ++i) {
-                    for (int j = 0; j < int(db.cols); ++j) {
-                        std::string payload = marshal->marshal_seal_object(db(i, j));
 
-                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->mutable_matrixpart()->set_row(i);
-                        part->mutable_matrixpart()->set_col(j);
-                        part->mutable_matrixpart()->mutable_ptx()->set_data(payload);
+            worker.second->wait_(); // This is not necessary. Though it is better to wait for the stream to be clean.
+            auto rnd_and_epch = std::make_unique<distribicom::WorkerTaskPart>();
+            rnd_and_epch->mutable_md()->set_round(rnd);
+            rnd_and_epch->mutable_md()->set_epoch(epoch);
+            worker.second->add_task_to_write(std::move(rnd_and_epch));
 
-                        worker.second->add_task_to_write(std::move(part));
-                    }
-                }
+            for (int i = 0; i < int(db.rows); ++i) {
+                for (int j = 0; j < int(db.cols); ++j) {
+                    std::string payload = marshal->marshal_seal_object(db(i, j));
 
-                for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
-
-                    std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
                     auto part = std::make_unique<distribicom::WorkerTaskPart>();
-
-                    part->mutable_matrixpart()->set_row(0);
-                    part->mutable_matrixpart()->set_col(i);
-                    part->mutable_matrixpart()->mutable_ctx()->set_data(payload);
+                    part->mutable_matrixpart()->set_row(i);
+                    part->mutable_matrixpart()->set_col(j);
+                    part->mutable_matrixpart()->mutable_ptx()->set_data(payload);
 
                     worker.second->add_task_to_write(std::move(part));
-
                 }
-                auto empty_task = std::make_unique<distribicom::WorkerTaskPart>();
-                worker.second->add_task_to_write(std::move(empty_task));
-                worker.second->write_next();
-                worker.second->wait_();
-                std::cout << "done writing" << std::endl;
             }
+
+            for (int i = 0; i < int(compressed_queries.data.size()); ++i) {
+
+                std::string payload = marshal->marshal_seal_object(compressed_queries.data[i]);
+                auto part = std::make_unique<distribicom::WorkerTaskPart>();
+
+                part->mutable_matrixpart()->set_row(0);
+                part->mutable_matrixpart()->set_col(i);
+                part->mutable_matrixpart()->mutable_ctx()->set_data(payload);
+
+                worker.second->add_task_to_write(std::move(part));
+
+            }
+
+            auto state_done = std::make_unique<distribicom::WorkerTaskPart>();
+            state_done->set_task_complete(true);
+            worker.second->add_task_to_write(std::move(state_done));
+            worker.second->write_next();
+
+            std::cout << "done writing" << std::endl;
         }
         return ledger;
     }

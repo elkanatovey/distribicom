@@ -71,8 +71,16 @@ message WorkerTaskPart {
   oneof part {
     MatrixPart matrixPart = 1;
     GaloisKeys gkey = 3;
+    TaskMetadata md = 4;
+    bool task_complete = 5;
   }
 }
+
+message TaskMetadata{
+  uint64 round = 1;
+  uint64 epoch = 2;
+}
+
 message MatrixPart {
   oneof data {
     Ciphertext ctx = 1;

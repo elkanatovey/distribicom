@@ -150,7 +150,7 @@ namespace services {
 
         std::shared_ptr<WorkDistributionLedger> sendtask(const math_utils::matrix<seal::Plaintext> &db,
                                                          const math_utils::matrix<seal::Ciphertext> &compressed_queries,
-                                                         grpc::ClientContext &context,
+                                                         int rnd, int epoch,
                                                          std::shared_ptr<WorkDistributionLedger> ptr);
 
         void wait_for_workers(int i);
