@@ -3,7 +3,7 @@
 #include "seal/seal.h"
 #include "distribicom.pb.h"
 #include "distribicom.grpc.pb.h"
-#include "../math_utils/matrix.h"
+#include "math_utils/matrix.h"
 
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
@@ -11,6 +11,8 @@
 #include "concurrency/concurrency.h"
 #include "utils.hpp"
 #include "client_context.hpp"
+
+#include "manager_workstream.hpp"
 
 
 namespace services {
@@ -41,11 +43,8 @@ namespace services {
         concurrency::Channel<int> done;
     };
 
-    // contains the workers and knows how to distribute their work.
-    // should be able to give a Promise for a specific round and fullfill it once all workers have sent their jobs.
-    // can use Frievalds to verify their work.
 
-    class Manager : public distribicom::Manager::Service {
+    class Manager : distribicom::Manager::WithCallbackMethod_RegisterAsWorker<distribicom::Manager::Service> {
     private:
         distribicom::AppConfigs app_configs;
 
@@ -63,6 +62,7 @@ namespace services {
         std::shared_ptr<math_utils::QueryExpander> expander;
 #endif
 
+        std::map<std::string, WorkStream *> work_streams;
 
     public:
         explicit Manager() {};
@@ -77,10 +77,6 @@ namespace services {
 #endif
         {};
 
-        // PartialWorkStream i save this on my server map.
-        ::grpc::Status
-        RegisterAsWorker(::grpc::ServerContext *context, const ::distribicom::WorkerRegistryRequest *request,
-                         ::distribicom::Ack *response) override;
 
         // a worker should send its work, along with credentials of what it sent.
         ::grpc::Status
@@ -115,8 +111,20 @@ namespace services {
 
         void send_galois_keys(const ClientDB &all_clients);
 
-        void send_db(const math_utils::matrix<seal::Plaintext> &db, grpc::ClientContext &context);
+        void send_db(const math_utils::matrix<seal::Plaintext> &db, int rnd, int epoch);
 
-        void send_queries(const ClientDB &all_clients, grpc::ClientContext &context);
+        void send_queries(const ClientDB &all_clients);
+
+        ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *RegisterAsWorker(
+                ::grpc::CallbackServerContext *ctx/*context*/,
+                const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override;
+
+        void close() {
+            mtx.lock();
+            for (auto ptr: work_streams) {
+                ptr.second->close();
+            }
+            mtx.unlock();
+        }
     };
 }

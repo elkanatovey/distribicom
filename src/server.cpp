@@ -98,5 +98,6 @@ shared_ptr<services::FullServer> full_server_instance(const distribicom::AppConf
     math_utils::matrix<seal::GaloisKeys> gal_keys(1, cols);
 
     // Copies the matrices. (not efficient, but it's fast enough to ignore).
-    return std::make_shared<services::FullServer>(db, queries, gal_keys, configs);
+    return nullptr;
+//    return std::make_shared<services::FullServer>(db, queries, gal_keys, configs);
 }
