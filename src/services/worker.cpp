@@ -121,14 +121,20 @@ namespace services {
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
                     update_current_task();
                     break;
-
-                default:
+                case distribicom::WorkerTaskPart::PartCase::kMd:
+                    task.round = int(read_val.md().round());
+                    task.epoch = int(read_val.md().epoch());
+                    break;
+                case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
                     if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
                         std::cout << "sending task to be processed" << std::endl;
                         chan.write(std::move(task));
                         task = WorkerServiceTask();
                         task.row_size = int(cnfgs.appconfigs().configs().db_cols());
                     }
+                    break;
+                default:
+                    throw std::invalid_argument("worker stream received unknown message received.");
             }
         } catch (std::exception &e) {
             read_val.clear_part();
