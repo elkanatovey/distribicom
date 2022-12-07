@@ -9,21 +9,22 @@ namespace services {
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
         std::cout << "Got a stream back!!!" << std::endl;
-        auto sending_worker = utils::extract_ip(context);
+        std::string worker_creds = utils::extract_string_from_metadata(context->client_metadata(),
+                                                                       constants::credentials_md);
 
-//        mtx.lock();
-//        auto exists = worker_stubs.find(sending_worker) != worker_stubs.end();
-//        mtx.unlock();
-//
-//        if (!exists) {
-//            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
-//        }
+        mtx.lock();
+        auto exists = worker_stubs.find(worker_creds) != worker_stubs.end();
+        mtx.unlock();
+
+        if (!exists) {
+            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
+        }
 
         auto round = utils::extract_size_from_metadata(context->client_metadata(), constants::round_md);
         auto epoch = utils::extract_size_from_metadata(context->client_metadata(), constants::epoch_md);
 
         mtx.lock();
-        auto exists = ledgers.find({round, epoch}) != ledgers.end();
+        exists = ledgers.find({round, epoch}) != ledgers.end();
         auto ledger = ledgers[{round, epoch}];
         mtx.unlock();
 
@@ -49,7 +50,7 @@ namespace services {
         }
 
         ledger->mtx.lock();
-        ledger->contributed.insert(sending_worker);
+        ledger->contributed.insert(worker_creds);
         auto n_contributions = ledger->contributed.size();
         ledger->mtx.unlock();
 
@@ -373,6 +374,20 @@ namespace services {
 
             i += 1;
         }
+    }
+
+    ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *
+    Manager::RegisterAsWorker(::grpc::CallbackServerContext *ctx, const ::distribicom::WorkerRegistryRequest *rqst) {
+
+        std::string creds = utils::extract_string_from_metadata(ctx->client_metadata(), constants::credentials_md);
+        // Assuming for now, no one leaves !
+        auto stream = new WorkStream();
+
+        mtx.lock();
+        work_streams[creds] = stream;
+        mtx.unlock();
+
+        return stream;
     }
 
 

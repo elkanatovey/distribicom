@@ -85,8 +85,8 @@ namespace services {
 
         void wait_() {
             std::unique_lock<std::mutex> lock(mtx);
-            // returns if q is not empty, and if channel is not closed. // todo verify this expression.
-            c.wait(lock, [&] { return (!to_write.empty()); });
+            // wait only if there is data that is being written currently.
+            c.wait(lock, [&] { return (to_write.empty()); });
         };
     };
 
@@ -174,16 +174,6 @@ namespace services {
 
         ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *RegisterAsWorker(
                 ::grpc::CallbackServerContext *ctx/*context*/,
-                const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override {
-
-            // Assuming for now, no one leaves !
-            auto stream = new WorkStream();
-
-            mtx.lock();
-            work_streams[ctx->peer()] = stream;
-            mtx.unlock();
-
-            return stream;
-        }
+                const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override;
     };
 }
