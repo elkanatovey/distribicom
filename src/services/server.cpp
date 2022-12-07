@@ -8,7 +8,7 @@
 
 
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
-                                 std::unique_ptr<services::ClientInfo>> &client_db,
+        std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
         db(db), manager(app_configs) {
     this->client_query_manager.client_counter = client_db.size();
@@ -115,7 +115,6 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
 //        // todo: set specific round and handle.
 
-
         ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1,
 #ifdef DISTRIBICOM_DEBUG
                                          client_query_manager.id_to_info.begin()->second->galois_keys
@@ -127,9 +126,9 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 }
 
 void services::FullServer::start_epoch() {
-    client_query_manager.mutex.lock_shared();
-    manager.map_workers_to_responsibilities(pir_configs.db_rows(), client_query_manager.client_counter);
-    client_query_manager.mutex.unlock_shared();
+//    client_query_manager.mutex.lock_shared();
+//    manager.map_workers_to_responsibilities(pir_configs.db_rows(), client_query_manager.client_counter);
+//    client_query_manager.mutex.unlock_shared();
 
     //todo: start epoch for registered clients as well -> make them send queries.
     manager.send_galois_keys(client_query_manager);

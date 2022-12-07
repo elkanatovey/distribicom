@@ -9,9 +9,6 @@
 namespace services {
 
     struct WorkerServiceTask {
-        explicit WorkerServiceTask() : epoch(-1), round(-1), row_size(-1) {};
-
-        explicit WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs);
 
         // metadata worker needs to know.
         int epoch;
@@ -71,6 +68,7 @@ namespace services::work_strategy {
         math_utils::matrix<seal::Ciphertext> query_mat;
         std::map<int, int> col_to_query_index;
         std::shared_ptr<marshal::Marshaller> mrshl;
+        std::string sym_key;
 
         std::future<int>
         async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
@@ -81,8 +79,9 @@ namespace services::work_strategy {
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
                                            std::shared_ptr<marshal::Marshaller> &m,
-                                           std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) :
-                WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m) {
+                                           std::unique_ptr<distribicom::Manager::Stub> &&manager_conn,
+                                           std::string &&sym_key) :
+                WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m), sym_key(std::move(sym_key)) {
         };
 
         math_utils::matrix<seal::Ciphertext> multiply_rows(WorkerServiceTask &task);
@@ -92,12 +91,21 @@ namespace services::work_strategy {
 
 // assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
-            // expand all queries.
-            expand_queries(task);
-            if(task.ptx_rows.empty()){ return;}
-            auto answer = multiply_rows(task);
+            try {
 
-            send_response(task, answer);
+                // expand all queries.
+                expand_queries(task);
+
+                if (task.ptx_rows.empty()) {
+                    return;
+                }
+                auto answer = multiply_rows(task);
+
+                send_response(task, answer);
+
+            } catch (std::exception &e) {
+                std::cout << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
+            }
         }
 
         void queries_to_mat(const WorkerServiceTask &task);

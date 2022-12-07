@@ -3,12 +3,6 @@
 #include "distribicom.pb.h"
 #include <grpc++/grpc++.h>
 
-class NotImplemented : public std::logic_error {
-public:
-    NotImplemented() : std::logic_error("Function not yet implemented") {};
-
-    explicit NotImplemented(const std::string &txt) : std::logic_error(txt) {};
-};
 namespace services {
 
     // todo: take a const ref of the app_configs:
@@ -35,23 +29,35 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
         request.set_worker_ip(cnfgs.worker_ip());
 
-        manager_conn->RegisterAsWorker(&context, request, &response);
+
+        symmetric_secret_key.resize(32);
+        auto gen = seal::Blake2xbPRNGFactory({1, 2, 3, cnfgs.workerport()}).create();
+        std::generate(
+                symmetric_secret_key.begin(),
+                symmetric_secret_key.end(),
+                [gen = std::move(gen)]() { return std::byte(gen->generate() % 256); }
+        );
+
+
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
                 enc_params,
-                mrshl, std::move(manager_conn)
+                mrshl, std::move(manager_conn), utils::byte_vec_to_64base_string(symmetric_secret_key)
         );
-        t = std::make_unique<std::thread>(
+
+        threads.emplace_back(
                 [&]() {
                     std::cout << "worker main thread: running" << std::endl;
                     for (;;) {
-                        auto task = chan.read();
-                        if (!task.ok) {
+                        auto task_ = chan.read();
+                        if (!task_.ok) {
                             std::cout << "worker main thread: stopping execution" << std::endl;
                             break;
                         }
-                        strategy->process_task(std::move(task.answer));
+                        strategy->process_task(std::move(task_.answer));
                     }
                 });
+
+        setup_stream();
     }
 
     void Worker::inspect_configs() const {
@@ -68,58 +74,11 @@ namespace services {
         }
     }
 
-    grpc::Status
-    Worker::SendTask(grpc::ServerContext *context, grpc::ServerReader<::distribicom::WorkerTaskPart> *reader,
-                     distribicom::Ack *_) {
-        try {
-            WorkerServiceTask task(context, cnfgs.appconfigs().configs());
-
-            int n_matrix_parts = 0;
-
-            distribicom::WorkerTaskPart tmp;
-            while (reader->Read(&tmp)) {
-
-                switch (tmp.part_case()) {
-                    case distribicom::WorkerTaskPart::PartCase::kGkey:
-                        strategy->store_galois_key(
-                                mrshl->unmarshal_seal_object<seal::GaloisKeys>(tmp.gkey().keys()),
-                                int(tmp.gkey().key_pos())
-                        );
-
-                        break;
-
-                    case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
-                        n_matrix_parts += 1;
-                        fill_matrix_part(task, tmp.matrixpart());
-
-                        break;
-
-                    default:
-                        throw std::invalid_argument("received a message that is not a matrix part or a gkey");
-
-                }
-
-                tmp.clear_part();
-            }
-
-            if (n_matrix_parts != 0) {
-                chan.write(task);
-            }
-
-        } catch (std::invalid_argument &e) {
-            std::cout << "Worker::SendTask::Exception: " << e.what() << std::endl;
-            return {grpc::StatusCode::INVALID_ARGUMENT, e.what()};
-        } catch (std::exception &e) {
-            std::cout << "Worker::SendTask:: " << e.what() << std::endl;
-            return {grpc::StatusCode::INTERNAL, e.what()};
-        }
-
-        return {};
-    }
-
-    void Worker::fill_matrix_part(WorkerServiceTask &task, const distribicom::MatrixPart &tmp) const {
+    void Worker::update_current_task() {
+        auto tmp = read_val.matrixpart();
         int row = tmp.row();
         int col = tmp.col();
+
 
         if (tmp.has_ptx()) {
             if (!task.ptx_rows.contains(row)) {
@@ -136,33 +95,125 @@ namespace services {
         if (!tmp.has_ctx()) {
             throw std::invalid_argument("Invalid matrix part, neither ptx nor ctx");
         }
-
         if (!task.ctx_cols.contains(col)) {
             task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
         }
-
         task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+    }
+
+
+    void Worker::OnReadDone(bool ok) {
+        try {
+            if (!ok) {
+                // bad read might mean data too big.
+                // bad read might mean closed stream.
+                // todo: find proper way to find out the error!
+                return;
+            }
+
+            switch (read_val.part_case()) {
+                case distribicom::WorkerTaskPart::PartCase::kGkey:
+                    std::cout << "received galois keys" << std::endl;
+                    strategy->store_galois_key(
+                            mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
+                            int(read_val.gkey().key_pos())
+                    );
+
+                    break;
+
+                case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
+                    std::cout << "received matrix part" << std::endl;
+                    update_current_task();
+                    break;
+
+                case distribicom::WorkerTaskPart::PartCase::kMd:
+                    std::cout << "received rnd and epoch" << std::endl;
+                    task.round = int(read_val.md().round());
+                    task.epoch = int(read_val.md().epoch());
+                    break;
+
+                case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
+                    std::cout << "task complete" << std::endl;
+                    if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
+                        std::cout << "sending task to be processed" << std::endl;
+                        chan.write(std::move(task));
+
+                        // TODO: does this leak memory?
+                        task = WorkerServiceTask();
+                        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+                    }
+                    break;
+
+                default:
+                    throw std::invalid_argument("worker stream received unknown message received.");
+            }
+
+            read_val.clear_part();
+            read_val.clear_gkey();
+            read_val.clear_matrixpart();
+
+        } catch (std::exception &e) {
+            std::cout << "Worker::OnReadDone: failure: " << e.what() << std::endl;
+        }
+
+        StartRead(&read_val);// queue the next read request.
+    }
+
+    void Worker::OnDone(const grpc::Status &s) {
+        std::cout << "Closing worker's stream!" << std::endl;
+        std::unique_lock<std::mutex> l(mu_);
+        status_ = s;
+        done_ = true;
+        cv_.notify_one();
+    }
+
+    grpc::Status Worker::wait_for_stream_termination() {
+        std::unique_lock<std::mutex> l(mu_);
+        cv_.wait(l, [this] { return done_; });
+        return std::move(status_);
     }
 
     void Worker::close() {
         chan.close();
-        t->join();
-
-    }
-
-    WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :
-            epoch(-1), round(-1), row_size(int(configs.db_cols())), ptx_rows(), ctx_cols() {
-
-        const auto &metadata = pContext->client_metadata();
-        epoch = utils::extract_size_from_metadata(metadata, constants::epoch_md);
-        round = utils::extract_size_from_metadata(metadata, constants::round_md);
-
-        if (epoch < 0) {
-            throw std::invalid_argument("epoch must be positive");
-        }
-        if (round < 0) {
-            throw std::invalid_argument("round must be positive");
+        for (auto &t: threads) {
+            t.join();
         }
     }
+
+    void Worker::setup_stream() {
+        // TODO: setup any value that we need in our stream here:
+
+        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+
+        // write worker's credentials here:
+
+
+        threads.emplace_back([&]() {
+            grpc::ChannelArguments ch_args;
+            ch_args.SetMaxReceiveMessageSize(constants::max_message_size);
+            ch_args.SetMaxSendMessageSize(constants::max_message_size);
+            this->stub = distribicom::Manager::NewStub(
+                    grpc::CreateCustomChannel(
+                            cnfgs.appconfigs().main_server_hostname(),
+                            grpc::InsecureChannelCredentials(),
+                            ch_args
+                    )
+            );
+
+            distribicom::WorkerRegistryRequest rqst;
+            utils::add_metadata_string(context_, constants::credentials_md,
+                                       utils::byte_vec_to_64base_string(symmetric_secret_key));
+            this->stub->async()->RegisterAsWorker(&context_, &rqst, this);
+
+            StartRead(&read_val); // queueing a read request.
+            StartCall();
+
+            auto status = wait_for_stream_termination();
+            if (!status.ok()) {
+                std::cout << "Worker stream terminated with error: " << status.error_message() << std::endl;
+            }
+        });
+    }
+
 }
 
