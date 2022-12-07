@@ -82,7 +82,7 @@ namespace math_utils {
          */
         void add_plain_in_place(seal::Plaintext &a, const seal::Plaintext &b) const;
 
-        void add_plain(const seal::Plaintext &a, const seal::Plaintext &b, seal::Plaintext &c);
+        void add_plain(const seal::Plaintext &a, const seal::Plaintext &b, seal::Plaintext &c) const;
 
         void add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
                                seal::Ciphertext &out) const;
@@ -99,6 +99,8 @@ namespace math_utils {
         /***
          * writes ptx embedding of ctx to ptx_decomposition after relinearizing ctx and putting switching to last modulus
          */
-        void get_ptx_embedding(const seal::Ciphertext &ctx, seal::RelinKeys relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition);
+        void get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) const;
+
+        void compose_to_ctx(const std::vector<seal::Plaintext> &ptx_decomposition, seal::Ciphertext &decoded) const;
     };
 }

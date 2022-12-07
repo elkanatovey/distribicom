@@ -1,7 +1,7 @@
 #include "evaluator_wrapper.hpp"
 
 namespace {
-    uint32_t compute_expansion_ratio(seal::EncryptionParameters params) {
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params) {
         uint32_t expansion_ratio = 0;
         uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
         for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
@@ -11,7 +11,7 @@ namespace {
         return expansion_ratio;
     }
 
-    std::vector<seal::Plaintext> decompose_to_plaintexts(seal::EncryptionParameters params,
+    std::vector<seal::Plaintext> decompose_to_plaintexts(const seal::EncryptionParameters& params,
                                                          const seal::Ciphertext &ct) {
         const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
         const auto coeff_count = params.poly_modulus_degree();
@@ -43,6 +43,45 @@ namespace {
         }
         return result;
     }
+
+    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+                               std::vector<seal::Plaintext>::const_iterator pt_iter,
+                               const size_t ct_poly_count, seal::Ciphertext &ct) {
+        const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        const auto coeff_count = params.poly_modulus_degree();
+        const auto coeff_mod_count = params.coeff_modulus().size();
+
+        ct.resize(ct_poly_count);
+        for (size_t poly_index = 0; poly_index < ct_poly_count; ++poly_index) {
+            for (size_t coeff_mod_index = 0; coeff_mod_index < coeff_mod_count;
+                 ++coeff_mod_index) {
+                const double coeff_bit_size =
+                        log2(params.coeff_modulus()[coeff_mod_index].value());
+                const size_t local_expansion_ratio =
+                        ceil(coeff_bit_size / pt_bits_per_coeff);
+                size_t shift = 0;
+                for (size_t i = 0; i < local_expansion_ratio; ++i) {
+                    for (size_t c = 0; c < pt_iter->coeff_count(); ++c) {
+                        if (shift == 0) {
+                            ct.data(poly_index)[coeff_mod_index * coeff_count + c] =
+                                    (*pt_iter)[c];
+                        } else {
+                            ct.data(poly_index)[coeff_mod_index * coeff_count + c] +=
+                                    ((*pt_iter)[c] << shift);
+                        }
+                    }
+                    ++pt_iter;
+                    shift += pt_bits_per_coeff;
+                }
+            }
+        }
+    }
+
+    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+                               const std::vector<seal::Plaintext> &pts, seal::Ciphertext &ct) {
+        return compose_to_ciphertext(
+                params, pts.begin(), pts.size() / compute_expansion_ratio(params), ct);
+    }
 }
 
 namespace math_utils {
@@ -73,7 +112,7 @@ namespace math_utils {
     }
 
     void EvaluatorWrapper::add_plain(const seal::Plaintext &a, const seal::Plaintext &b,
-                                     seal::Plaintext &c) {
+                                     seal::Plaintext &c) const {
         seal::Plaintext tmp;
         tmp = a;
 
@@ -222,12 +261,18 @@ namespace math_utils {
         }
     }
 
-    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, seal::RelinKeys relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) {
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) const {
         seal::Ciphertext ctx_copy;
         evaluator->relinearize(ctx, relin_keys, ctx_copy);
         evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
 
         ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
+    }
+
+    void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
+        seal::Ciphertext ctx_copy(context, context.last_parms_id());
+        compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
+        decoded = ctx_copy;
     }
 
 
