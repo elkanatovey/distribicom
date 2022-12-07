@@ -9,20 +9,22 @@ namespace services {
         std::mutex mtx;
         std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
         bool mid_write = false; // ensures that sequential calls to write would not write the same item twice.
-    public:
-
-        void close() { Finish(grpc::Status::OK); }
 
         void OnDone() override {
             // todo: mark that this stream is closing, and no-one should hold onto it anymore.
             delete this;
         }
 
+        void OnWriteDone(bool ok) override;
+
+    public:
+
+        void close() { Finish(grpc::Status::OK); }
+
         void add_task_to_write(std::unique_ptr<distribicom::WorkerTaskPart> &&tsk);
 
         void write_next();
 
-        // after each succsessful write, pops from the queue, then attempts to do the next write.
-        void OnWriteDone(bool ok) override;
+
     };
 }

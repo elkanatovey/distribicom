@@ -24,7 +24,7 @@ void services::WorkStream::OnWriteDone(bool ok) {
 
     mtx.lock();
     mid_write = false;
-    to_write.pop();
+    if (!to_write.empty()) { to_write.pop(); }
     mtx.unlock();
 
     write_next();
