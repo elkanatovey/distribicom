@@ -6,18 +6,11 @@
 #include "client_context.hpp"
 
 
-services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, math_utils::matrix<seal::Ciphertext> &queries,
-                                 math_utils::matrix<seal::GaloisKeys> &gal_keys,
-                                 const distribicom::AppConfigs &app_configs) :
-        db(db), queries(queries), gal_keys(gal_keys), manager(app_configs) {
-    finish_construction(app_configs);
-
-}
 
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
         std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-        db(db), queries(0, 0), gal_keys(0, 0), manager(app_configs) {
+        db(db), manager(app_configs) {
     this->client_query_manager.client_counter = client_db.size();
     this->client_query_manager.id_to_info = std::move(client_db);
     finish_construction(app_configs);
@@ -25,7 +18,7 @@ services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::m
 }
 
 services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
-        db(0, 0), queries(0, 0), gal_keys(0, 0), manager(app_configs) {
+        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs) {
     finish_construction(app_configs);
 
 }
@@ -116,16 +109,15 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
 std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
     std::shared_ptr<services::WorkDistributionLedger> ledger;
 
-//     block is to destroy the db and querries handles.
+    // block is to destroy the db handle.
     {
         auto db_handle = db.many_reads();
-        auto queries_handle = queries.many_reads();
-        // todo: set specific round and handle.
 
+//        // todo: set specific round and handle.
 
-        ledger = manager.distribute_work(db_handle.mat, queries_handle.mat, 1, 1,
+        ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1,
 #ifdef DISTRIBICOM_DEBUG
-                                         gal_keys.many_reads().mat.data[0]
+                                         client_query_manager.id_to_info.begin()->second->galois_keys
 #endif
         );
     }
@@ -139,8 +131,7 @@ void services::FullServer::start_epoch() {
 //    client_query_manager.mutex.unlock_shared();
 
     //todo: start epoch for registered clients as well -> make them send queries.
-    auto handle = gal_keys.many_reads();
-    manager.send_galois_keys(handle.mat);
+    manager.send_galois_keys(client_query_manager);
 //            wait_for_workers(0); todo: wait for app_configs.num_workers
 }
 

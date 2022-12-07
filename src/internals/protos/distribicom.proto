@@ -87,8 +87,8 @@ message MatrixPart {
     Plaintext ptx = 2;
   }
 
-  int32 row = 3;
-  int32 col = 4;
+  uint32 row = 3;
+  uint32 col = 4;
 }
 
 message QueryCiphertext {
@@ -98,7 +98,7 @@ message QueryCiphertext {
 message GaloisKeys{
   bytes keys = 1;
   // should point to the matching ciphertext.
-  int64 key_pos = 2;
+  uint64 key_pos = 2;
 }
 
 message Ciphertext {bytes data = 1;}
@@ -153,7 +153,7 @@ message ClientConfigs {
 
 
 message TellNewRoundRequest {
-  int32 round = 1;
+  uint32 round = 1;
 }
 
 message WorkerRegistryRequest {
@@ -162,6 +162,8 @@ message WorkerRegistryRequest {
 
   // the port the worker is listening to.
   uint32 workerPort = 2;
+
+  string worker_ip=3;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
@@ -221,4 +223,6 @@ message WorkerConfigs {
 
   // the port the worker is listening to.
   uint32 workerPort = 2;
+
+  string worker_ip=3;
 };

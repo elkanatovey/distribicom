@@ -27,6 +27,7 @@ namespace services {
         distribicom::WorkerRegistryRequest request;
 
         request.set_workerport(cnfgs.workerport());
+        request.set_worker_ip(cnfgs.worker_ip());
 
 
         symmetric_secret_key.resize(32);

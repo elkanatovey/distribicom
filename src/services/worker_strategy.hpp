@@ -93,7 +93,6 @@ namespace services::work_strategy {
         void process_task(WorkerServiceTask &&task) override {
             try {
 
-
                 // expand all queries.
                 expand_queries(task);
 
@@ -103,6 +102,7 @@ namespace services::work_strategy {
                 auto answer = multiply_rows(task);
 
                 send_response(task, answer);
+
             } catch (std::exception &e) {
                 std::cout << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }
