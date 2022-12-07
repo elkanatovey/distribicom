@@ -95,5 +95,10 @@ namespace math_utils {
         void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
         void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
+
+        /***
+         * writes ptx embedding of ctx to ptx_decomposition after relinearizing ctx and putting switching to last modulus
+         */
+        void get_ptx_embedding(const seal::Ciphertext &ctx, seal::RelinKeys relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition);
     };
 }
