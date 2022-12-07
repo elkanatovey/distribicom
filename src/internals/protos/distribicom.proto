@@ -154,6 +154,8 @@ message WorkerRegistryRequest {
 
   // the port the worker is listening to.
   uint32 workerPort = 2;
+
+  string worker_ip=3;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
@@ -213,4 +215,6 @@ message WorkerConfigs {
 
   // the port the worker is listening to.
   uint32 workerPort = 2;
+
+  string worker_ip=3;
 };

@@ -15,7 +15,7 @@ namespace services {
         try {
 
             auto requesting_worker =  utils::extract_ip(context);
-            std::string subscribing_worker_address = "localhost:52100";
+            std::string subscribing_worker_address =request->worker_ip() + ":" + std::to_string(request->workerport());
 
             // creating client to the worker:
             auto worker_conn = std::make_unique<distribicom::Worker::Stub>(distribicom::Worker::Stub(
