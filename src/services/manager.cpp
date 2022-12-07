@@ -13,7 +13,7 @@ namespace services {
                                                                        constants::credentials_md);
 
         mtx.lock();
-        auto exists = worker_stubs.find(worker_creds) != worker_stubs.end();
+        auto exists = work_streams.find(worker_creds) != work_streams.end();
         mtx.unlock();
 
         if (!exists) {
@@ -218,10 +218,9 @@ namespace services {
                       const math_utils::matrix<seal::Ciphertext> &compressed_queries,
                       int rnd, int epoch, std::shared_ptr<WorkDistributionLedger> ledger) {
 
-
+        std::cout << "sending work" << std::endl;
         for (auto &worker: work_streams) {
 
-            worker.second->wait_(); // This is not necessary. Though it is better to wait for the stream to be clean.
             auto rnd_and_epch = std::make_unique<distribicom::WorkerTaskPart>();
             rnd_and_epch->mutable_md()->set_round(rnd);
             rnd_and_epch->mutable_md()->set_epoch(epoch);
@@ -316,7 +315,6 @@ namespace services {
                 worker.second->add_task_to_write(std::move(prt));
             }
             worker.second->write_next();
-            worker.second->wait_();
         }
     }
 

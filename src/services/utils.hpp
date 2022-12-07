@@ -24,7 +24,7 @@ namespace services::utils {
 
     seal::EncryptionParameters setup_enc_params(const distribicom::AppConfigs &cnfgs);
 
-    std::string byte_vec_to_string(const std::vector<std::byte> &bytes);
+    std::string byte_vec_to_64base_string(const std::vector<std::byte> &bytes);
 }
 
 

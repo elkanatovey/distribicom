@@ -3,8 +3,6 @@
 #include "distribicom.pb.h"
 #include <grpc++/grpc++.h>
 
-#include "worker_reader.hpp"
-
 namespace services {
 
     // todo: take a const ref of the app_configs:
@@ -31,6 +29,7 @@ namespace services {
         request.set_workerport(cnfgs.workerport());
 
 
+        symmetric_secret_key.resize(32);
         auto gen = seal::Blake2xbPRNGFactory({1, 2, 3, cnfgs.workerport()}).create();
         std::generate(
                 symmetric_secret_key.begin(),
@@ -38,11 +37,10 @@ namespace services {
                 [gen = std::move(gen)]() { return std::byte(gen->generate() % 256); }
         );
 
-        ;
 
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
                 enc_params,
-                mrshl, std::move(manager_conn), utils::byte_vec_to_string(symmetric_secret_key)
+                mrshl, std::move(manager_conn), utils::byte_vec_to_64base_string(symmetric_secret_key)
         );
 
         threads.emplace_back(
@@ -114,7 +112,7 @@ namespace services {
 
             switch (read_val.part_case()) {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
-                    std::cout << "writing galois keys" << std::endl;
+                    std::cout << "received galois keys" << std::endl;
                     strategy->store_galois_key(
                             mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
                             int(read_val.gkey().key_pos())
@@ -123,15 +121,18 @@ namespace services {
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
+                    std::cout << "received matrix part" << std::endl;
                     update_current_task();
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kMd:
+                    std::cout << "received rnd and epoch" << std::endl;
                     task.round = int(read_val.md().round());
                     task.epoch = int(read_val.md().epoch());
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
+                    std::cout << "task complete" << std::endl;
                     if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
                         std::cout << "sending task to be processed" << std::endl;
                         chan.write(std::move(task));
@@ -186,7 +187,7 @@ namespace services {
 
             distribicom::WorkerRegistryRequest rqst;
             utils::add_metadata_string(context_, constants::credentials_md,
-                                       utils::byte_vec_to_string(symmetric_secret_key));
+                                       utils::byte_vec_to_64base_string(symmetric_secret_key));
             this->stub->async()->RegisterAsWorker(&context_, &rqst, this);
 
             StartRead(&read_val); // queueing a read request.

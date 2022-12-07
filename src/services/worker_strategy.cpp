@@ -116,8 +116,12 @@ namespace services::work_strategy {
         }
 
         grpc::ClientContext context;
-        utils::add_metadata_size(context, services::constants::round_md, task.round);
-        utils::add_metadata_size(context, services::constants::epoch_md, task.epoch);
+        utils::add_metadata_string(context, constants::credentials_md, sym_key);
+        utils::add_metadata_size(context, constants::round_md, task.round);
+        utils::add_metadata_size(context, constants::epoch_md, task.epoch);
+        std::cout << std::endl;
+        std::cout << "key:" << sym_key << " done" << std::endl;
+        std::cout << std::endl;
 
         distribicom::Ack resp;
         auto stream = manager_conn->ReturnLocalWork(&context, &resp);

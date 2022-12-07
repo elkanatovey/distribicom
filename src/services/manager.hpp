@@ -49,7 +49,6 @@ namespace services {
     class WorkStream : public grpc::ServerWriteReactor<distribicom::WorkerTaskPart> {
         std::mutex mtx;
         std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
-        std::condition_variable c;
     public:
         void OnDone() override {
             // todo: mark that this stream is closing, and no-one should hold onto it anymore.
@@ -78,16 +77,10 @@ namespace services {
             // probably should ? only write when you have many things to write.
             mtx.lock();
             to_write.pop();
-            c.notify_one();
             mtx.unlock();
+
             write_next();
         }
-
-        void wait_() {
-            std::unique_lock<std::mutex> lock(mtx);
-            // wait only if there is data that is being written currently.
-            c.wait(lock, [&] { return (to_write.empty()); });
-        };
     };
 
 
