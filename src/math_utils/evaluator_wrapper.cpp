@@ -267,6 +267,11 @@ namespace math_utils {
         evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
 
         ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
+
+        for(auto & ptx : ptx_decomposition){
+            evaluator->transform_to_ntt_inplace(ptx, context.first_parms_id());
+        }
+
     }
 
     void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
