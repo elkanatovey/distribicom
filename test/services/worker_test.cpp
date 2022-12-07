@@ -40,10 +40,8 @@ int worker_test(int, char *[]) {
 
     std::cout << "setting up worker-service" << std::endl;
     threads.emplace_back(setupWorker(wg, cfgs));
-    sleep(4);
 
     fs.wait_for_workers(1);
-    sleep(3);
     fs.start_epoch();
     fs.distribute_work();
 
@@ -57,10 +55,11 @@ int worker_test(int, char *[]) {
     return 0;
 }
 
-std::map<uint32_t, std::unique_ptr<services::ClientInfo>> create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all){
+std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
+create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all) {
     auto m = marshal::Marshaller::Create(all->encryption_params);
     std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
-    for(int i=0;i<size;i++) {
+    for (int i = 0; i < size; i++) {
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
         auto gkey = all->gal_keys;
         client_info->galois_keys = gkey;
@@ -118,18 +117,7 @@ std::thread setupWorker(std::latch &wg, distribicom::AppConfigs &configs) {
                     )
             );
 
-            grpc::ServerBuilder builder;
-
-            builder.SetMaxMessageSize(services::constants::max_message_size);
-
-            std::string server_address("0.0.0.0:" + std::string(worker_port));
-            builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-            builder.RegisterService(&worker);
-
-            auto server(builder.BuildAndStart());
-            std::cout << "worker-service listening on " << server_address << std::endl;
             wg.wait();
-            server->Shutdown();
             worker.close();
         } catch (std::exception &e) {
             std::cerr << "setupWorker :: exception: " << e.what() << std::endl;
@@ -147,11 +135,18 @@ std::thread runFullServer(std::latch &wg, services::FullServer &f) {
 
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 
+        auto sv = f.get_manager_service();
+        std::cout << "had sync methods?" << sv->has_synchronous_methods() << std::endl;
+        std::cout << "had callback methods?" << sv->has_callback_methods() << std::endl;
+        std::cout << "had generic methods?" << sv->has_generic_methods() << std::endl;
 
         builder.RegisterService(f.get_manager_service());
         auto server(builder.BuildAndStart());
         std::cout << "manager and client services are listening on " << server_address << std::endl;
         wg.wait();
+
+        f.close();
+
         server->Shutdown();
     });
 }

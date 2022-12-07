@@ -386,6 +386,8 @@ namespace services {
         work_streams[creds] = stream;
         mtx.unlock();
 
+        worker_counter.add(1);
+
         return stream;
     }
 
