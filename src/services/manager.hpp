@@ -3,7 +3,7 @@
 #include "seal/seal.h"
 #include "distribicom.pb.h"
 #include "distribicom.grpc.pb.h"
-#include "../math_utils/matrix.h"
+#include "math_utils/matrix.h"
 
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
@@ -11,6 +11,8 @@
 #include "concurrency/concurrency.h"
 #include "utils.hpp"
 #include "client_context.hpp"
+
+#include "manager_workstream.hpp"
 
 
 namespace services {
@@ -39,48 +41,6 @@ namespace services {
 
         // open completion will be closed to indicate to anyone waiting.
         concurrency::Channel<int> done;
-    };
-
-    // contains the workers and knows how to distribute their work.
-    // should be able to give a Promise for a specific round and fullfill it once all workers have sent their jobs.
-    // can use Frievalds to verify their work.
-
-
-    class WorkStream : public grpc::ServerWriteReactor<distribicom::WorkerTaskPart> {
-        std::mutex mtx;
-        std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
-    public:
-        void OnDone() override {
-            // todo: mark that this stream is closing, and no-one should hold onto it anymore.
-            delete this;
-        }
-
-        void add_task_to_write(std::unique_ptr<distribicom::WorkerTaskPart> &&tsk) {
-            mtx.lock();
-            to_write.emplace(std::move(tsk));
-            mtx.unlock();
-        }
-
-        void write_next() {
-            mtx.lock();
-            if (!to_write.empty()) {
-                StartWrite(to_write.front().get());
-            }
-            mtx.unlock();
-        }
-
-        // after each succsessful write, pops from the queue, then attempts to do the next write.
-        void OnWriteDone(bool ok) override {
-            if (!ok) {
-                std::cout << "Bad write" << std::endl;
-            }
-            // probably should ? only write when you have many things to write.
-            mtx.lock();
-            to_write.pop();
-            mtx.unlock();
-
-            write_next();
-        }
     };
 
 
