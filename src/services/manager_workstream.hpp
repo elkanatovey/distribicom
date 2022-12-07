@@ -8,6 +8,7 @@ namespace services {
     class WorkStream : public grpc::ServerWriteReactor<distribicom::WorkerTaskPart> {
         std::mutex mtx;
         std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
+        bool mid_write = false; // ensures that sequential calls to write would not write the same item twice.
     public:
 
         void close() { Finish(grpc::Status::OK); }
