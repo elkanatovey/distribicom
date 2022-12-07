@@ -1,5 +1,50 @@
 #include "evaluator_wrapper.hpp"
 
+namespace {
+    uint32_t compute_expansion_ratio(seal::EncryptionParameters params) {
+        uint32_t expansion_ratio = 0;
+        uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
+            double coeff_bit_size = log2(params.coeff_modulus()[i].value());
+            expansion_ratio += ceil(coeff_bit_size / pt_bits_per_coeff);
+        }
+        return expansion_ratio;
+    }
+
+    std::vector<seal::Plaintext> decompose_to_plaintexts(seal::EncryptionParameters params,
+                                                         const seal::Ciphertext &ct) {
+        const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        const auto coeff_count = params.poly_modulus_degree();
+        const auto coeff_mod_count = params.coeff_modulus().size();
+        const uint64_t pt_bitmask = (1 << pt_bits_per_coeff) - 1;
+
+        std::vector<seal::Plaintext> result(compute_expansion_ratio(params) * ct.size());
+        auto pt_iter = result.begin();
+        for (size_t poly_index = 0; poly_index < ct.size(); ++poly_index) {
+            for (size_t coeff_mod_index = 0; coeff_mod_index < coeff_mod_count;
+                 ++coeff_mod_index) {
+                const double coeff_bit_size =
+                        log2(params.coeff_modulus()[coeff_mod_index].value());
+                const size_t local_expansion_ratio =
+                        ceil(coeff_bit_size / pt_bits_per_coeff);
+                size_t shift = 0;
+                for (size_t i = 0; i < local_expansion_ratio; ++i) {
+                    pt_iter->resize(coeff_count);
+                    for (size_t c = 0; c < coeff_count; ++c) {
+                        (*pt_iter)[c] =
+                                (ct.data(poly_index)[coeff_mod_index * coeff_count + c] >>
+                                                                                        shift) &
+                                pt_bitmask;
+                    }
+                    ++pt_iter;
+                    shift += pt_bits_per_coeff;
+                }
+            }
+        }
+        return result;
+    }
+}
+
 namespace math_utils {
 
     void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Plaintext &right,
@@ -176,4 +221,14 @@ namespace math_utils {
             assert(plaintext[current_coeff] < threshold);
         }
     }
+
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, seal::RelinKeys relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) {
+        seal::Ciphertext ctx_copy;
+        evaluator->relinearize(ctx, relin_keys, ctx_copy);
+        evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
+
+        ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
+    }
+
+
 }
