@@ -9,6 +9,9 @@ namespace services {
         std::mutex mtx;
         std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
     public:
+
+        void close() { Finish(grpc::Status::OK); }
+
         void OnDone() override {
             // todo: mark that this stream is closing, and no-one should hold onto it anymore.
             delete this;

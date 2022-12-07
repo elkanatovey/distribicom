@@ -35,8 +35,8 @@ namespace services {
 
     public:
         explicit FullServer(math_utils::matrix<seal::Plaintext> &db,
-                   std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db,
-                   const distribicom::AppConfigs &app_configs);
+                            std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db,
+                            const distribicom::AppConfigs &app_configs);
 
         explicit FullServer(const distribicom::AppConfigs &app_configs);
 
@@ -80,6 +80,8 @@ namespace services {
         void learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>);
 
         void run_step_2(std::shared_ptr<WorkDistributionLedger>);
+
+        void close() { manager.close(); }
 
     private:
         void finish_construction(const distribicom::AppConfigs &app_configs);

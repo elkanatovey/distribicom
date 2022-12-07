@@ -128,5 +128,13 @@ namespace services {
         ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *RegisterAsWorker(
                 ::grpc::CallbackServerContext *ctx/*context*/,
                 const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override;
+
+        void close() {
+            mtx.lock();
+            for (auto ptr: work_streams) {
+                ptr.second->close();
+            }
+            mtx.unlock();
+        }
     };
 }

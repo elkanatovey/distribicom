@@ -107,7 +107,7 @@ namespace services {
                 // bad read might mean data too big.
                 // bad read might mean closed stream.
                 // todo: find proper way to find out the error!
-                throw std::runtime_error("bad read");
+                return;
             }
 
             switch (read_val.part_case()) {
@@ -158,6 +158,20 @@ namespace services {
         StartRead(&read_val);// queue the next read request.
     }
 
+    void Worker::OnDone(const grpc::Status &s) {
+        std::cout << "Closing worker's stream!" << std::endl;
+        std::unique_lock<std::mutex> l(mu_);
+        status_ = s;
+        done_ = true;
+        cv_.notify_one();
+    }
+
+    grpc::Status Worker::wait_for_stream_termination() {
+        std::unique_lock<std::mutex> l(mu_);
+        cv_.wait(l, [this] { return done_; });
+        return std::move(status_);
+    }
+
     void Worker::close() {
         chan.close();
         for (auto &t: threads) {
@@ -193,22 +207,12 @@ namespace services {
             StartRead(&read_val); // queueing a read request.
             StartCall();
 
-            wait_for_stream_termination();
+            auto status = wait_for_stream_termination();
+            if (!status.ok()) {
+                std::cout << "Worker stream terminated with error: " << status.error_message() << std::endl;
+            }
         });
     }
 
-
-    grpc::Status Worker::wait_for_stream_termination() {
-        std::unique_lock<std::mutex> l(mu_);
-        cv_.wait(l, [this] { return done_; });
-        return std::move(status_);
-    }
-
-    void Worker::OnDone(const grpc::Status &s) {
-        std::unique_lock<std::mutex> l(mu_);
-        status_ = s;
-        done_ = true;
-        cv_.notify_one();
-    }
 }
 

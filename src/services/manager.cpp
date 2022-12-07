@@ -8,9 +8,10 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
-        std::cout << "Got a stream back!!!" << std::endl;
-        std::string worker_creds = utils::extract_string_from_metadata(context->client_metadata(),
-                                                                       constants::credentials_md);
+        std::string worker_creds = utils::extract_string_from_metadata(
+                context->client_metadata(),
+                constants::credentials_md
+        );
 
         mtx.lock();
         auto exists = work_streams.find(worker_creds) != work_streams.end();
