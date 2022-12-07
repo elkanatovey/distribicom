@@ -5,12 +5,6 @@
 
 #include "worker_reader.hpp"
 
-class NotImplemented : public std::logic_error {
-public:
-    NotImplemented() : std::logic_error("Function not yet implemented") {};
-
-    explicit NotImplemented(const std::string &txt) : std::logic_error(txt) {};
-};
 namespace services {
 
     // todo: take a const ref of the app_configs:
@@ -36,9 +30,19 @@ namespace services {
 
         request.set_workerport(cnfgs.workerport());
 
+
+        auto gen = seal::Blake2xbPRNGFactory({1, 2, 3, cnfgs.workerport()}).create();
+        std::generate(
+                symmetric_secret_key.begin(),
+                symmetric_secret_key.end(),
+                [gen = std::move(gen)]() { return std::byte(gen->generate() % 256); }
+        );
+
+        ;
+
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
                 enc_params,
-                mrshl, std::move(manager_conn)
+                mrshl, std::move(manager_conn), utils::byte_vec_to_string(symmetric_secret_key)
         );
 
         threads.emplace_back(
@@ -121,25 +125,32 @@ namespace services {
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
                     update_current_task();
                     break;
+
                 case distribicom::WorkerTaskPart::PartCase::kMd:
                     task.round = int(read_val.md().round());
                     task.epoch = int(read_val.md().epoch());
                     break;
+
                 case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
                     if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
                         std::cout << "sending task to be processed" << std::endl;
                         chan.write(std::move(task));
+
+                        // TODO: does this leak memory?
                         task = WorkerServiceTask();
                         task.row_size = int(cnfgs.appconfigs().configs().db_cols());
                     }
                     break;
+
                 default:
                     throw std::invalid_argument("worker stream received unknown message received.");
             }
-        } catch (std::exception &e) {
+
             read_val.clear_part();
             read_val.clear_gkey();
             read_val.clear_matrixpart();
+
+        } catch (std::exception &e) {
             std::cout << "Worker::OnReadDone: failure: " << e.what() << std::endl;
         }
 
@@ -153,25 +164,12 @@ namespace services {
         }
     }
 
-    WorkerServiceTask::WorkerServiceTask(grpc::ServerContext *pContext, const distribicom::Configs &configs) :
-            epoch(-1), round(-1), row_size(int(configs.db_cols())), ptx_rows(), ctx_cols() {
-
-        const auto &metadata = pContext->client_metadata();
-        epoch = utils::extract_size_from_metadata(metadata, constants::epoch_md);
-        round = utils::extract_size_from_metadata(metadata, constants::round_md);
-
-        if (epoch < 0) {
-            throw std::invalid_argument("epoch must be positive");
-        }
-        if (round < 0) {
-            throw std::invalid_argument("round must be positive");
-        }
-    }
-
     void Worker::setup_stream() {
         // TODO: setup any value that we need in our stream here:
 
         task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+
+        // write worker's credentials here:
 
 
         threads.emplace_back([&]() {
@@ -187,6 +185,8 @@ namespace services {
             );
 
             distribicom::WorkerRegistryRequest rqst;
+            utils::add_metadata_string(context_, constants::credentials_md,
+                                       utils::byte_vec_to_string(symmetric_secret_key));
             this->stub->async()->RegisterAsWorker(&context_, &rqst, this);
 
             StartRead(&read_val); // queueing a read request.

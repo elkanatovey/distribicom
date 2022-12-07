@@ -86,5 +86,19 @@ namespace services::utils {
         enc_params.set_plain_modulus(seal::PlainModulus::Batching(N, logt + 1));
         return enc_params;
     }
+
+    void add_metadata_string(grpc::ClientContext &context, const constants::metadata &md, const std::string &str) {
+        context.AddMetadata(std::string(md), str);
+    }
+
+    std::string extract_string_from_metadata(const std::multimap<grpc::string_ref, grpc::string_ref> &mp,
+                                             const constants::metadata &md) {
+        auto ntmp = mp.find(std::string(md));
+        return {ntmp->second.data(), ntmp->second.size()};
+    }
+
+    std::string byte_vec_to_string(const std::vector<std::byte> &bytes) {
+        return {(char *) &bytes[0], bytes.size()};
+    }
 }
 
