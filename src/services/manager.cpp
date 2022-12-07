@@ -8,6 +8,7 @@ namespace services {
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *response) {
+        std::cout << "Got a stream back!!!" << std::endl;
         auto sending_worker = utils::extract_ip(context);
 
 //        mtx.lock();

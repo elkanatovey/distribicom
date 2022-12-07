@@ -91,7 +91,7 @@ namespace services {
     };
 
 
-    class Manager : public distribicom::Manager::CallbackService::WithCallbackMethod_RegisterAsWorker {
+    class Manager : distribicom::Manager::WithCallbackMethod_RegisterAsWorker<distribicom::Manager::Service> {
     private:
         distribicom::AppConfigs app_configs;
 
@@ -124,10 +124,6 @@ namespace services {
 #endif
         {};
 
-        // PartialWorkStream i save this on my server map.
-        ::grpc::Status
-        RegisterAsWorker(::grpc::ServerContext *context, const ::distribicom::WorkerRegistryRequest *request,
-                         ::distribicom::MatrixPart *response);
 
         // a worker should send its work, along with credentials of what it sent.
         ::grpc::Status
