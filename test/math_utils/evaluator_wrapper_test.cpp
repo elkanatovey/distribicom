@@ -64,7 +64,7 @@ void mult_slow_vs_modified_test() {
 
     seal::Ciphertext out3;
     all->w_evaluator->evaluator->transform_to_ntt_inplace(ctx); // ntt expected.
-    all->w_evaluator->mult_modified(ptx, ctx, out3);
+    all->w_evaluator->mult(ptx, ctx, out3);
 
 
     all->w_evaluator->evaluator->sub_inplace(out2, out3);
@@ -77,7 +77,7 @@ seal::Ciphertext create_ctx_multed_with_random_ptx(const std::shared_ptr<TestUti
     auto ctx1 = all->random_ciphertext();
     auto ptx1 = all->random_plaintext();
     all->w_evaluator->evaluator->transform_to_ntt_inplace(ctx1);
-    all->w_evaluator->mult_modified(ptx1, ctx1, ctx1);
+    all->w_evaluator->mult(ptx1, ctx1, ctx1);
     all->w_evaluator->evaluator->transform_from_ntt_inplace(ctx1);
     return ctx1;
 }

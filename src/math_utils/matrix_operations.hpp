@@ -15,36 +15,16 @@ namespace math_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
-
-    enum MultTaskType {
-        ptx_to_ctx,
-        ctx_to_ctx
-    };
-    // represents a task to be executed by a thread
-    struct task {
-        MultTaskType task_type;
-        // the WaitGroup that the issuer of the task is waiting on.
+    struct Task {
+        std::function<void()> f;
         std::shared_ptr<std::latch> wg;
-        // compute details.
-        std::uint64_t row;
-        std::uint64_t col;
-        std::uint64_t n; // number of elements in a row or column.
-
-        // either we have a plain left
-        const matrix<SplitPlaintextNTTForm> *left_ntt;
-        // or we have a ctx left.
-        const matrix<seal::Ciphertext> *left_ctx;
-
-        // the result and the right matrix are always ctx matrices.
-        const matrix<seal::Ciphertext> *right;
-        matrix<seal::Ciphertext> *result;
     };
 
     class MatrixOperations {
     protected:
 
     private:
-        std::shared_ptr<concurrency::Channel<task>> chan;
+        std::shared_ptr<concurrency::Channel<Task>> chan;
         std::vector<std::thread> threads;
 
 #ifdef DISTRIBICOM_DEBUG
@@ -85,38 +65,6 @@ namespace math_utils {
         static std::shared_ptr<MatrixOperations> Create(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
         /***
-         * multiply matrix by integer array using operations on plaintexts
-         * @param dims [num_of_cols, num_of_rows] of matrix
-         * @param left_vec integer vector (row vector: [1,2,0,4,...])
-         * @param matrix plaintext matrix to mult
-         * @param result where to place result, not in ntt representation
-         */
-        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                           PlaintextDefaultFormMatrix &matrix,
-                           std::vector<seal::Plaintext> &result);
-
-
-        /***
-         * multiply matrix by integer array using operations on ciphertext.
-         * Note, this should be called on the second side of the freivalds expression.
-         * (r*A)*b - {r*(A*B)}, where A*B is ciphertext.
-         */
-        void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                           CiphertextDefaultFormMatrix &matrix, std::vector<seal::Ciphertext> &result);
-
-        /***
-         *
-         * multiply matrix by integer array using operations on ciphertexts
-         * Note, left where we have plaintext*ctx done via mult_slow.
-         * @param dims [num_of_cols, num_of_rows] of matrix
-         * @param left_vec integer vector
-         * @param matrix plaintext matrix to mult
-         * @param result where to place result, not in ntt representation
-         */
-        virtual void left_multiply(std::vector<std::uint64_t> &dims, std::vector<std::uint64_t> &left_vec,
-                                   PlaintextDefaultFormMatrix &matrix, std::vector<seal::Ciphertext> &result);
-
-        /***
          *
          * @param dims
          * @param matrix
@@ -142,18 +90,9 @@ namespace math_utils {
 
         // working with matrices:
         void left_multiply(const std::vector<std::uint64_t> &left_vec,
-                           const matrix <seal::Ciphertext> &mat,
-                           matrix <seal::Ciphertext> &result) const;
+                           const matrix<seal::Ciphertext> &mat,
+                           matrix<seal::Ciphertext> &result) const;
 
-        /**
-         * Will transform the mat into trivial ciphertexts
-         * @param left_vec
-         * @param mat
-         * @param result
-         */
-        void left_multiply(const std::vector<std::uint64_t> &left_vec,
-                           const matrix <seal::Plaintext> &mat,
-                           matrix <seal::Ciphertext> &result) const;
 
         /***
          * performs matrix-multiplication.
@@ -188,6 +127,48 @@ namespace math_utils {
 
         bool frievalds(const matrix<seal::Ciphertext> &A, const matrix<seal::Ciphertext> &B,
                        const matrix<seal::Ciphertext> &C) const;
+
+        template<typename U, typename V>
+        seal::Ciphertext mult_row(uint64_t row, uint64_t col, const matrix<U> &left, const matrix<V> &right) const;
+
+        template<typename U, typename V>
+        void
+        mat_mult(const matrix<U> &left, const matrix<V> &right,
+                 matrix<seal::Ciphertext> &result) const;
+
+        template<typename U, typename V>
+        std::shared_ptr<std::latch>
+        async_mat_mult(const std::shared_ptr<matrix<U>> &left,
+                       const std::shared_ptr<matrix<V>> &right,
+                       std::shared_ptr<matrix<seal::Ciphertext>> &result) const;
+
+        /***
+         * Scalar dot product is used to perform Frievalds algorithm.
+         * To ensure integrity of the computations any addition is performed between two ciphertexts.
+         * furthermore, because plaintexts do not support multiplication we rely on Trivial multiplication.
+         * @tparam U either a Ciphertext or a Plaintext
+         * @param vec a vector of uints.
+         * @param mat a matrix of type U (either Ciphertext or Plaintext).
+         * @param result_vec a vector of Ciphertexts.
+         */
+        template<typename U>
+        std::shared_ptr<std::latch>
+        // TODO: instead of latch something smarter - waits and after the first wait is done it'll use atomic checks.
+        async_scalar_dot_product(const std::shared_ptr<std::vector<std::uint64_t>> &vec,
+                                 const std::shared_ptr<matrix<U>> &mat,
+                                 std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const;
+
+        /***
+         *
+         * @param mat
+         * @param vec
+         * @param result_vec
+         */
+        template<typename U>
+        std::shared_ptr<std::latch> async_scalar_dot_product(
+                const std::shared_ptr<matrix<U>> &mat,
+                const std::shared_ptr<std::vector<std::uint64_t>> &vec,
+                std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const;
 
     private:
         void

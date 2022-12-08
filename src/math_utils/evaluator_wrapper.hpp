@@ -58,13 +58,21 @@ namespace math_utils {
          * splits plaintext into two, then mults with ciphertext and then adds the sub results together.
          * should achieve associative/commutative ptx-ciphertext multiplication.
          */
-        void mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+        void mult(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+
+        inline void mult(const seal::Ciphertext &a, const seal::Plaintext &b, seal::Ciphertext &c) const {
+            mult(b, a, c);
+        }
 
         /***
-         * mult_modified receives a split ptx and multiplies it with the ciphertext.
+         * mult receives a split ptx and multiplies it with the ciphertext.
          * all params are in ntt forms.
          */
-        void mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+        void mult(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const;
+
+        inline void mult(const seal::Ciphertext &a, const SplitPlaintextNTTForm &b, seal::Ciphertext &c) const {
+            mult(b, a, c);
+        }
 
         SplitPlaintextNTTForm split_plaintext(const seal::Plaintext &a) const;
 
@@ -87,12 +95,10 @@ namespace math_utils {
         void add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
                                seal::Ciphertext &out) const;
 
-        /***
-        * take vector along with constant and do sum += vector*constant.
-        ***/
-        void multiply_add(const std::uint64_t left, const seal::Plaintext &right, seal::Plaintext &sum) const;
 
-        void multiply_add(const std::uint64_t left, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
+        void scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
+
+        void scalar_multiply(std::uint64_t scalar, const seal::Plaintext &ptx, seal::Ciphertext &sum) const;
 
         void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
 

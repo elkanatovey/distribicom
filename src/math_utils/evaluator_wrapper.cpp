@@ -86,31 +86,6 @@ namespace {
 
 namespace math_utils {
 
-    void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Plaintext &right,
-                                        seal::Plaintext &sum) const {
-        if (left == 0) {
-            return;
-        }
-
-        auto ptx_mod = enc_params.plain_modulus().value();
-
-        auto coeff_count = right.coeff_count();
-        for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
-            sum[current_coeff] += (left * right[current_coeff]);
-            if (sum[current_coeff] >= ptx_mod) {
-                sum[current_coeff] -= ptx_mod;
-            }
-        }
-    }
-
-    void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Ciphertext &right,
-                                        seal::Ciphertext &sum) const {
-        if (left == 0) {
-            return;
-        }
-        evaluator->add_inplace(sum, right);
-    }
-
     void EvaluatorWrapper::add_plain(const seal::Plaintext &a, const seal::Plaintext &b,
                                      seal::Plaintext &c) const {
         seal::Plaintext tmp;
@@ -167,8 +142,7 @@ namespace math_utils {
                 // skipping if to perform + 1 in case a[current_coeff] is odd.
                 a1[current_coeff] = (a[current_coeff] >> 1) + (a[current_coeff] & 1);
                 a2[current_coeff] = (a[current_coeff] >> 1);
-            }
-            else {
+            } else {
                 a1[current_coeff] = a[current_coeff];
                 a2[current_coeff] = 0;
             }
@@ -189,8 +163,8 @@ namespace math_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b,
-                                    seal::Ciphertext &c) const {
+    EvaluatorWrapper::mult(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b,
+                           seal::Ciphertext &c) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(2 == a.size());
         for (auto &a_i: a) {
@@ -207,13 +181,13 @@ namespace math_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+    EvaluatorWrapper::mult(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
         assert(b.is_ntt_form());
 #endif
         auto split_ptx = split_plaintext(a);
-        mult_modified(split_ptx, b, c);
+        mult(split_ptx, b, c);
     }
 
     void EvaluatorWrapper::mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
@@ -266,7 +240,7 @@ namespace math_utils {
         evaluator->relinearize(ctx, relin_keys, ctx_copy);
         evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
 
-        ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
+        ptx_decomposition = std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
 
         for(auto & ptx : ptx_decomposition){
             evaluator->transform_to_ntt_inplace(ptx, context.first_parms_id());
@@ -278,6 +252,19 @@ namespace math_utils {
         seal::Ciphertext ctx_copy(context, context.last_parms_id());
         compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
         decoded = ctx_copy;
+    }
+
+    void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
+                                           seal::Ciphertext &sum) const {
+        seal::Plaintext ptx;
+        ptx = scalar;
+        evaluator->multiply_plain(right, ptx, sum);
+    }
+
+    void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Plaintext &ptx,
+                                           seal::Ciphertext &sum) const {
+        trivial_ciphertext(ptx, sum);
+        scalar_multiply(scalar, sum, sum);
     }
 
 
