@@ -234,7 +234,6 @@ void ctx_composition_test() {
     all->w_evaluator->compose_to_ctx(embedded_enc_ptx, unembedded_enc_ptx);
 
     seal::Plaintext decrypted_unembedded_enc_ptx;
-    std::cout<<all->decryptor.invariant_noise_budget(unembedded_enc_ptx)<<std::endl;
     all->decryptor.decrypt(unembedded_enc_ptx, decrypted_unembedded_enc_ptx);
 
     assert(decrypted_unembedded_enc_ptx.to_string() == ptx.to_string());
