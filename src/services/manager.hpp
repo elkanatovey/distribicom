@@ -69,9 +69,11 @@ namespace services {
 
         explicit Manager(const distribicom::AppConfigs &app_configs) :
                 app_configs(app_configs),
+
                 marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs)))
 #ifdef DISTRIBICOM_DEBUG
                 ,matops(math_utils::MatrixOperations::Create(
+
                         math_utils::EvaluatorWrapper::Create(utils::setup_enc_params(app_configs)))),
                 expander(math_utils::QueryExpander::Create(utils::setup_enc_params(app_configs)))
 #endif
@@ -93,6 +95,7 @@ namespace services {
                 int epoch
 #ifdef DISTRIBICOM_DEBUG
                 ,const seal::GaloisKeys &expansion_key
+
 #endif
         );
 
