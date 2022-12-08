@@ -18,7 +18,7 @@ namespace math_utils {
      */
     typedef std::vector<seal::Plaintext> EmbeddedCiphertextNTTForm;
 
-    typedef std::vector<seal::Ciphertext> EmbeddedCiphertextNTTFormEncrypted;
+    typedef std::vector<seal::Ciphertext> EncryptedEmbeddedCiphertextNTTForm;
 
 /***
  * This class wraps and modifies the behaviour of seal::Evaluator to add wanted multiplication for distribicom.
@@ -105,14 +105,18 @@ namespace math_utils {
         void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
 
         /***
-         * writes ptx embedding of ctx to ptx_decomposition after relinearizing ctx and putting switching to last modulus
+         * writes ptx embedding of ctx to ptx_decompositio
          */
-        void get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, EmbeddedCiphertextNTTForm  &ptx_decomposition) const;
+        void get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertextNTTForm  &ptx_decomposition) const;
 
         void compose_to_ctx(const std::vector<seal::Plaintext> &ptx_decomposition, seal::Ciphertext &decoded) const;
 
         void
         mult_with_ptx_decomposition(const EmbeddedCiphertextNTTForm &ptx_decomposition, const seal::Ciphertext &ctx,
                                     std::vector<seal::Ciphertext> &result) const;
+
+        void add_embedded_ctxs(const EncryptedEmbeddedCiphertextNTTForm &ctx_decomposition1,
+                               const EncryptedEmbeddedCiphertextNTTForm &ctx_decomposition2,
+                               EncryptedEmbeddedCiphertextNTTForm &result) const;
     };
 }

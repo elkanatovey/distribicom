@@ -7,7 +7,11 @@ void order_of_ops_test1();
 
 void order_of_ops_test2(std::shared_ptr<TestUtils::CryptoObjects> all);
 
+void ctx_composition_test();
+
 int evaluator_wrapper_test(int, char *[]) {
+
+    ctx_composition_test();
 
     mult_slow_vs_modified_test();
 
@@ -211,4 +215,27 @@ void benchmark_mult() {
     std::cout << "comparing mult_slow to both mult and mult_plain: " << std::endl;
     std::cout << "mult_slow / mult:       " << double(mult_slow_time) / double(mult_time) << std::endl;
     std::cout << "mult_slow / mult_plain: " << double(mult_slow_time) / double(mult_plain_time) << std::endl;
+}
+
+void ctx_composition_test() {
+    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
+
+    auto ptx = all->random_plaintext();
+    seal::Ciphertext enc_ptx;
+
+
+    all->encryptor.encrypt_symmetric(ptx, enc_ptx);
+
+    math_utils::EmbeddedCiphertextNTTForm embedded_enc_ptx;
+
+    all->w_evaluator->get_ptx_embedding(enc_ptx, embedded_enc_ptx);
+
+    seal::Ciphertext unembedded_enc_ptx;
+    all->w_evaluator->compose_to_ctx(embedded_enc_ptx, unembedded_enc_ptx);
+
+    seal::Plaintext decrypted_unembedded_enc_ptx;
+    std::cout<<all->decryptor.invariant_noise_budget(unembedded_enc_ptx)<<std::endl;
+    all->decryptor.decrypt(unembedded_enc_ptx, decrypted_unembedded_enc_ptx);
+
+    assert(decrypted_unembedded_enc_ptx.to_string() == ptx.to_string());
 }
