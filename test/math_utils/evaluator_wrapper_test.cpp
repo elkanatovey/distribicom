@@ -226,7 +226,7 @@ void ctx_composition_test() {
 
     all->encryptor.encrypt_symmetric(ptx, enc_ptx);
 
-    math_utils::EmbeddedCiphertextNTTForm embedded_enc_ptx;
+    math_utils::EmbeddedCiphertext embedded_enc_ptx;
 
     all->w_evaluator->get_ptx_embedding(enc_ptx, embedded_enc_ptx);
 

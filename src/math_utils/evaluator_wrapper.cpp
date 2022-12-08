@@ -261,7 +261,7 @@ namespace math_utils {
         }
     }
 
-    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertextNTTForm  &ptx_decomposition) const {
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const {
 
         ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx));
 
@@ -274,7 +274,7 @@ namespace math_utils {
     }
 
 
-    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertextNTTForm &ptx_decomposition, const seal::Ciphertext &ctx, EncryptedEmbeddedCiphertextNTTForm  &result) const {
+    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertext &ptx_decomposition, const seal::Ciphertext &ctx, EncryptedEmbeddedCiphertext  &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(ptx_decomposition[0].is_ntt_form());
         assert(ctx.is_ntt_form());
@@ -288,14 +288,14 @@ namespace math_utils {
     }
 
 
-    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertextNTTForm &ctx_decomposition1, const EncryptedEmbeddedCiphertextNTTForm &ctx_decomposition2, EncryptedEmbeddedCiphertextNTTForm  &result) const {
+    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1, const EncryptedEmbeddedCiphertext &ctx_decomposition2, EncryptedEmbeddedCiphertext  &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(ctx_decomposition1[0].is_ntt_form());
         assert(ctx_decomposition2[0].is_ntt_form());
         assert(ctx_decomposition1.size()==ctx_decomposition2.size());
 #endif
 
-        EncryptedEmbeddedCiphertextNTTForm result_copy(ctx_decomposition1.size());
+        EncryptedEmbeddedCiphertext result_copy(ctx_decomposition1.size());
         for(auto i=0; i<ctx_decomposition1.size(); i++){
             evaluator->add(ctx_decomposition1[i], ctx_decomposition2[i], result_copy[i]);
         }
