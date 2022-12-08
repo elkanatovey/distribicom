@@ -261,7 +261,7 @@ namespace math_utils {
         }
     }
 
-    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) const {
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, EmbeddedCiphertextNTTForm  &ptx_decomposition) const {
         seal::Ciphertext ctx_copy;
         evaluator->relinearize(ctx, relin_keys, ctx_copy);
         evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
@@ -278,6 +278,19 @@ namespace math_utils {
         seal::Ciphertext ctx_copy(context, context.last_parms_id());
         compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
         decoded = ctx_copy;
+    }
+
+    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertextNTTForm &ptx_decomposition, const seal::Ciphertext &ctx, EmbeddedCiphertextNTTFormEncrypted  &result) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(ptx_decomposition[0].is_ntt_form());
+        assert(ctx.is_ntt_form());
+#endif
+
+        std::vector<seal::Ciphertext> result_copy(ptx_decomposition.size());
+        for(auto i=0; i<ptx_decomposition.size(); i++){
+            evaluator->multiply_plain(ctx, ptx_decomposition[i], result_copy[i]);
+        }
+        result = std::move(result_copy);
     }
 
 
