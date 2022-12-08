@@ -2,12 +2,14 @@
 #include <grpc++/grpc++.h>
 #include "utils.hpp"
 
+#define UNUSED(x) (void)(x)
 
 namespace services {
 
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
-                                            ::distribicom::Ack *response) {
+                                            ::distribicom::Ack *resp) {
+        UNUSED(resp);
         std::string worker_creds = utils::extract_string_from_metadata(
                 context->client_metadata(),
                 constants::credentials_md
@@ -283,13 +285,13 @@ namespace services {
         std::uint32_t i = 0;
         std::shared_lock lock(mtx);
 
-        auto num_queries_per_worker = query_count_per_worker(worker_stubs.size(), num_rows, num_queries);
+        auto num_queries_per_worker = query_count_per_worker(work_streams.size(), num_rows, num_queries);
 
-        for (auto &worker: worker_stubs) {
+        for (auto &worker: work_streams) {
             this->worker_name_to_work_responsible_for[worker.first].worker_number = i;
             this->worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
 #ifdef DISTRIBICOM_DEBUG
-            if (worker_stubs.size() == 1) {
+            if (work_streams.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
                 for (std::uint32_t j = 0; j < num_rows; j++) {
                     temp[j] = j;
@@ -311,7 +313,7 @@ namespace services {
 
     ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *
     Manager::RegisterAsWorker(::grpc::CallbackServerContext *ctx, const ::distribicom::WorkerRegistryRequest *rqst) {
-
+        UNUSED(rqst);
         std::string creds = utils::extract_string_from_metadata(ctx->client_metadata(), constants::credentials_md);
         // Assuming for now, no one leaves !
         auto stream = new WorkStream();
