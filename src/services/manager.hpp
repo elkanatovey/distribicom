@@ -49,7 +49,6 @@ namespace services {
         distribicom::AppConfigs app_configs;
 
         std::shared_mutex mtx;
-        std::map<std::string, std::unique_ptr<distribicom::Worker::Stub>> worker_stubs;
 
         std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
         concurrency::Counter worker_counter;
