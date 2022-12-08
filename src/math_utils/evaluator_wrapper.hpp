@@ -118,5 +118,7 @@ namespace math_utils {
         void add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1,
                                const EncryptedEmbeddedCiphertext &ctx_decomposition2,
                                EncryptedEmbeddedCiphertext &result) const;
+
+        void transform_to_ntt_inplace(EmbeddedCiphertext &encoded) const;
     };
 }

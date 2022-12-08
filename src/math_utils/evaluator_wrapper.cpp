@@ -288,6 +288,13 @@ namespace math_utils {
     }
 
 
+    void EvaluatorWrapper::transform_to_ntt_inplace(EmbeddedCiphertext  &encoded) const {
+        for(auto & ptx_piece : encoded) {
+            evaluator->transform_to_ntt_inplace(ptx_piece, context.first_parms_id());
+        }
+    }
+
+
     void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1, const EncryptedEmbeddedCiphertext &ctx_decomposition2, EncryptedEmbeddedCiphertext  &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(ctx_decomposition1[0].is_ntt_form());
