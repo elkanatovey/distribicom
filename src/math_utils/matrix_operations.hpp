@@ -136,6 +136,16 @@ namespace math_utils {
         mat_mult(const matrix<U> &left, const matrix<V> &right,
                  matrix<seal::Ciphertext> &result) const;
 
+        /***
+         * usage: Note that this is an async function, it'll return fast without anything in result.
+         *        Before you access result you must wait on the latch!
+         * @tparam U
+         * @tparam V
+         * @param left
+         * @param right
+         * @param result
+         * @return
+         */
         template<typename U, typename V>
         std::shared_ptr<std::latch>
         async_mat_mult(const std::shared_ptr<matrix<U>> &left,
@@ -146,6 +156,9 @@ namespace math_utils {
          * Scalar dot product is used to perform Frievalds algorithm.
          * To ensure integrity of the computations any addition is performed between two ciphertexts.
          * furthermore, because plaintexts do not support multiplication we rely on Trivial multiplication.
+         *
+         * usage: Note that this is an async function, it'll return fast without anything in result_vec.
+         *        Before you access result_vec you must wait on the latch!
          * @tparam U either a Ciphertext or a Plaintext
          * @param vec a vector of uints.
          * @param mat a matrix of type U (either Ciphertext or Plaintext).
