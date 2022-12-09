@@ -5,17 +5,6 @@
 
 namespace math_utils {
     // helper funcs:
-
-    template<typename T, typename U>
-    void verify_not_empty_matrices(const matrix<T> &left, const matrix<U> &right) {
-        if (left.data.empty()) {
-            throw std::invalid_argument("MatrixOperations::multiply: received empty left matrix");
-        }
-        if (right.data.empty()) {
-            throw std::invalid_argument("MatrixOperations::multiply: received empty right matrix");
-        }
-    }
-
     void verify_ptx_ctx_mat_mul_args(const matrix<seal::Plaintext> &left, const matrix<seal::Ciphertext> &right) {
         verify_not_empty_matrices(left, right);
         if (left.data[0].is_ntt_form()) {
@@ -34,13 +23,6 @@ namespace math_utils {
         }
         if (!right.data[0].is_ntt_form()) {
             throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
-        }
-    }
-
-    template<typename T, typename U>
-    void verify_correct_dimension(const matrix<T> &left, const matrix<U> &right) {
-        if (left.cols != right.rows) {
-            throw std::invalid_argument("MatrixOperations::multiply: left matrix cols != right matrix rows");
         }
     }
 
@@ -203,41 +185,6 @@ namespace math_utils {
         mat_mult(left_ntt, right, result);
     }
 
-    template<typename U, typename V>
-    void
-    MatrixOperations::mat_mult(const matrix<U> &left, const matrix<V> &right,
-                               matrix<seal::Ciphertext> &result) const {
-        verify_correct_dimension(left, right);
-        verify_not_empty_matrices(left, right);
-        auto wg = std::make_shared<std::latch>(int(left.rows * right.cols));
-        for (uint64_t i = 0; i < left.rows; ++i) {
-            for (uint64_t j = 0; j < right.cols; ++j) {
-
-                chan->write(
-                        {
-                                .f = [&, i, j]() { result(i, j) = mult_row(i, j, left, right); },
-                                .wg = wg,
-                        }
-                );
-
-            }
-        }
-        wg->wait();
-    }
-
-    template<typename U, typename V>
-    std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
-    MatrixOperations::async_mat_mult(const std::unique_ptr<matrix<U>> &left,
-                                     const std::unique_ptr<matrix<V>> &right) const {
-
-
-        auto left_ptr = std::make_shared<matrix<U>>(std::move(left));
-        auto right_ptr = std::make_shared<matrix<V>>(std::move(right));
-
-        return async_mat_mult(left_ptr, right_ptr);
-    }
-
-
     void fill_rand_vec(uint64_t size, std::vector<std::uint64_t> &randvec) {
         randvec.resize(size);
         // using random seed:
@@ -307,70 +254,6 @@ namespace math_utils {
                 }
             });
         }
-    }
-
-    // TODO: reuse code with the following function.
-    template<typename U>
-    std::shared_ptr<std::latch>
-    MatrixOperations::async_scalar_dot_product(const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-                                               const std::shared_ptr<matrix<U>> &mat,
-                                               std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const {
-
-        result_vec->resize(1, mat->cols);
-        // todo: verify the dimensions are correct.
-
-        auto wg = std::make_shared<std::latch>(int(mat->cols));
-        for (uint64_t k = 0; k < mat->cols; k++) {
-            chan->write(
-                    {
-                            .f = [&, k]() {
-                                seal::Ciphertext tmp;
-                                seal::Ciphertext rslt(w_evaluator->context);
-                                for (uint64_t j = 0; j < mat->rows; j++) {
-                                    w_evaluator->scalar_multiply((*vec)[j], (*mat)(j, k), tmp);
-                                    w_evaluator->add(tmp, rslt, rslt);
-                                }
-                                (*result_vec)(0, k) = rslt;
-                            },
-                            .wg = wg,
-                    }
-            );
-
-        }
-
-        return wg;
-    }
-
-    template<typename U>
-    std::shared_ptr<std::latch>
-    MatrixOperations::async_scalar_dot_product(
-            const std::shared_ptr<matrix<U>> &mat,
-            const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-            std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const {
-
-        result_vec->resize(mat->rows, 1);
-        // todo: verify the dimensions are correct.
-
-        auto wg = std::make_shared<std::latch>(int(mat->rows));
-        for (uint64_t k = 0; k < mat->rows; k++) {
-            chan->write(
-                    {
-                            .f= [&, k]() {
-                                seal::Ciphertext tmp;
-                                seal::Ciphertext rslt(w_evaluator->context);
-                                for (uint64_t j = 0; j < mat->cols; j++) {
-                                    w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
-                                    w_evaluator->add(tmp, rslt, rslt);
-                                }
-                                (*result_vec)(k, 0) = rslt;
-                            },
-                            .wg = wg,
-                    }
-            );
-
-        }
-
-        return wg;
     }
 
 }

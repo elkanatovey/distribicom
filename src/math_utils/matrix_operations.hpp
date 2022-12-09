@@ -201,3 +201,5 @@ namespace math_utils {
     };
 
 }
+
+#include "matrix_operations.tpp"

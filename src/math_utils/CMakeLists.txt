@@ -1,4 +1,4 @@
-add_library(multiplication_utils matrix_operations.hpp matrix_operations.cpp evaluator_wrapper.hpp evaluator_wrapper.cpp query_expander.hpp query_expander.cpp matrix.h)
+add_library(multiplication_utils matrix_operations.hpp matrix_operations.cpp matrix_operations.tpp evaluator_wrapper.hpp evaluator_wrapper.cpp query_expander.hpp query_expander.cpp matrix.h)
 
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH MY_PARENT_DIR)
 

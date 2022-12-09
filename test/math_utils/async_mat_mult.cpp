@@ -46,7 +46,7 @@ int async_mat_mult(int, char *[]) {
     TestUtils::time_func_print("mat-mult", [&matops, &A_as_ptx, &B, &C]() { matops->multiply(*A_as_ptx, *B, *C); });
 
 
-    auto p = matops->async_mat_mult<seal::Plaintext, seal::Ciphertext>(A_as_ptx, B);
+    auto p = matops->async_mat_mult<>(A_as_ptx, B);
     auto async_c = p->get();
 
     for (std::uint64_t i = 0; i < C->data.size(); ++i) {
