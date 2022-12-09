@@ -3,7 +3,7 @@
 #include <latch>
 #include "evaluator_wrapper.hpp"
 #include "matrix.h"
-#include "concurrency/channel.hpp"
+#include "concurrency/concurrency.h"
 
 
 namespace math_utils {
@@ -136,9 +136,19 @@ namespace math_utils {
         mat_mult(const matrix<U> &left, const matrix<V> &right,
                  matrix<seal::Ciphertext> &result) const;
 
+
+        /**
+         * Performs mat-mult between two matrices (ptx-ctx, ctx-ptx, ctx-ctx).
+         * returns a promise which can be waited upon to receive the result.
+         * @return
+         */
+        template<typename U, typename V>
+        std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
+        async_mat_mult(const std::shared_ptr<matrix<U>> &left_ptr,
+                       const std::shared_ptr<matrix<V>> &right_ptr) const;
+
         /***
-         * usage: Note that this is an async function, it'll return fast without anything in result.
-         *        Before you access result you must wait on the latch!
+         * similar to any async_mat_mult.
          * @tparam U
          * @tparam V
          * @param left
@@ -147,10 +157,9 @@ namespace math_utils {
          * @return
          */
         template<typename U, typename V>
-        std::shared_ptr<std::latch>
-        async_mat_mult(const std::shared_ptr<matrix<U>> &left,
-                       const std::shared_ptr<matrix<V>> &right,
-                       std::shared_ptr<matrix<seal::Ciphertext>> &result) const;
+        std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
+        async_mat_mult(const std::unique_ptr<matrix<U>> &left,
+                       const std::unique_ptr<matrix<V>> &right) const;
 
         /***
          * Scalar dot product is used to perform Frievalds algorithm.
@@ -166,7 +175,6 @@ namespace math_utils {
          */
         template<typename U>
         std::shared_ptr<std::latch>
-        // TODO: instead of latch something smarter - waits and after the first wait is done it'll use atomic checks.
         async_scalar_dot_product(const std::shared_ptr<std::vector<std::uint64_t>> &vec,
                                  const std::shared_ptr<matrix<U>> &mat,
                                  std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const;

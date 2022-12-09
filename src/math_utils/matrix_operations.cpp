@@ -226,51 +226,15 @@ namespace math_utils {
     }
 
     template<typename U, typename V>
-    std::shared_ptr<std::latch>
-    MatrixOperations::async_mat_mult(const std::shared_ptr<matrix<U>> &left,
-                                     const std::shared_ptr<matrix<V>> &right,
-                                     std::shared_ptr<matrix<seal::Ciphertext>> &result) const {
-        verify_correct_dimension(left, right);
-        verify_not_empty_matrices(left, right);
+    std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
+    MatrixOperations::async_mat_mult(const std::unique_ptr<matrix<U>> &left,
+                                     const std::unique_ptr<matrix<V>> &right) const {
 
-        auto wg = std::make_shared<std::latch>(int(left->rows * right->cols));
-        for (uint64_t i = 0; i < left->rows; ++i) {
-            for (uint64_t j = 0; j < right->cols; ++j) {
-                chan->write(
-                        {
-                                .f = [&, i, j]() { (*result)(i, j) = mult_row(i, j, left, right); },
-                                .wg = wg,
-                        }
-                );
-            }
-        }
-        return wg;
-    }
 
-    template<typename U, typename V>
-    seal::Ciphertext MatrixOperations::mult_row(uint64_t i, uint64_t j, const matrix<U> &left,
-                                                const matrix<V> &right) const {
-        seal::Ciphertext tmp;
-        seal::Ciphertext tmp_result(w_evaluator->context);
-        // compiletime if, ensures the row multiplication is correct.
-        if constexpr (
+        auto left_ptr = std::make_shared<matrix<U>>(std::move(left));
+        auto right_ptr = std::make_shared<matrix<V>>(std::move(right));
 
-            // case 1: left  is ptx and right is ctx
-                ((std::is_same_v<U, seal::Plaintext> || std::is_same_v<U, SplitPlaintextNTTForm>) &&
-                 std::is_same_v<V, seal::Ciphertext>) ||
-
-                // case 2: right is ptx and left is ctx
-                ((std::is_same_v<V, seal::Plaintext> || std::is_same_v<V, SplitPlaintextNTTForm>) &&
-                 std::is_same_v<U, seal::Ciphertext>)
-                ) {
-            w_evaluator->evaluator->transform_to_ntt_inplace(tmp_result);
-        }
-
-        for (uint64_t k = 0; k < left.cols; ++k) {
-            w_evaluator->mult(left(i, k), right(k, j), tmp);
-            w_evaluator->add(tmp, tmp_result, tmp_result);
-        }
-        return tmp_result;
+        return async_mat_mult(left_ptr, right_ptr);
     }
 
 
