@@ -9,6 +9,7 @@ create_test_sourcelist (Tests
         query_expander_test.cpp
         mult_benchmark.cpp
         frievalds_test.cpp
+        async_mat_mult.cpp
         )
 
 # add the executable
