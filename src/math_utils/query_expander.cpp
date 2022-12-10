@@ -206,7 +206,7 @@ namespace math_utils {
         pool->submit(
                 {
                         .f =
-                        [&, query_i_cpy, galkey_cpy, n_i]() {
+                        [&, promise, query_i_cpy, galkey_cpy, n_i]() {
                             promise->set(
                                     std::make_shared<std::vector<seal::Ciphertext>>(
                                             expand_query(*query_i_cpy, n_i, *galkey_cpy))
