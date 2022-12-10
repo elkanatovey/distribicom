@@ -174,10 +174,9 @@ namespace math_utils {
          * @param result_vec a vector of Ciphertexts.
          */
         template<typename U>
-        std::shared_ptr<std::latch>
+        std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
         async_scalar_dot_product(const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-                                 const std::shared_ptr<matrix<U>> &mat,
-                                 std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const;
+                                 const std::shared_ptr<matrix<U>> &mat) const;
 
         /***
          *
@@ -186,10 +185,9 @@ namespace math_utils {
          * @param result_vec
          */
         template<typename U>
-        std::shared_ptr<std::latch> async_scalar_dot_product(
-                const std::shared_ptr<matrix<U>> &mat,
-                const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-                std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const;
+        std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
+        async_scalar_dot_product(const std::shared_ptr<matrix<U>> &mat,
+                                 const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
 
     private:
         void

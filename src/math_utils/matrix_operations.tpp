@@ -114,19 +114,18 @@ namespace math_utils {
 
     // TODO: reuse code with the following function.
     template<typename U>
-    std::shared_ptr<std::latch>
+    std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
     MatrixOperations::async_scalar_dot_product(const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-                                               const std::shared_ptr<matrix<U>> &mat,
-                                               std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const {
+                                               const std::shared_ptr<matrix<U>> &mat) const {
 
-        result_vec->resize(1, mat->cols);
-        // todo: verify the dimensions are correct.
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(1, mat->cols);
 
-        auto wg = std::make_shared<std::latch>(int(mat->cols));
+        auto p = std::make_unique<concurrency::promise<matrix<seal::Ciphertext>>>(int(mat->cols), result_vec);
+        auto latch = p->get_latch();
         for (uint64_t k = 0; k < mat->cols; k++) {
             chan->write(
                     {
-                            .f = [&, k]() {
+                            .f = [&, k, result_vec, vec, mat]() {
                                 seal::Ciphertext tmp;
                                 seal::Ciphertext rslt(w_evaluator->context);
                                 for (uint64_t j = 0; j < mat->rows; j++) {
@@ -135,30 +134,29 @@ namespace math_utils {
                                 }
                                 (*result_vec)(0, k) = rslt;
                             },
-                            .wg = wg,
+                            .wg = latch,
                     }
             );
 
         }
 
-        return wg;
+        return p;
     }
 
     template<typename U>
-    std::shared_ptr<std::latch>
+    std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
     MatrixOperations::async_scalar_dot_product(
             const std::shared_ptr<matrix<U>> &mat,
-            const std::shared_ptr<std::vector<std::uint64_t>> &vec,
-            std::shared_ptr<matrix<seal::Ciphertext>> &result_vec) const {
+            const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
 
-        result_vec->resize(mat->rows, 1);
-        // todo: verify the dimensions are correct.
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->rows, 1);
 
-        auto wg = std::make_shared<std::latch>(int(mat->rows));
+        auto p = std::make_unique<concurrency::promise<matrix<seal::Ciphertext>>>(int(mat->rows), result_vec);
+        auto latch = p->get_latch();
         for (uint64_t k = 0; k < mat->rows; k++) {
             chan->write(
                     {
-                            .f= [&, k]() {
+                            .f= [&, k, result_vec, vec, mat]() {
                                 seal::Ciphertext tmp;
                                 seal::Ciphertext rslt(w_evaluator->context);
                                 for (uint64_t j = 0; j < mat->cols; j++) {
@@ -167,13 +165,13 @@ namespace math_utils {
                                 }
                                 (*result_vec)(k, 0) = rslt;
                             },
-                            .wg = wg,
+                            .wg = latch,
                     }
             );
 
         }
 
-        return wg;
+        return p;
     }
 
 }
