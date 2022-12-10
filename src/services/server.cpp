@@ -6,31 +6,28 @@
 #include "client_context.hpp"
 
 
-
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
         std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-        db(db), manager(app_configs) {
+        db(db), manager(app_configs), enc_params(utils::setup_enc_params(app_configs)) {
     this->client_query_manager.client_counter = client_db.size();
     this->client_query_manager.id_to_info = std::move(client_db);
-    finish_construction(app_configs);
+    init_pir_data(app_configs);
 
 }
 
 services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
-        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs) {
-    finish_construction(app_configs);
+        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs),
+        enc_params(utils::setup_enc_params(app_configs)) {
+    init_pir_data(app_configs);
 
 }
 
-void services::FullServer::finish_construction(const distribicom::AppConfigs &app_configs) {
-    pir_configs = app_configs.configs();
-    enc_params = utils::setup_enc_params(app_configs);
+void services::FullServer::init_pir_data(const distribicom::AppConfigs &app_configs) {
     const auto &configs = app_configs.configs();
     gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
                    configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
                    configs.use_batching(), configs.use_recursive_mod_switching());
-    client = make_unique<PIRClient>(PIRClient(enc_params, pir_params));
 }
 
 grpc::Status

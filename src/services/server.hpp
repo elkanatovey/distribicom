@@ -23,7 +23,6 @@ namespace services {
         distribicom::Configs pir_configs;
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
-        std::unique_ptr<PIRClient> client;
 
         // concurrency stuff
         ClientDB client_query_manager;
@@ -38,7 +37,6 @@ namespace services {
                             const distribicom::AppConfigs &app_configs);
 
         explicit FullServer(const distribicom::AppConfigs &app_configs);
-
 
 
         grpc::Status
@@ -78,6 +76,6 @@ namespace services {
         void close() { manager.close(); }
 
     private:
-        void finish_construction(const distribicom::AppConfigs &app_configs);
+        void init_pir_data(const distribicom::AppConfigs &app_configs);
     };
 }
