@@ -2,6 +2,7 @@
 
 #include <seal/seal.h>
 #include <vector>
+#include "concurrency/concurrency.h"
 
 namespace math_utils {
     /***
@@ -13,11 +14,20 @@ namespace math_utils {
      * expand_query takes a part of multi-dimensional query and expand one part of.
      */
     class QueryExpander {
+        QueryExpander(const seal::EncryptionParameters parameters, std::shared_ptr<concurrency::threadpool> sharedPtr);
+
+        std::shared_ptr<concurrency::threadpool> pool;
     public:
         static std::shared_ptr<QueryExpander> Create(const seal::EncryptionParameters enc_params);
 
+        static std::shared_ptr<QueryExpander>
+        Create(const seal::EncryptionParameters enc_params, std::shared_ptr<concurrency::threadpool> &pool);
+
         std::vector<seal::Ciphertext>
         expand_query(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey) const;
+
+        std::unique_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>
+        async_expand(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey);
 
         std::vector<seal::Ciphertext> __expand_query(const seal::Ciphertext &encrypted,
                                                      uint32_t m, seal::GaloisKeys &galkey) const;

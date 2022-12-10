@@ -172,10 +172,16 @@ namespace math_utils {
     }
 
     QueryExpander::QueryExpander(const seal::EncryptionParameters enc_params) :
-            enc_params_(enc_params) {
+            enc_params_(enc_params), pool(std::make_shared<concurrency::threadpool>()) {
         seal::SEALContext context(enc_params, true);
 
         evaluator_ = std::make_unique<seal::Evaluator>(context);
+    }
+
+    QueryExpander::QueryExpander(const seal::EncryptionParameters enc_params,
+                                 std::shared_ptr<concurrency::threadpool> pool) :
+            enc_params_(enc_params), pool(std::make_shared<concurrency::threadpool>()) {
+
     }
 
     std::shared_ptr<QueryExpander>
@@ -183,4 +189,11 @@ namespace math_utils {
         auto eval = QueryExpander(enc_params);
         return std::make_shared<QueryExpander>(std::move(eval));
     }
+
+    std::shared_ptr<QueryExpander>
+    QueryExpander::Create(const seal::EncryptionParameters enc_params, std::shared_ptr<concurrency::threadpool> &pool) {
+        auto eval = QueryExpander(enc_params, pool);
+        return std::make_shared<QueryExpander>(std::move(eval));
+    }
+
 }
