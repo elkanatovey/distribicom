@@ -174,9 +174,5 @@ namespace math_utils {
         return p;
     }
 
-    MatrixOperations::MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator,
-                                       std::shared_ptr<concurrency::threadpool> &pool) : w_evaluator(w_evaluator),
-                                                                                         pool(pool) {}
-
 
 }

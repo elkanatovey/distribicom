@@ -29,11 +29,15 @@ namespace math_utils {
         public:
 #endif
 
-        explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator);
+        explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator) :
+                w_evaluator(w_evaluator),
+                pool(std::make_shared<concurrency::threadpool>()) {
+        };
 
         explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator,
                                   std::shared_ptr<concurrency::threadpool> &pool
-        );
+        ) : w_evaluator(w_evaluator),
+            pool(pool) {};
 
         /***
          * receives a plaintext matrix/ vector, and transforms it into a
