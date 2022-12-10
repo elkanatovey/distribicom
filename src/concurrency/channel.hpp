@@ -4,6 +4,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+
 namespace concurrency {
 
     template<class T>
@@ -15,6 +16,31 @@ namespace concurrency {
 
     template<class T>
     class Channel {
+    private:
+
+        bool closed = false;
+        std::queue<T> q;
+        mutable std::mutex m;
+        std::condition_variable c;
+
+        /**
+         * USAGE: should be called when channel resources are locked!
+         * the proper way the channel outputs anything, will always attempt to drain the channel before stating it is closed
+         * @return
+         */
+        inline Result<T> pop_chan() {
+            if (!q.empty()) {
+                T val = q.front();
+                q.pop();
+                return Result<T>{val, true};
+            }
+            if (closed) {
+                return Result<T>{T(), false};
+            } // result is not OK.
+
+            throw std::runtime_error("Channel::pop_chan() - unexpected state.");
+        }
+
     public:
         Channel() : q(), m(), c() {}
 
@@ -45,10 +71,8 @@ namespace concurrency {
             std::unique_lock<std::mutex> lock(m);
             // returns if q is not empty, and if channel is not closed. // todo verify this expression.
             c.wait(lock, [&] { return (!q.empty() || closed); });
-            if (closed) { return Result<T>{T(), false}; } // result is not OK.
-            T val = q.front();
-            q.pop();
-            return Result<T>{val, true};
+
+            return pop_chan();
         }
 
         /**
@@ -67,13 +91,7 @@ namespace concurrency {
                 return Result<T>{T(), false}; // timeout passed..
             }
 
-            if (closed) {
-                return Result<T>{T(), false};
-            } // result is not OK.
-
-            T val = q.front();
-            q.pop();
-            return Result<T>{val, true};
+            return pop_chan();
         }
 
         /**
@@ -85,11 +103,5 @@ namespace concurrency {
             c.notify_all();
         }
 
-
-    private:
-        bool closed = false;
-        std::queue<T> q;
-        mutable std::mutex m;
-        std::condition_variable c;
     };
 }
