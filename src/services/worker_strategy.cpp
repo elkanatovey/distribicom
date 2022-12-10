@@ -71,7 +71,9 @@ namespace services::work_strategy {
                         return 0;
                     }
 
+                    // todo: use async_expander.
                     auto expanded = query_expander->expand_query(qry, expanded_size, gkeys.find(query_pos)->second);
+
 
                     mu.lock();
                     queries.insert({query_pos, math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)});

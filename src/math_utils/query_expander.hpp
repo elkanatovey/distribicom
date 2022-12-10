@@ -26,7 +26,7 @@ namespace math_utils {
         std::vector<seal::Ciphertext>
         expand_query(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey) const;
 
-        std::unique_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>
+        std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>
         async_expand(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey);
 
         std::vector<seal::Ciphertext> __expand_query(const seal::Ciphertext &encrypted,
