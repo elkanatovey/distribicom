@@ -124,13 +124,10 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 }
 
 void services::FullServer::start_epoch() {
-    client_query_manager.mutex.lock_shared();
-    manager.map_workers_to_responsibilities(pir_configs.db_rows(), client_query_manager.client_counter);
-    client_query_manager.mutex.unlock_shared();
+    std::shared_lock client_db_lock(client_query_manager.mutex);
 
-    //todo: start epoch for registered clients as well -> make them send queries.
+    manager.new_epoch(client_query_manager);
     manager.send_galois_keys(client_query_manager);
-//            wait_for_workers(0); todo: wait for app_configs.num_workers
 }
 
 void services::FullServer::wait_for_workers(int i) {

@@ -24,6 +24,11 @@ namespace services {
         std::vector<std::uint64_t> db_rows;
     };
 
+    struct EpochData {
+        std::map<std::string, WorkerInfo> worker_to_responsibilities;
+        // following the same key as the client's db.
+        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
+    };
     /**
  * WorkDistributionLedger keeps track on a distributed task.
  * it should keep hold on a working task.
@@ -50,7 +55,6 @@ namespace services {
 
         std::shared_mutex mtx;
 
-        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for; // todo: refactor into struct
         concurrency::Counter worker_counter;
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
 
@@ -62,7 +66,7 @@ namespace services {
 #endif
 
         std::map<std::string, WorkStream *> work_streams;
-
+        EpochData epoch_data;
     public:
         explicit Manager() {};
 
@@ -71,9 +75,9 @@ namespace services {
 
                 marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs)))
 #ifdef DISTRIBICOM_DEBUG
-                ,matops(math_utils::MatrixOperations::Create(
+                , matops(math_utils::MatrixOperations::Create(
 
-                        math_utils::EvaluatorWrapper::Create(utils::setup_enc_params(app_configs)))),
+                math_utils::EvaluatorWrapper::Create(utils::setup_enc_params(app_configs)))),
                 expander(math_utils::QueryExpander::Create(utils::setup_enc_params(app_configs)))
 #endif
         {};
@@ -93,7 +97,7 @@ namespace services {
                 int rnd,
                 int epoch
 #ifdef DISTRIBICOM_DEBUG
-                ,const seal::GaloisKeys &expansion_key
+                , const seal::GaloisKeys &expansion_key
 
 #endif
         );
@@ -109,7 +113,7 @@ namespace services {
         /**
          *  assumes num workers map well to db and queries
          */
-        void map_workers_to_responsibilities(uint64_t num_rows, uint64_t num_queries);
+        map<string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
 
         void send_galois_keys(const ClientDB &all_clients);
 
@@ -128,5 +132,10 @@ namespace services {
             }
             mtx.unlock();
         }
+
+        /**
+         * assumes the given db is thread-safe.
+         */
+        void new_epoch(const ClientDB &db);
     };
 }

@@ -168,7 +168,7 @@ namespace services {
 
             worker.second->add_task_to_write(std::move(part));
 
-            auto db_rows = worker_name_to_work_responsible_for[worker.first].db_rows;
+            auto db_rows = epoch_data.worker_to_responsibilities[worker.first].db_rows;
             for (const auto &db_row: db_rows) {
                 // first send db
                 for (std::uint32_t j = 0; j < db.cols; ++j) {
@@ -198,7 +198,7 @@ namespace services {
         std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
 
-            auto current_worker_info = worker_name_to_work_responsible_for[worker.first];
+            auto current_worker_info = epoch_data.worker_to_responsibilities[worker.first];
             auto range_start = current_worker_info.query_range_start;
             auto range_end = current_worker_info.query_range_end;
 
@@ -234,13 +234,12 @@ namespace services {
         utils::add_metadata_size(context, services::constants::round_md, 1);
         utils::add_metadata_size(context, services::constants::epoch_md, 1);
 
-        std::shared_lock client_db_lock(all_clients.mutex);
         std::shared_lock lock(mtx);
 
         for (auto &worker: work_streams) {
 
-            auto range_start = worker_name_to_work_responsible_for[worker.first].query_range_start;
-            auto range_end = worker_name_to_work_responsible_for[worker.first].query_range_end;
+            auto range_start = epoch_data.worker_to_responsibilities[worker.first].query_range_start;
+            auto range_end = epoch_data.worker_to_responsibilities[worker.first].query_range_end;
 
             for (std::uint64_t i = range_start; i < range_end; ++i) {
                 auto prt = std::make_unique<distribicom::WorkerTaskPart>();
@@ -281,34 +280,36 @@ namespace services {
     }
 
 
-    void Manager::map_workers_to_responsibilities(std::uint64_t num_rows, std::uint64_t num_queries) {
+    map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
+        std::uint64_t num_rows = app_configs.configs().db_rows();
         std::uint32_t i = 0;
         std::shared_lock lock(mtx);
 
         auto num_queries_per_worker = query_count_per_worker(work_streams.size(), num_rows, num_queries);
-
+        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for;
         for (auto &worker: work_streams) {
-            this->worker_name_to_work_responsible_for[worker.first].worker_number = i;
-            this->worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
+            worker_name_to_work_responsible_for[worker.first].worker_number = i;
+            worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
 #ifdef DISTRIBICOM_DEBUG
             if (work_streams.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
                 for (std::uint32_t j = 0; j < num_rows; j++) {
                     temp[j] = j;
                 }
-                this->worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);
-                this->worker_name_to_work_responsible_for[worker.first].query_range_start = 0;
-                this->worker_name_to_work_responsible_for[worker.first].query_range_end = num_queries;
-                return;
+                worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);
+                worker_name_to_work_responsible_for[worker.first].query_range_start = 0;
+                worker_name_to_work_responsible_for[worker.first].query_range_end = num_queries;
+                return worker_name_to_work_responsible_for;
             }
 #endif
             auto query_range = get_query_range_to_work_with(i, num_queries, num_queries_per_worker);
 
-            this->worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
-            this->worker_name_to_work_responsible_for[worker.first].query_range_end = query_range.second;
+            worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
+            worker_name_to_work_responsible_for[worker.first].query_range_end = query_range.second;
 
             i += 1;
         }
+        return worker_name_to_work_responsible_for;
     }
 
     ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *
@@ -327,5 +328,23 @@ namespace services {
         return stream;
     }
 
+    // TODO: add epoch number so we can throw out old work and not be confused by it.
+    void Manager::new_epoch(const ClientDB &db) {
+        EpochData ed{
+                .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+                .queries = {},
+        };
+
+        auto expand_size = app_configs.configs().db_cols();
+        for (const auto &info: db.id_to_info) {
+            // expanding the first dimension asynchrounously.
+            auto promise = expander->async_expand(info.second->query[0], expand_size, info.second->galois_keys);
+            ed.queries[info.first] = std::move(promise);
+        }
+
+        mtx.lock();
+        epoch_data = std::move(ed);
+        mtx.unlock();
+    }
 
 }
