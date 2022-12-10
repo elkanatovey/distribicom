@@ -16,11 +16,13 @@ namespace concurrency {
 
     class threadpool {
     public:
+        explicit threadpool() : threadpool(std::thread::hardware_concurrency()) {};
+
         explicit threadpool(uint64_t n_threads);
 
         ~threadpool();
 
-        void submit(Task &&task);
+        void submit(Task task);
 
     private:
         std::vector<std::thread> threads;

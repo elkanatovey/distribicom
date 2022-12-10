@@ -26,6 +26,6 @@ concurrency::threadpool::~threadpool() {
     }
 }
 
-void concurrency::threadpool::submit(concurrency::Task &&task) {
-    chan.write(std::move(task));
+void concurrency::threadpool::submit(concurrency::Task task) {
+    chan.write(task);
 }

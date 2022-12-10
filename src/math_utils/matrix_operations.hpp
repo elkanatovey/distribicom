@@ -15,17 +15,11 @@ namespace math_utils {
     typedef std::vector<SplitPlaintextNTTForm> SplitPlaintextNTTFormMatrix;
     typedef std::vector<seal::Ciphertext> CiphertextDefaultFormMatrix;
 
-    struct Task {
-        std::function<void()> f;
-        std::shared_ptr<std::latch> wg;
-    };
-
     class MatrixOperations {
     protected:
 
     private:
-        std::shared_ptr<concurrency::Channel<Task>> chan;
-        std::vector<std::thread> threads;
+        std::shared_ptr<concurrency::threadpool> pool;
 
 #ifdef DISTRIBICOM_DEBUG
     public:
@@ -36,15 +30,6 @@ namespace math_utils {
 #endif
 
         explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator);
-
-        ~MatrixOperations() {
-            chan->close();
-            for (auto &t: threads) {
-                t.join();
-            }
-        }
-
-        void start();
 
         /***
          * receives a plaintext matrix/ vector, and transforms it into a

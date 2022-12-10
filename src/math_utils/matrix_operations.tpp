@@ -59,7 +59,7 @@ namespace math_utils {
         for (uint64_t i = 0; i < left.rows; ++i) {
             for (uint64_t j = 0; j < right.cols; ++j) {
 
-                chan->write(
+                pool->submit(
                         {
                                 .f = [&, i, j]() { result(i, j) = mult_row(i, j, left, right); },
                                 .wg = wg,
@@ -87,7 +87,7 @@ namespace math_utils {
         auto latch = p->get_latch();
         for (uint64_t i = 0; i < left_ptr->rows; ++i) {
             for (uint64_t j = 0; j < right_ptr->cols; ++j) {
-                chan->write(
+                pool->submit(
                         {
                                 .f = [&, i, j, result, left_ptr, right_ptr]() {
                                     (*result)(i, j) = mult_row<U, V>(i, j, *left_ptr, *right_ptr);
@@ -123,7 +123,7 @@ namespace math_utils {
         auto p = std::make_unique<concurrency::promise<matrix<seal::Ciphertext>>>(int(mat->cols), result_vec);
         auto latch = p->get_latch();
         for (uint64_t k = 0; k < mat->cols; k++) {
-            chan->write(
+            pool->submit(
                     {
                             .f = [&, k, result_vec, vec, mat]() {
                                 seal::Ciphertext tmp;
@@ -154,7 +154,7 @@ namespace math_utils {
         auto p = std::make_unique<concurrency::promise<matrix<seal::Ciphertext>>>(int(mat->rows), result_vec);
         auto latch = p->get_latch();
         for (uint64_t k = 0; k < mat->rows; k++) {
-            chan->write(
+            pool->submit(
                     {
                             .f= [&, k, result_vec, vec, mat]() {
                                 seal::Ciphertext tmp;

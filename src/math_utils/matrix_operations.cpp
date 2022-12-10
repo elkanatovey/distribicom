@@ -78,7 +78,6 @@ namespace math_utils {
     std::shared_ptr<MatrixOperations>
     MatrixOperations::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator) {
         auto matops = std::make_shared<MatrixOperations>(w_evaluator);
-        matops->start();
         return matops;
     }
 
@@ -232,28 +231,9 @@ namespace math_utils {
     }
 
     MatrixOperations::
-    MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator) : chan(), threads(), w_evaluator(w_evaluator) {
-        chan = std::make_shared<concurrency::Channel<Task>>();
-    }
-
-    void MatrixOperations::start() {
-        auto processor_count = std::thread::hardware_concurrency();
-
-        // creating our multiplication worker.
-        for (std::uint64_t i = 0; i < processor_count; ++i) {
-            threads.emplace_back([&] {
-                seal::Ciphertext tmp(w_evaluator->context);
-
-                while (true) {
-                    concurrency::Result<Task> r = chan->read();
-                    if (!r.ok) {
-                        return;
-                    }
-                    r.answer.f();
-                    r.answer.wg->count_down();
-                }
-            });
-        }
+    MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator) :
+            w_evaluator(w_evaluator),
+            pool(std::make_shared<concurrency::threadpool>()) {
     }
 
 }
