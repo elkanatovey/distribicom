@@ -81,6 +81,13 @@ namespace math_utils {
         return matops;
     }
 
+    std::shared_ptr<MatrixOperations>
+    MatrixOperations::Create(std::shared_ptr<EvaluatorWrapper> w_evaluator,
+                             std::shared_ptr<concurrency::threadpool> &pool) {
+        auto matops = std::make_shared<MatrixOperations>(w_evaluator, pool);
+        return matops;
+    }
+
     void MatrixOperations::right_multiply(std::vector<std::uint64_t> &dims, std::vector<SplitPlaintextNTTForm> &matrix,
                                           std::vector<seal::Ciphertext> &right_vec, std::vector<seal::Ciphertext>
                                           &result) {
@@ -235,5 +242,6 @@ namespace math_utils {
             w_evaluator(w_evaluator),
             pool(std::make_shared<concurrency::threadpool>()) {
     }
+
 
 }

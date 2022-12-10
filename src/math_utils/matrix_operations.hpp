@@ -31,6 +31,10 @@ namespace math_utils {
 
         explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator);
 
+        explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator,
+                                  std::shared_ptr<concurrency::threadpool> &pool
+        );
+
         /***
          * receives a plaintext matrix/ vector, and transforms it into a
          * splitPlainTextMatrix which is a vector of SplitPlaintextNTTForm in NTT form.
@@ -48,6 +52,9 @@ namespace math_utils {
          * @return a matrix multiplier
          */
         static std::shared_ptr<MatrixOperations> Create(std::shared_ptr<EvaluatorWrapper> w_evaluator);
+
+        static std::shared_ptr<MatrixOperations> Create(std::shared_ptr<EvaluatorWrapper> w_evaluator,
+                                                        std::shared_ptr<concurrency::threadpool> &pool);
 
         /***
          *
