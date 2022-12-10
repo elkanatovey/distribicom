@@ -34,6 +34,20 @@ namespace concurrency {
             return value;
         }
 
+        /***
+         * Sets a new value iff the promise is not already done.
+         * Notice, this should not be called after the latch reaches zero!
+         */
+        void set(std::shared_ptr<T> val) {
+            if (done.load()) {
+                return;
+            }
+            if (safety.load() == 0) {
+                throw std::runtime_error("promise set after it was done");
+            }
+            value = std::move(val);
+        }
+
         std::shared_ptr<std::latch> &get_latch() {
             return wg;
         }
