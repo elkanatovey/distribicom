@@ -338,8 +338,11 @@ namespace services {
         auto expand_size = app_configs.configs().db_cols();
         for (const auto &info: db.id_to_info) {
             // expanding the first dimension asynchrounously.
-            auto promise = expander->async_expand(info.second->query[0], expand_size, info.second->galois_keys);
-            ed.queries[info.first] = std::move(promise);
+            ed.queries[info.first] = expander->async_expand(
+                    info.second->query[0],
+                    expand_size,
+                    info.second->galois_keys
+            );
         }
 
         mtx.lock();
