@@ -39,6 +39,8 @@ namespace services {
         }
 
         // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
+
+        // finished verification...................................
         distribicom::MatrixPart tmp;
         while (reader->Read(&tmp)) {
             std::uint32_t row = tmp.row();
@@ -50,6 +52,14 @@ namespace services {
                 marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
             assert(ledger->result_mat(row, col).is_transparent());
 #endif
+            //stage 2
+            //1. create data structure of right size
+            //2. store in data structure
+            //3.
+//            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+//            math_utils::EmbeddedCiphertext ptx_embedding;
+//            this->matops->w_evaluator->get_ptx_embedding(current_ctx, ptx_embedding);
+
         }
 
         ledger->mtx.lock();
@@ -336,12 +346,14 @@ namespace services {
         EpochData ed{
             .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
             .queries = {},
+            .queries_dim2 = {},
             .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
             .query_mat_times_randvec = std::make_shared<promise_of_promise<math_utils::matrix<seal::Ciphertext>>>(
                 1, nullptr),
         };
 
         auto expand_size = app_configs.configs().db_cols();
+        auto expand_size_dim2 = app_configs.configs().db_rows();
         for (const auto &info: db.id_to_info) {
             // expanding the first dimension asynchrounously.
             ed.queries[info.first] = expander->async_expand(
@@ -349,6 +361,14 @@ namespace services {
                 expand_size,
                 info.second->galois_keys
             );
+
+            // expanding the second dimension asynchrounously.
+            ed.queries_dim2[info.first] = expander->async_expand(
+                    info.second->query[1],
+                    expand_size_dim2,
+                    info.second->galois_keys
+            );
+
         }
 
         // fill random vector:

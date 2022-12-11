@@ -18,6 +18,9 @@ namespace services {
         PirQuery query;
         seal::GaloisKeys galois_keys;
         std::unique_ptr<distribicom::Client::Stub> client_stub;
+
+        std::unique_ptr<math_utils::matrix<seal::Plaintext>> partial_answer;
+        std::uint64_t answer_count;
     };
     struct ClientDB {
         mutable std::shared_mutex mutex;

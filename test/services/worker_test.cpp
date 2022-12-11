@@ -56,7 +56,7 @@ int worker_test(int, char *[]) {
 }
 
 std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
-create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all) {
+create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all,const distribicom::AppConfigs &app_configs) {
     auto m = marshal::Marshaller::Create(all->encryption_params);
     std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
     for (int i = 0; i < size; i++) {
@@ -74,6 +74,11 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all) {
         client_info->query_info_marshaled.set_mailbox_id(i);
         client_info->query = std::move(query);
 
+        client_info->answer_count=0;
+        client_info->partial_answer =
+                std::make_unique<math_utils::matrix<seal::Plaintext>>(math_utils::matrix<seal::Plaintext>
+                        (app_configs.configs().db_rows(),all->pir_params.expansion_ratio));
+
         cdb.insert(
                 {i, std::move(client_info)});
     }
@@ -89,7 +94,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
         p = all->random_plaintext();
     }
 
-    auto cdb = create_client_db(n, all);
+    auto cdb = create_client_db(n, all, configs);
 
     return services::FullServer(db, cdb, configs);
 }

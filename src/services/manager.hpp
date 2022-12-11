@@ -26,6 +26,12 @@ namespace{
 
 namespace services {
 
+    struct ResultMatPart {
+        seal::Ciphertext ctx;
+        std::uint64_t row;
+        std::uint64_t col;
+    };
+
     struct WorkerInfo {
         std::uint64_t worker_number;
         std::uint64_t query_range_start;
@@ -37,6 +43,9 @@ namespace services {
         std::map<std::string, WorkerInfo> worker_to_responsibilities;
         // following the same key as the client's db.
         std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
+
+        // following the same key as the client's db.
+        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries_dim2;
 
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
@@ -103,6 +112,62 @@ namespace services {
         ::grpc::Status
         ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                         ::distribicom::Ack *response) override;
+
+        void verify_worker(const std::vector<ResultMatPart>& parts, std::string worker_creds){
+
+        };
+
+        void put_in_result_matrix(const std::vector<ResultMatPart>& parts, ClientDB& all_clients){
+            all_clients.mutex.lock_shared();
+            for(const auto & partial_answer : parts){
+                math_utils::EmbeddedCiphertext ptx_embedding;
+                this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
+
+                for(size_t i = 0;i<ptx_embedding.size();i++){
+                    (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row ,i)=ptx_embedding[i];
+                }
+                all_clients.id_to_info[partial_answer.col]->answer_count+=1;
+            }
+            all_clients.mutex.unlock_shared();
+        };
+
+        void calculate_final_answer(ClientDB& all_clients){
+
+//            for(const auto & client : all_clients.id_to_info){
+//
+//                // this task relies on the dim2 query matrix.
+//                // due to them being sent to be computed before the following task they
+//                // should be available once this task is picked up.
+//                pool->submit(
+//                        {
+//                                .f = [&, expand_size] {
+//                                    auto rows = expand_size;
+//                                    // first of all, run over the queries and put them in a matrix.
+//                                    auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+//                                    for (const auto &col_to_vec: epoch_data.queries) {
+//                                        auto column = col_to_vec.first;
+//                                        auto v = col_to_vec.second->get();
+//                                        for (std::uint64_t i = 0; i < rows; i++) {
+//                                            (*query_mat)(i, column) = (*v)[i];
+//                                        }
+//                                    }
+//
+//                                    // async multiply by the random vector.
+//                                    epoch_data.query_mat_times_randvec->set(
+//                                            matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector)
+//                                    );
+//                                },
+//                                .wg = epoch_data.query_mat_times_randvec->get_latch(),
+//                        }
+//                );
+//
+//
+//
+//
+//                auto result = matops->async_mat_mult(this->epoch_data.queries_dim2[client.first] ,client.second->partial_answer);
+//
+//            }
+        };
 
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
