@@ -144,6 +144,13 @@ namespace math_utils {
         }
     }
 
+    void MatrixOperations::to_ntt(std::vector<seal::Plaintext> &m) const {
+        std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Plaintext &ptx) {
+            w_evaluator->evaluator->transform_to_ntt_inplace(ptx, this->w_evaluator->context.first_parms_id());
+        });
+    }
+
+
     void MatrixOperations::to_ntt(std::vector<seal::Ciphertext> &m) const {
         std::for_each(std::execution::par_unseq, m.begin(), m.end(), [this](seal::Ciphertext &ctx) {
             w_evaluator->evaluator->transform_to_ntt_inplace(ctx);

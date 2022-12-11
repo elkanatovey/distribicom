@@ -235,23 +235,31 @@ namespace math_utils {
         }
     }
 
-    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, const seal::RelinKeys& relin_keys, std::vector<seal::Plaintext>  &ptx_decomposition) const {
-        seal::Ciphertext ctx_copy;
-        evaluator->relinearize(ctx, relin_keys, ctx_copy);
-        evaluator->mod_switch_to_inplace(ctx_copy, context.last_parms_id());
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const {
 
-        ptx_decomposition = std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx_copy));
+        ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx));
 
-        for(auto & ptx : ptx_decomposition){
-            evaluator->transform_to_ntt_inplace(ptx, context.first_parms_id());
-        }
 
     }
 
     void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
         seal::Ciphertext ctx_copy(context, context.last_parms_id());
         compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
-        decoded = ctx_copy;
+        decoded = std::move(ctx_copy);
+    }
+
+
+    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertext &ptx_decomposition, const seal::Ciphertext &ctx, EncryptedEmbeddedCiphertext  &result) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(ptx_decomposition[0].is_ntt_form());
+        assert(ctx.is_ntt_form());
+#endif
+
+        std::vector<seal::Ciphertext> result_copy(ptx_decomposition.size());
+        for(auto i=0; i<ptx_decomposition.size(); i++){
+            evaluator->multiply_plain(ctx, ptx_decomposition[i], result_copy[i]);
+        }
+        result = std::move(result_copy);
     }
 
     void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
@@ -267,5 +275,26 @@ namespace math_utils {
         scalar_multiply(scalar, sum, sum);
     }
 
+
+    void EvaluatorWrapper::transform_to_ntt_inplace(EmbeddedCiphertext  &encoded) const {
+        for(auto & ptx_piece : encoded) {
+            evaluator->transform_to_ntt_inplace(ptx_piece, context.first_parms_id());
+        }
+    }
+
+
+    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1, const EncryptedEmbeddedCiphertext &ctx_decomposition2, EncryptedEmbeddedCiphertext  &result) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(ctx_decomposition1[0].is_ntt_form());
+        assert(ctx_decomposition2[0].is_ntt_form());
+        assert(ctx_decomposition1.size()==ctx_decomposition2.size());
+#endif
+
+        EncryptedEmbeddedCiphertext result_copy(ctx_decomposition1.size());
+        for(auto i=0; i<ctx_decomposition1.size(); i++){
+            evaluator->add(ctx_decomposition1[i], ctx_decomposition2[i], result_copy[i]);
+        }
+        result = std::move(result_copy);
+    }
 
 }

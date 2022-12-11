@@ -113,9 +113,9 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
 //        // todo: set specific round and handle.
 
-        ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1,
+        ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1
 #ifdef DISTRIBICOM_DEBUG
-                                         client_query_manager.id_to_info.begin()->second->galois_keys
+                                         ,client_query_manager.id_to_info.begin()->second->galois_keys
 #endif
         );
     }
