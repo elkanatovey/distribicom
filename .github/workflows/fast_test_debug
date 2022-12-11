@@ -1,4 +1,4 @@
-name: Cmake fast
+name: Cmake fast debug
 on:
   push:
     branches: [ "master", "dev" ]
