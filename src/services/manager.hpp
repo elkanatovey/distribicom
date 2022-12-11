@@ -54,33 +54,34 @@ namespace services {
         distribicom::AppConfigs app_configs;
 
         std::shared_mutex mtx;
+        std::shared_ptr<concurrency::threadpool> pool;
 
         concurrency::Counter worker_counter;
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
 
         std::shared_ptr<marshal::Marshaller> marshal;
-
-#ifdef DISTRIBICOM_DEBUG
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
-#endif
-
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
     public:
-        explicit Manager() {};
+        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};
 
         explicit Manager(const distribicom::AppConfigs &app_configs) :
                 app_configs(app_configs),
-
-                marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs)))
-#ifdef DISTRIBICOM_DEBUG
-                , matops(math_utils::MatrixOperations::Create(
-
-                math_utils::EvaluatorWrapper::Create(utils::setup_enc_params(app_configs)))),
-                expander(math_utils::QueryExpander::Create(utils::setup_enc_params(app_configs)))
-#endif
-        {};
+                pool(std::make_shared<concurrency::threadpool>()),
+                marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
+                matops(math_utils::MatrixOperations::Create(
+                               math_utils::EvaluatorWrapper::Create(
+                                       utils::setup_enc_params(app_configs)
+                               ), pool
+                       )
+                ),
+                expander(math_utils::QueryExpander::Create(
+                                 utils::setup_enc_params(app_configs),
+                                 pool
+                         )
+                ) {};
 
 
         // a worker should send its work, along with credentials of what it sent.
