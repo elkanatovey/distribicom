@@ -79,13 +79,14 @@ namespace services {
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
+    Manager::distribute_work(const math_utils::matrix <seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch,
 #ifdef DISTRIBICOM_DEBUG
-                             const seal::GaloisKeys &expansion_key
+            const seal::GaloisKeys &expansion_key
 #endif
     ) {
+        // TODO: delete old ledger.
 
         auto ledger = std::make_shared<WorkDistributionLedger>();
         {
@@ -113,13 +114,15 @@ namespace services {
             send_queries(all_clients);
         }
 
+
+        // TODO: process the DB for frievalds.
         send_db(db, rnd, epoch);
 
         return ledger;
     }
 
 
-    void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
+    void Manager::create_res_matrix(const math_utils::matrix <seal::Plaintext> &db,
                                     const ClientDB &all_clients,
                                     const seal::GaloisKeys &expansion_key,
                                     std::shared_ptr<WorkDistributionLedger> &ledger) const {
@@ -152,7 +155,7 @@ namespace services {
     }
 
     void
-    Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
+    Manager::send_db(const math_utils::matrix <seal::Plaintext> &db,
                      int rnd, int epoch) {
 
         auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
@@ -280,7 +283,7 @@ namespace services {
     }
 
 
-    map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
+    map <string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
         std::uint32_t i = 0;
         std::shared_lock lock(mtx);
@@ -333,6 +336,7 @@ namespace services {
         EpochData ed{
                 .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
                 .queries = {},
+                .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
         };
 
         auto expand_size = app_configs.configs().db_cols();
@@ -344,6 +348,20 @@ namespace services {
                     info.second->galois_keys
             );
         }
+
+        // fill random vector:
+        ed.random_scalar_vector->reserve(db.client_counter);
+
+        seal::Blake2xbPRNGFactory factory;
+        auto prng = factory.create({(std::random_device()) ()});
+        std::uniform_int_distribution<unsigned long long> dist(
+                std::numeric_limits<std::uint64_t>::min(),
+                std::numeric_limits<std::uint64_t>::max()
+        );
+
+        for (auto &i: *(ed.random_scalar_vector)) { i = prng->generate(); }
+
+        // todo: take queries and multiply once from the right by a frievalds vector.
 
         mtx.lock();
         epoch_data = std::move(ed);

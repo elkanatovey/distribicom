@@ -28,6 +28,9 @@ namespace services {
         std::map<std::string, WorkerInfo> worker_to_responsibilities;
         // following the same key as the client's db.
         std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
+
+        // the following vector will be used to be multiplied against incoming work.
+        std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
     };
     /**
  * WorkDistributionLedger keeps track on a distributed task.
