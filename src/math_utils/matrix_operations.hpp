@@ -192,6 +192,7 @@ namespace math_utils {
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
 
+        void to_ntt(std::vector<seal::Plaintext> &m) const;
     };
 
 }
