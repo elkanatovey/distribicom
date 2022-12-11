@@ -17,6 +17,12 @@
 
 namespace services {
 
+    struct ResultMatPart {
+        seal::Ciphertext ctx;
+        std::uint64_t row;
+        std::uint64_t col;
+    };
+
     struct WorkerInfo {
         std::uint64_t worker_number;
         std::uint64_t query_range_start;
@@ -87,6 +93,32 @@ namespace services {
         ::grpc::Status
         ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                         ::distribicom::Ack *response) override;
+
+        void verify_worker(const std::vector<ResultMatPart>& parts, std::string worker_creds){
+
+        };
+
+        void put_in_result_matrix(const std::vector<ResultMatPart>& parts, ClientDB& all_clients){
+            all_clients.mutex.lock_shared();
+            for(const auto & partial_answer : parts){
+                math_utils::EmbeddedCiphertext ptx_embedding;
+                this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
+
+                for(size_t i = 0;i<ptx_embedding.size();i++){
+                    auto current_location = all_clients.id_to_info[partial_answer.col]->partial_answer->pos(partial_answer.row ,i);
+                    all_clients.id_to_info[partial_answer.col]->partial_answer->data[current_location] = ptx_embedding[i];
+                }
+                all_clients.id_to_info[partial_answer.col]->answer_count+=1;
+            }
+            all_clients.mutex.unlock_shared();
+        };
+
+        void calculate_final_answer(ClientDB& all_clients){
+            for(const auto & client : all_clients.id_to_info){
+                auto result = matops->async_mat_mult(this->epoch_data.queries[client.first] ,client.second->partial_answer);
+
+            }
+        };
 
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly

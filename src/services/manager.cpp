@@ -39,6 +39,8 @@ namespace services {
         }
 
         // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
+
+        // finished verification...................................
         distribicom::MatrixPart tmp;
         while (reader->Read(&tmp)) {
             std::uint32_t row = tmp.row();
@@ -50,6 +52,14 @@ namespace services {
                     marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
             assert(ledger->result_mat(row, col).is_transparent());
 #endif
+            //stage 2
+            //1. create data structure of right size
+            //2. store in data structure
+            //3.
+//            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+//            math_utils::EmbeddedCiphertext ptx_embedding;
+//            this->matops->w_evaluator->get_ptx_embedding(current_ctx, ptx_embedding);
+
         }
 
         ledger->mtx.lock();
@@ -336,6 +346,15 @@ namespace services {
         };
 
         auto expand_size = app_configs.configs().db_cols();
+        for (const auto &info: db.id_to_info) {
+            // expanding the first dimension asynchrounously.
+            ed.queries[info.first] = expander->async_expand(
+                    info.second->query[0],
+                    expand_size,
+                    info.second->galois_keys
+            );
+        }
+
         for (const auto &info: db.id_to_info) {
             // expanding the first dimension asynchrounously.
             ed.queries[info.first] = expander->async_expand(
