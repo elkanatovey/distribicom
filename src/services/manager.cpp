@@ -11,8 +11,8 @@ namespace services {
                                             ::distribicom::Ack *resp) {
         UNUSED(resp);
         std::string worker_creds = utils::extract_string_from_metadata(
-                context->client_metadata(),
-                constants::credentials_md
+            context->client_metadata(),
+            constants::credentials_md
         );
 
         mtx.lock_shared();
@@ -33,8 +33,8 @@ namespace services {
 
         if (!exists) {
             return {
-                    grpc::StatusCode::INVALID_ARGUMENT,
-                    "ledger not found in {round,epoch}" + std::to_string(round) + "," + std::to_string(epoch)
+                grpc::StatusCode::INVALID_ARGUMENT,
+                "ledger not found in {round,epoch}" + std::to_string(round) + "," + std::to_string(epoch)
             };
         }
 
@@ -46,8 +46,8 @@ namespace services {
 
 #ifdef DISTRIBICOM_DEBUG
             matops->w_evaluator->evaluator->sub_inplace(
-                    ledger->result_mat(row, col),
-                    marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
+                ledger->result_mat(row, col),
+                marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
             assert(ledger->result_mat(row, col).is_transparent());
 #endif
         }
@@ -79,12 +79,11 @@ namespace services {
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::distribute_work(const math_utils::matrix <seal::Plaintext> &db,
+    Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch
 #ifdef DISTRIBICOM_DEBUG
-
-                             ,const seal::GaloisKeys &expansion_key
+        , const seal::GaloisKeys &expansion_key
 #endif
     ) {
         // TODO: delete old ledger.
@@ -98,7 +97,7 @@ namespace services {
             ledger->worker_list.reserve(work_streams.size());
             all_clients.mutex.lock_shared();
             ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                    db.cols, all_clients.client_counter);
+                db.cols, all_clients.client_counter);
             all_clients.mutex.unlock_shared();
             for (auto &worker: work_streams) {
                 ledger->worker_list.push_back(worker.first);
@@ -123,7 +122,7 @@ namespace services {
     }
 
 
-    void Manager::create_res_matrix(const math_utils::matrix <seal::Plaintext> &db,
+    void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
                                     const ClientDB &all_clients,
                                     const seal::GaloisKeys &expansion_key,
                                     std::shared_ptr<WorkDistributionLedger> &ledger) const {
@@ -156,7 +155,7 @@ namespace services {
     }
 
     void
-    Manager::send_db(const math_utils::matrix <seal::Plaintext> &db,
+    Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
                      int rnd, int epoch) {
 
         auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
@@ -284,7 +283,7 @@ namespace services {
     }
 
 
-    map <string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
+    map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
         std::uint32_t i = 0;
         std::shared_lock lock(mtx);
@@ -335,18 +334,18 @@ namespace services {
     // TODO: add epoch number so we can throw out old work and not be confused by it.
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
-                .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
-                .queries = {},
-                .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
+            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+            .queries = {},
+            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
         };
 
         auto expand_size = app_configs.configs().db_cols();
         for (const auto &info: db.id_to_info) {
             // expanding the first dimension asynchrounously.
             ed.queries[info.first] = expander->async_expand(
-                    info.second->query[0],
-                    expand_size,
-                    info.second->galois_keys
+                info.second->query[0],
+                expand_size,
+                info.second->galois_keys
             );
         }
 
@@ -356,8 +355,8 @@ namespace services {
         seal::Blake2xbPRNGFactory factory;
         auto prng = factory.create({(std::random_device()) ()});
         std::uniform_int_distribution<unsigned long long> dist(
-                std::numeric_limits<std::uint64_t>::min(),
-                std::numeric_limits<std::uint64_t>::max()
+            std::numeric_limits<std::uint64_t>::min(),
+            std::numeric_limits<std::uint64_t>::max()
         );
 
         for (auto &i: *(ed.random_scalar_vector)) { i = prng->generate(); }
@@ -367,6 +366,13 @@ namespace services {
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
+
+        pool->submit(
+            {
+
+
+            }
+        );
     }
 
 }
