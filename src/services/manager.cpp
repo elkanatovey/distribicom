@@ -81,9 +81,10 @@ namespace services {
     std::shared_ptr<WorkDistributionLedger>
     Manager::distribute_work(const math_utils::matrix <seal::Plaintext> &db,
                              const ClientDB &all_clients,
-                             int rnd, int epoch,
+                             int rnd, int epoch
 #ifdef DISTRIBICOM_DEBUG
-            const seal::GaloisKeys &expansion_key
+
+                             ,const seal::GaloisKeys &expansion_key
 #endif
     ) {
         // TODO: delete old ledger.
