@@ -59,6 +59,9 @@ namespace concurrency {
          */
         void write(T t) {
             std::lock_guard<std::mutex> lock(m);
+            if (closed) {
+                throw std::runtime_error("Channel::write() - channel closed.");
+            }
             q.push(t);
             c.notify_one();
         }
