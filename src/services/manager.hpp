@@ -15,6 +15,15 @@
 #include "manager_workstream.hpp"
 
 
+namespace{
+    template<typename T>
+    using promise = concurrency::promise<T>;
+
+    template<typename T>
+    using promise_of_promise = promise<promise<T>>;
+}
+
+
 namespace services {
 
     struct WorkerInfo {
@@ -31,6 +40,9 @@ namespace services {
 
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
+
+        // contains promised computation for expanded_queries X random_scalar_vector
+        std::shared_ptr<promise_of_promise < math_utils::matrix<seal::Ciphertext>>> query_mat_times_randvec;
     };
     /**
  * WorkDistributionLedger keeps track on a distributed task.
@@ -71,20 +83,20 @@ namespace services {
         explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};
 
         explicit Manager(const distribicom::AppConfigs &app_configs) :
-                app_configs(app_configs),
-                pool(std::make_shared<concurrency::threadpool>()),
-                marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
-                matops(math_utils::MatrixOperations::Create(
-                               math_utils::EvaluatorWrapper::Create(
-                                       utils::setup_enc_params(app_configs)
-                               ), pool
-                       )
-                ),
-                expander(math_utils::QueryExpander::Create(
-                                 utils::setup_enc_params(app_configs),
-                                 pool
-                         )
-                ) {};
+            app_configs(app_configs),
+            pool(std::make_shared<concurrency::threadpool>()),
+            marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
+            matops(math_utils::MatrixOperations::Create(
+                       math_utils::EvaluatorWrapper::Create(
+                           utils::setup_enc_params(app_configs)
+                       ), pool
+                   )
+            ),
+            expander(math_utils::QueryExpander::Create(
+                         utils::setup_enc_params(app_configs),
+                         pool
+                     )
+            ) {};
 
 
         // a worker should send its work, along with credentials of what it sent.
@@ -96,12 +108,12 @@ namespace services {
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
         std::shared_ptr<WorkDistributionLedger> distribute_work(
-                const math_utils::matrix<seal::Plaintext> &db,
-                const ClientDB &all_clients,
-                int rnd,
-                int epoch
+            const math_utils::matrix<seal::Plaintext> &db,
+            const ClientDB &all_clients,
+            int rnd,
+            int epoch
 #ifdef DISTRIBICOM_DEBUG
-                , const seal::GaloisKeys &expansion_key
+            , const seal::GaloisKeys &expansion_key
 
 #endif
         );
@@ -126,8 +138,8 @@ namespace services {
         void send_queries(const ClientDB &all_clients);
 
         ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *RegisterAsWorker(
-                ::grpc::CallbackServerContext *ctx/*context*/,
-                const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override;
+            ::grpc::CallbackServerContext *ctx/*context*/,
+            const ::distribicom::WorkerRegistryRequest *rqst/*request*/) override;
 
         void close() {
             mtx.lock();
