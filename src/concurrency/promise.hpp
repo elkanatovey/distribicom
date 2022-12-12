@@ -7,22 +7,41 @@
 
 namespace concurrency {
 
+    class safelatch : public std::latch {
+        std::atomic<int> safety;
+    public:
+        explicit safelatch(int count) : std::latch(count), safety(count) {};
+
+        bool done_waiting() {
+            return safety.load() == 0;
+        }
+
+        void count_down() {
+            std::latch::count_down();
+            auto prev = safety.fetch_add(-1);
+            if (prev <= 0) {
+                throw std::runtime_error(
+                    "count_down:: latch's value is less than 0, this is a bug that can lead to deadlock!");
+            }
+        }
+
+    };
+
     template<typename T>
     class promise {
 
     private:
-        std::atomic<int> safety;
         std::atomic<bool> done;
-        std::shared_ptr<std::latch> wg;
+        std::shared_ptr<safelatch> wg;
         std::shared_ptr<T> value;
 
     public:
-        promise(int n, std::shared_ptr<T> &result_store) : safety(n), value(result_store) {
-            wg = std::make_shared<std::latch>(n);
+        promise(int n, std::shared_ptr<T> &result_store) : value(result_store) {
+            wg = std::make_shared<safelatch>(n);
         }
 
-        promise(int n, std::shared_ptr<T> &&result_store) : safety(n), value(std::move(result_store)) {
-            wg = std::make_shared<std::latch>(n);
+        promise(int n, std::shared_ptr<T> &&result_store) : value(std::move(result_store)) {
+            wg = std::make_shared<safelatch>(n);
         }
 
         std::shared_ptr<T> get() {
@@ -42,23 +61,18 @@ namespace concurrency {
             if (done.load()) {
                 return;
             }
-            if (safety.load() == 0) {
+            if (wg->done_waiting()) {
                 throw std::runtime_error("promise set after it was done");
             }
             value = std::move(val);
         }
 
-        std::shared_ptr<std::latch> &get_latch() {
+        std::shared_ptr<safelatch> get_latch() {
             return wg;
         }
 
         inline void count_down() {
             wg->count_down();
-            auto prev = safety.fetch_add(-1);
-            if (prev <= 0) {
-                throw std::runtime_error(
-                        "promise::count_down:: latch's value is less than 0, this is a bug that can lead to deadlock!");
-            }
         }
     };
 

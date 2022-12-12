@@ -6,11 +6,12 @@
 #include <functional>
 #include <memory>
 #include "channel.hpp"
+#include "promise.hpp"
 
 namespace concurrency {
     struct Task {
         std::function<void()> f;
-        std::shared_ptr<std::latch> wg;
+        std::shared_ptr<safelatch> wg;
     };
 
 
