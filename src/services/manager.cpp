@@ -393,6 +393,47 @@ namespace services {
                 .wg = epoch_data.query_mat_times_randvec->get_latch(),
             }
         );
+
+        #ifdef DISTRIBICOM_DEBUG
+        this->verify_query_x_rand_vec(db);
+        #endif
     }
+
+    #ifdef DISTRIBICOM_DEBUG
+
+    void Manager::verify_query_x_rand_vec(const ClientDB &db) {
+        auto expand_size = app_configs.configs().db_cols();
+        auto rows = expand_size;
+        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+
+        auto column = 0;
+        for (const auto &info: db.id_to_info) {
+            // expanding the first dimension asynchrounously.
+            auto exp = expander->expand_query(
+                info.second->query[0],
+                expand_size,
+                info.second->galois_keys
+            );
+
+            for (std::uint64_t i = 0; i < rows; i++) {
+                (*query_mat)(i, column) = exp[i];
+            }
+            column += 1;
+        }
+
+        auto promise = matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector);
+        auto evaluator = math_utils::EvaluatorWrapper::Create(
+            utils::setup_enc_params(app_configs)
+        );
+
+        auto result_vec = promise->get();
+        auto res_vec_async = epoch_data.query_mat_times_randvec->get()->get();
+        for (std::uint64_t i = 0; i < result_vec->data.size(); ++i) {
+            matops->w_evaluator->evaluator->sub_inplace(result_vec->data[i], (*res_vec_async).data[i]);
+            assert(result_vec->data[i].is_transparent());
+        }
+    }
+
+    #endif
 
 }

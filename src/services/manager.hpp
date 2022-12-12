@@ -15,7 +15,7 @@
 #include "manager_workstream.hpp"
 
 
-namespace{
+namespace {
     template<typename T>
     using promise = concurrency::promise<T>;
 
@@ -79,6 +79,13 @@ namespace services {
         std::shared_ptr<math_utils::QueryExpander> expander;
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
+
+        #ifdef DISTRIBICOM_DEBUG
+
+        void verify_query_x_rand_vec(const ClientDB &db);
+
+        #endif
+
     public:
         explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};
 
