@@ -37,31 +37,7 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
 
 
     try {
-
-        auto requesting_client = utils::extract_ip(context);
-        std::string subscribing_client_address = requesting_client + ":" + std::to_string(request->client_port());
-
-        // creating stub to the client:
-        auto client_conn = std::make_unique<distribicom::Client::Stub>(distribicom::Client::Stub(
-                grpc::CreateChannel(
-                        subscribing_client_address,
-                        grpc::InsecureChannelCredentials()
-                )
-        ));
-
-        auto client_info = std::make_unique<ClientInfo>(ClientInfo());
-        client_info->galois_keys_marshaled.set_keys(request->galois_keys());
-        client_info->client_stub = std::move(client_conn);
-
-        std::unique_lock lock(client_query_manager.mutex);
-        client_info->galois_keys_marshaled.set_key_pos(client_query_manager.client_counter);
-        client_info->answer_count=0;
-        client_info->partial_answer = std::make_unique<math_utils::matrix<seal::Plaintext>>(math_utils::matrix<seal::Plaintext>(pir_configs.db_rows(), pir_params.expansion_ratio));
-        client_query_manager.id_to_info.insert(
-                {client_query_manager.client_counter, std::move(client_info)});
-        response->set_mailbox_id(client_query_manager.client_counter);
-        client_query_manager.client_counter += 1;
-
+        response->set_mailbox_id(client_query_manager.add_client(context, request, pir_configs, pir_params));
     } catch (std::exception &e) {
         std::cout << "Error: " << e.what() << std::endl;
         return {grpc::StatusCode::INTERNAL, e.what()};
