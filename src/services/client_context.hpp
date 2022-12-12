@@ -54,7 +54,7 @@ namespace services {
         }
 
 
-        std::uint64_t add_client(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request, const distribicom::Configs& pir_configs, const PirParams& pir_params){
+        std::uint64_t add_client(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request, const distribicom::Configs& pir_configs, std::uint32_t expansion_ratio){
             auto requesting_client = utils::extract_ip(context);
             std::string subscribing_client_address = requesting_client + ":" + std::to_string(request->client_port());
 
@@ -74,7 +74,7 @@ namespace services {
             client_info->galois_keys_marshaled.set_key_pos(client_counter);
             client_info->answer_count=0;
             client_info->partial_answer = std::make_unique<math_utils::matrix<seal::Plaintext>>
-                    (math_utils::matrix<seal::Plaintext>(pir_configs.db_rows(), pir_params.expansion_ratio));
+                    (math_utils::matrix<seal::Plaintext>(pir_configs.db_rows(), expansion_ratio));
             id_to_info.insert(
                     {client_counter, std::move(client_info)});
             client_counter += 1;

@@ -42,8 +42,20 @@ namespace math_utils {
             w_evaluator->evaluator->transform_to_ntt_inplace(tmp_result);
         }
 
+        // assume that in seal::Plaintext case we don't want to turn into splitPlaintexts
         for (uint64_t k = 0; k < left.cols; ++k) {
-            w_evaluator->mult(left(i, k), right(k, j), tmp);
+            if constexpr ((std::is_same_v<U, seal::Plaintext>))
+            {
+                w_evaluator->mult_reg(left(i, k), right(k, j), tmp);
+            }
+            else if constexpr (std::is_same_v<V, seal::Plaintext>)
+            {
+                w_evaluator->mult_reg(right(k, j), left(i, k), tmp);
+            }
+            else
+            {
+                w_evaluator->mult(left(i, k), right(k, j), tmp);
+            }
             w_evaluator->add(tmp, tmp_result, tmp_result);
         }
         return tmp_result;
