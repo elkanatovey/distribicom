@@ -14,8 +14,6 @@ namespace services {
 
     // uses both the Manager and the Server services to complete a full distribicom server.
     class FullServer final : public distribicom::Server::Service {
-        // used for tests
-        services::DB<seal::Plaintext> db;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;

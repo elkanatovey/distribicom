@@ -9,14 +9,14 @@
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
         std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-        db(db), manager(app_configs, client_db), pir_configs(app_configs.configs()),
+         manager(app_configs, client_db, db), pir_configs(app_configs.configs()),
         enc_params(utils::setup_enc_params(app_configs)) {
     init_pir_data(app_configs);
 
 }
 
 //services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
-//        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs),
+//         app_configs.configs().db_cols()), manager(app_configs),
 //        pir_configs(app_configs.configs()), enc_params(utils::setup_enc_params(app_configs)) {
 //    init_pir_data(app_configs);
 //
@@ -33,17 +33,20 @@ grpc::Status
 services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distribicom::ClientRegistryRequest *request,
                                        distribicom::ClientRegistryReply *response) {
 
+//@todo fix expansion ration calc
 
-    try {
-        response->set_mailbox_id(manager.client_query_manager.add_client(context, request, pir_configs, pir_params));
-    } catch (std::exception &e) {
-        std::cout << "Error: " << e.what() << std::endl;
-        return {grpc::StatusCode::INTERNAL, e.what()};
-    }
+//    try {
+//        response->set_mailbox_id(manager.client_query_manager.add_client(context, request, pir_configs, math_utils::compute_expansion_ratio(enc_params)));
+//    } catch (std::exception &e) {
+//        std::cout << "Error: " << e.what() << std::endl;
+//        return {grpc::StatusCode::INTERNAL, e.what()};
+//    }
+//
+//    response->set_num_mailboxes(pir_configs.number_of_elements());
+//
+//    return grpc::Status::OK;
+    throw std::runtime_error("unimplemented");
 
-    response->set_num_mailboxes(pir_configs.number_of_elements());
-
-    return grpc::Status::OK;
 }
 
 //@todo this assumes that no one is registering, very dangerous
@@ -85,7 +88,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
     // block is to destroy the db handle.
     {
-        auto db_handle = db.many_reads();
+        auto db_handle = manager.db.many_reads();
 
 //        // todo: set specific round and handle.
 

@@ -61,18 +61,9 @@ namespace services {
             auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
             parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
         }
-//        auto promise = std::make_shared<concurrency::promise<std::vector<seal::Ciphertext>>>(1, nullptr);
-//
-//        pool->submit(
-//                {
-//                        .f =
-//                        [&]() {
-//                            put_in_result_matrix();
-//                        },
-//                        .wg = promise->get_latch(),
-//
-//                }
-//        );
+        verify_worker(parts, worker_creds);
+        put_in_result_matrix(parts, this->client_query_manager);
+        calculate_final_answer(this->client_query_manager);
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);
@@ -375,7 +366,7 @@ namespace services {
             );
 
             // expanding the second dimension asynchrounously.
-            ed.queries_dim2[info.first] = expander->async_expand(
+            ed.queries_dim2[info.first] = expander->async_expand_to_matrix(
                     info.second->query[1],
                     expand_size_dim2,
                     info.second->galois_keys
@@ -393,7 +384,8 @@ namespace services {
             std::numeric_limits<std::uint64_t>::max()
         );
 
-        for (auto &i: *(ed.random_scalar_vector)) { i = prng->generate(); }
+        for (size_t i=0;i<db.client_counter;i++)
+        { ed.random_scalar_vector->push_back(prng->generate()%256); }
 
         // todo: take queries and multiply once from the right by a frievalds vector.
         mtx.lock();

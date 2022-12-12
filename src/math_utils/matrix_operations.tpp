@@ -186,5 +186,25 @@ namespace math_utils {
         return p;
     }
 
+    template<typename U>
+    std::shared_ptr<matrix<seal::Ciphertext>>
+    MatrixOperations::scalar_dot_product(
+            const std::shared_ptr<matrix<U>> &mat,
+            const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->rows, 1);
+        for (uint64_t k = 0; k < mat->rows; k++) {
+                seal::Ciphertext tmp;
+                seal::Ciphertext rslt(w_evaluator->context);
+                for (uint64_t j = 0; j < mat->cols; j++) {
+                    w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
+                    w_evaluator->add(tmp, rslt, rslt);
+                }
+                (*result_vec)(k, 0) = rslt;
+
+        }
+
+        return result_vec;
+    }
+
 
 }

@@ -185,6 +185,12 @@ namespace math_utils {
         async_scalar_dot_product(const std::shared_ptr<matrix<U>> &mat,
                                  const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
 
+
+        template<typename U>
+        std::shared_ptr<matrix<seal::Ciphertext>>
+        scalar_dot_product(const std::shared_ptr<matrix<U>> &mat,
+                                 const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
+
     private:
         void
         left_frievalds(const std::vector<std::uint64_t> &rand_vec,

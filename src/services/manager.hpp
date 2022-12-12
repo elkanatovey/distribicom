@@ -45,7 +45,7 @@ namespace services {
         std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
 
         // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries_dim2;
+        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> queries_dim2;
 
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
@@ -91,10 +91,12 @@ namespace services {
 
     public:
         ClientDB client_query_manager;
-        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};
+        services::DB<seal::Plaintext> db;
+
+        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {};
 
         explicit Manager(const distribicom::AppConfigs &app_configs, std::map<uint32_t,
-                std::unique_ptr<services::ClientInfo>> &client_db) :
+                std::unique_ptr<services::ClientInfo>> &client_db, math_utils::matrix<seal::Plaintext> &db) :
             app_configs(app_configs),
             pool(std::make_shared<concurrency::threadpool>()),
             marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
@@ -108,7 +110,9 @@ namespace services {
                          utils::setup_enc_params(app_configs),
                          pool
                      )
-            ) {
+            ),
+            db(db)
+            {
             this->client_query_manager.client_counter = client_db.size();
             this->client_query_manager.id_to_info = std::move(client_db);
         };
@@ -119,16 +123,52 @@ namespace services {
         ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                         ::distribicom::Ack *response) override;
 
-        void verify_worker(const std::vector<ResultMatPart>& parts, std::string worker_creds){
 
+        bool verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &a_times_b, std::uint64_t row_id){
+            auto challenge_vec = epoch_data.random_scalar_vector;
+
+            auto a_times_b_times_challenge11 = matops->async_scalar_dot_product(a_times_b, challenge_vec);
+            auto a_times_b_times_challenge1 =  a_times_b_times_challenge11->get();
+            auto b_times_chall = epoch_data.query_mat_times_randvec->get()->get().get();
+            auto a = db.many_reads().mat;
+
+            auto a_times_b_times_challenge2 = matops->mult_row(row_id, 0, a, *b_times_chall);
+
+            seal::Ciphertext c;
+            matops->w_evaluator->evaluator->sub(a_times_b_times_challenge1->data[0], a_times_b_times_challenge2, c);
+            return c.is_transparent();
+        }
+
+        void verify_worker(const std::vector<ResultMatPart>& parts, std::string worker_creds){
+            auto creds =  this->epoch_data.worker_to_responsibilities[worker_creds];
+            auto rows = creds.db_rows;
+            auto query_row_len = creds.query_range_end - creds.query_range_start;
+            if(query_row_len!=epoch_data.queries.size()){throw std::runtime_error("unimplemented");}
+
+            for(size_t i=0;i<rows.size();i++){
+                std::vector<seal::Ciphertext> temp;
+                temp.reserve(query_row_len);
+                for(size_t j=0;j<query_row_len;j++){
+                    temp.push_back(parts[j+i*query_row_len].ctx);
+                }
+                auto to_check = std::make_shared<math_utils::matrix<seal::Ciphertext>>(query_row_len, 1, temp);
+                auto res = verify_row(to_check, rows[i]);
+                assert(res==true);
+            }
+
+
+
+
+            epoch_data.query_mat_times_randvec->get()->get();
         };
 
         void put_in_result_matrix(const std::vector<ResultMatPart>& parts, ClientDB& all_clients){
+
             all_clients.mutex->lock_shared();
             for(const auto & partial_answer : parts){
                 math_utils::EmbeddedCiphertext ptx_embedding;
                 this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
-
+                this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
                 for(size_t i = 0;i<ptx_embedding.size();i++){
                     (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row ,i)=std::move(ptx_embedding[i]);
                 }
@@ -141,8 +181,9 @@ namespace services {
 
             for(const auto & client : all_clients.id_to_info){
                 auto result = math_utils::matrix<seal::Ciphertext>(1,  client.second->partial_answer->cols);
-                auto m = math_utils::matrix<seal::Ciphertext>(1,epoch_data.queries_dim2[client.first]->get()->size(),*epoch_data.queries_dim2[client.first]->get()->data());
-                matops->mat_mult(m, (*client.second->partial_answer),  (*client.second->final_answer));
+                auto current_query = *epoch_data.queries_dim2[client.first]->get();
+                if(!current_query.data[0].is_ntt_form()){matops->to_ntt(current_query.data);}
+                matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
             }
         };
 
