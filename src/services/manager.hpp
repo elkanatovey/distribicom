@@ -124,49 +124,20 @@ namespace services {
                 this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
 
                 for(size_t i = 0;i<ptx_embedding.size();i++){
-                    (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row ,i)=ptx_embedding[i];
+                    (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row ,i)=std::move(ptx_embedding[i]);
                 }
                 all_clients.id_to_info[partial_answer.col]->answer_count+=1;
             }
             all_clients.mutex.unlock_shared();
         };
 
-        void calculate_final_answer(ClientDB& all_clients){
+        void calculate_final_answer(const ClientDB& all_clients){
 
-//            for(const auto & client : all_clients.id_to_info){
-//
-//                // this task relies on the dim2 query matrix.
-//                // due to them being sent to be computed before the following task they
-//                // should be available once this task is picked up.
-//                pool->submit(
-//                        {
-//                                .f = [&, expand_size] {
-//                                    auto rows = expand_size;
-//                                    // first of all, run over the queries and put them in a matrix.
-//                                    auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
-//                                    for (const auto &col_to_vec: epoch_data.queries) {
-//                                        auto column = col_to_vec.first;
-//                                        auto v = col_to_vec.second->get();
-//                                        for (std::uint64_t i = 0; i < rows; i++) {
-//                                            (*query_mat)(i, column) = (*v)[i];
-//                                        }
-//                                    }
-//
-//                                    // async multiply by the random vector.
-//                                    epoch_data.query_mat_times_randvec->set(
-//                                            matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector)
-//                                    );
-//                                },
-//                                .wg = epoch_data.query_mat_times_randvec->get_latch(),
-//                        }
-//                );
-//
-//
-//
-//
-//                auto result = matops->async_mat_mult(this->epoch_data.queries_dim2[client.first] ,client.second->partial_answer);
-//
-//            }
+            for(const auto & client : all_clients.id_to_info){
+                auto result = math_utils::matrix<seal::Ciphertext>(1,  client.second->partial_answer->cols);
+                auto m = math_utils::matrix<seal::Ciphertext>(1,epoch_data.queries_dim2[client.first]->get()->size(),*epoch_data.queries_dim2[client.first]->get()->data());
+                matops->mat_mult(m, (*client.second->partial_answer),  (*client.second->final_answer));
+            }
         };
 
 

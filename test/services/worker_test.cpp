@@ -55,29 +55,21 @@ int worker_test(int, char *[]) {
     return 0;
 }
 
+
 std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
 create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all,const distribicom::AppConfigs &app_configs) {
     auto m = marshal::Marshaller::Create(all->encryption_params);
     std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
     for (int i = 0; i < size; i++) {
-        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
         auto gkey = all->gal_keys;
-        client_info->galois_keys = gkey;
         auto gkey_serialised = m->marshal_seal_object(gkey);
-        client_info->galois_keys_marshaled.set_keys(gkey_serialised);
-        client_info->galois_keys_marshaled.set_key_pos(i);
         std::vector<std::vector<seal::Ciphertext>> query = {{all->random_ciphertext()},
                                                             {all->random_ciphertext()}};
         distribicom::ClientQueryRequest query_marshaled;
         m->marshal_query_vector(query, query_marshaled);
-        client_info->query_info_marshaled.CopyFrom(query_marshaled);
-        client_info->query_info_marshaled.set_mailbox_id(i);
-        client_info->query = std::move(query);
+        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        client_info->answer_count=0;
-        client_info->partial_answer =
-                std::make_unique<math_utils::matrix<seal::Plaintext>>(math_utils::matrix<seal::Plaintext>
-                        (app_configs.configs().db_rows(),all->pir_params.expansion_ratio));
+        services::set_client(all->pir_params.expansion_ratio, app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled, client_info);
 
         cdb.insert(
                 {i, std::move(client_info)});

@@ -42,6 +42,7 @@ namespace services {
 
         // finished verification...................................
         distribicom::MatrixPart tmp;
+        std::vector<ResultMatPart> parts;
         while (reader->Read(&tmp)) {
             std::uint32_t row = tmp.row();
             std::uint32_t col = tmp.col();
@@ -56,11 +57,22 @@ namespace services {
             //1. create data structure of right size
             //2. store in data structure
             //3.
-//            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
-//            math_utils::EmbeddedCiphertext ptx_embedding;
-//            this->matops->w_evaluator->get_ptx_embedding(current_ctx, ptx_embedding);
 
+            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+            parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
         }
+//        auto promise = std::make_shared<concurrency::promise<std::vector<seal::Ciphertext>>>(1, nullptr);
+//
+//        pool->submit(
+//                {
+//                        .f =
+//                        [&]() {
+//                            put_in_result_matrix();
+//                        },
+//                        .wg = promise->get_latch(),
+//
+//                }
+//        );
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);

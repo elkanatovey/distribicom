@@ -20,8 +20,18 @@ namespace services {
         std::unique_ptr<distribicom::Client::Stub> client_stub;
 
         std::unique_ptr<math_utils::matrix<seal::Plaintext>> partial_answer;
+        std::unique_ptr<math_utils::matrix<seal::Ciphertext>> final_answer;
         std::uint64_t answer_count;
     };
+
+    void
+    set_client(std::uint32_t expansion_ratio, std::uint32_t db_rows, int client_id,
+               const seal::GaloisKeys &gkey, string &gkey_serialised, vector<std::vector<seal::Ciphertext>> &query,
+               const distribicom::ClientQueryRequest &query_marshaled,
+               std::unique_ptr<services::ClientInfo> &client_info);
+
+
+
     struct ClientDB {
         mutable std::shared_mutex mutex;
         std::map<uint32_t, std::unique_ptr<ClientInfo>> id_to_info;
