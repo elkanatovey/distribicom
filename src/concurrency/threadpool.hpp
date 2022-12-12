@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 #include "channel.hpp"
-#include "promise.hpp"
+#include "safelatch.h"
 
 namespace concurrency {
     struct Task {

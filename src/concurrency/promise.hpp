@@ -1,31 +1,8 @@
 
 #pragma once
-
-#include <latch>
 #include <memory>
-#include <atomic>
-
+#include "safelatch.h"
 namespace concurrency {
-
-    class safelatch : public std::latch {
-        std::atomic<int> safety;
-    public:
-        explicit safelatch(int count) : std::latch(count), safety(count) {};
-
-        bool done_waiting() {
-            return safety.load() == 0;
-        }
-
-        void count_down() {
-            std::latch::count_down();
-            auto prev = safety.fetch_add(-1);
-            if (prev <= 0) {
-                throw std::runtime_error(
-                    "count_down:: latch's value is less than 0, this is a bug that can lead to deadlock!");
-            }
-        }
-
-    };
 
     template<typename T>
     class promise {
