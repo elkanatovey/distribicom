@@ -117,10 +117,10 @@ namespace services {
             ledgers.insert({{rnd, epoch}, ledger});
             ledger->worker_list = std::vector<std::string>();
             ledger->worker_list.reserve(work_streams.size());
-            all_clients.mutex.lock_shared();
+            all_clients.mutex->lock_shared();
             ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
                 db.cols, all_clients.client_counter);
-            all_clients.mutex.unlock_shared();
+            all_clients.mutex->unlock_shared();
             for (auto &worker: work_streams) {
                 ledger->worker_list.push_back(worker.first);
             }
@@ -152,7 +152,7 @@ namespace services {
         auto exp = expansion_key;
         auto expand_sz = db.cols;
 
-        all_clients.mutex.lock_shared();
+        all_clients.mutex->lock_shared();
         math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
         auto col = -1;
         for (const auto &client: all_clients.id_to_info) {
@@ -166,7 +166,7 @@ namespace services {
                 query_mat(i, col) = expanded[i];
             }
         }
-        all_clients.mutex.unlock_shared();
+        all_clients.mutex->unlock_shared();
 
         matops->to_ntt(query_mat.data);
 
@@ -219,7 +219,7 @@ namespace services {
     void
     Manager::send_queries(const ClientDB &all_clients) {
 
-        std::shared_lock client_db_lock(all_clients.mutex);
+        std::shared_lock client_db_lock(*all_clients.mutex);
         std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
 

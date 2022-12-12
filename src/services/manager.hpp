@@ -118,7 +118,7 @@ namespace services {
         };
 
         void put_in_result_matrix(const std::vector<ResultMatPart>& parts, ClientDB& all_clients){
-            all_clients.mutex.lock_shared();
+            all_clients.mutex->lock_shared();
             for(const auto & partial_answer : parts){
                 math_utils::EmbeddedCiphertext ptx_embedding;
                 this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
@@ -128,7 +128,7 @@ namespace services {
                 }
                 all_clients.id_to_info[partial_answer.col]->answer_count+=1;
             }
-            all_clients.mutex.unlock_shared();
+            all_clients.mutex->unlock_shared();
         };
 
         void calculate_final_answer(const ClientDB& all_clients){

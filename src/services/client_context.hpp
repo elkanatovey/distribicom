@@ -33,7 +33,7 @@ namespace services {
 
 
     struct ClientDB {
-        mutable std::shared_mutex mutex;
+        std::unique_ptr<std::shared_mutex> mutex=std::make_unique<std::shared_mutex>();
         std::map<uint32_t, std::unique_ptr<ClientInfo>> id_to_info;
         std::uint64_t client_counter = 0;
 
@@ -50,7 +50,7 @@ namespace services {
         // as long as the shared_mat instance is not destroyed and we can't add a client.
         // useful for distributing the DB, or going over multiple rows.
         shared_cdb many_reads() {
-            return shared_cdb(*this, mutex);
+            return shared_cdb(*this, *mutex);
         }
 
 
@@ -70,7 +70,7 @@ namespace services {
             client_info->galois_keys_marshaled.set_keys(request->galois_keys());
             client_info->client_stub = std::move(client_conn);
 
-            std::unique_lock lock(mutex);
+            std::unique_lock lock(*mutex);
             client_info->galois_keys_marshaled.set_key_pos(client_counter);
             client_info->answer_count=0;
             client_info->partial_answer = std::make_unique<math_utils::matrix<seal::Plaintext>>

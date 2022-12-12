@@ -55,7 +55,7 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 
     auto id = request->mailbox_id();
 
-    std::unique_lock lock(client_query_manager.mutex);
+    std::unique_lock lock(*client_query_manager.mutex);
     if (client_query_manager.id_to_info.find(id) == client_query_manager.id_to_info.end()) {
         return {grpc::StatusCode::NOT_FOUND, "Client not found"};
     }
@@ -102,7 +102,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 }
 
 void services::FullServer::start_epoch() {
-    std::shared_lock client_db_lock(client_query_manager.mutex);
+    std::shared_lock client_db_lock(*client_query_manager.mutex);
 
     manager.new_epoch(client_query_manager);
     manager.send_galois_keys(client_query_manager);
