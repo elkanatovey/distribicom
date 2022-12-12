@@ -88,10 +88,13 @@ namespace services {
         std::shared_ptr<math_utils::QueryExpander> expander;
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
+
     public:
+        ClientDB client_query_manager;
         explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};
 
-        explicit Manager(const distribicom::AppConfigs &app_configs) :
+        explicit Manager(const distribicom::AppConfigs &app_configs, std::map<uint32_t,
+                std::unique_ptr<services::ClientInfo>> &client_db) :
             app_configs(app_configs),
             pool(std::make_shared<concurrency::threadpool>()),
             marshal(marshal::Marshaller::Create(utils::setup_enc_params(app_configs))),
@@ -105,7 +108,10 @@ namespace services {
                          utils::setup_enc_params(app_configs),
                          pool
                      )
-            ) {};
+            ) {
+            this->client_query_manager.client_counter = client_db.size();
+            this->client_query_manager.id_to_info = std::move(client_db);
+        };
 
 
         // a worker should send its work, along with credentials of what it sent.

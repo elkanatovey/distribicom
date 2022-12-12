@@ -9,20 +9,18 @@
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
         std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-        db(db), manager(app_configs), pir_configs(app_configs.configs()),
+        db(db), manager(app_configs, client_db), pir_configs(app_configs.configs()),
         enc_params(utils::setup_enc_params(app_configs)) {
-    this->client_query_manager.client_counter = client_db.size();
-    this->client_query_manager.id_to_info = std::move(client_db);
     init_pir_data(app_configs);
 
 }
 
-services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
-        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs),
-        pir_configs(app_configs.configs()), enc_params(utils::setup_enc_params(app_configs)) {
-    init_pir_data(app_configs);
-
-}
+//services::FullServer::FullServer(const distribicom::AppConfigs &app_configs) :
+//        db(app_configs.configs().db_rows(), app_configs.configs().db_cols()), manager(app_configs),
+//        pir_configs(app_configs.configs()), enc_params(utils::setup_enc_params(app_configs)) {
+//    init_pir_data(app_configs);
+//
+//}
 
 void services::FullServer::init_pir_data(const distribicom::AppConfigs &app_configs) {
     const auto &configs = app_configs.configs();
@@ -37,7 +35,7 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
 
 
     try {
-        response->set_mailbox_id(client_query_manager.add_client(context, request, pir_configs, pir_params));
+        response->set_mailbox_id(manager.client_query_manager.add_client(context, request, pir_configs, pir_params));
     } catch (std::exception &e) {
         std::cout << "Error: " << e.what() << std::endl;
         return {grpc::StatusCode::INTERNAL, e.what()};
@@ -55,12 +53,12 @@ services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom
 
     auto id = request->mailbox_id();
 
-    std::unique_lock lock(*client_query_manager.mutex);
-    if (client_query_manager.id_to_info.find(id) == client_query_manager.id_to_info.end()) {
+    std::unique_lock lock(*manager.client_query_manager.mutex);
+    if (manager.client_query_manager.id_to_info.find(id) == manager.client_query_manager.id_to_info.end()) {
         return {grpc::StatusCode::NOT_FOUND, "Client not found"};
     }
 
-    client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
+    manager.client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
     response->set_success(true);
     return grpc::Status::OK;
 }
@@ -91,9 +89,9 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
 //        // todo: set specific round and handle.
 
-        ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1
+        ledger = manager.distribute_work(db_handle.mat, manager.client_query_manager, 1, 1
 #ifdef DISTRIBICOM_DEBUG
-                                         ,client_query_manager.id_to_info.begin()->second->galois_keys
+                                         , manager.client_query_manager.id_to_info.begin()->second->galois_keys
 #endif
         );
     }
@@ -102,10 +100,10 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 }
 
 void services::FullServer::start_epoch() {
-    std::shared_lock client_db_lock(*client_query_manager.mutex);
+    std::shared_lock client_db_lock(*manager.client_query_manager.mutex);
 
-    manager.new_epoch(client_query_manager);
-    manager.send_galois_keys(client_query_manager);
+    manager.new_epoch(manager.client_query_manager);
+    manager.send_galois_keys(manager.client_query_manager);
 }
 
 void services::FullServer::wait_for_workers(int i) {
