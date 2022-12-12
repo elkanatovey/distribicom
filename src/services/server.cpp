@@ -111,7 +111,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
     {
         auto db_handle = db.many_reads();
 
-//        // todo: set specific round and handle.
+        std::shared_lock client_db_lock(client_query_manager.mutex);
 
         ledger = manager.distribute_work(db_handle.mat, client_query_manager, 1, 1
 #ifdef DISTRIBICOM_DEBUG

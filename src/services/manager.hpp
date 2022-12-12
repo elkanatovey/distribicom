@@ -72,6 +72,7 @@ namespace services {
         std::shared_ptr<concurrency::threadpool> pool;
 
         concurrency::Counter worker_counter;
+        // todo: on new round/ new distribute work delete old ledgers...
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
 
         std::shared_ptr<marshal::Marshaller> marshal;
@@ -160,5 +161,8 @@ namespace services {
          * assumes the given db is thread-safe.
          */
         void new_epoch(const ClientDB &db);
+
+        shared_ptr<WorkDistributionLedger>
+        new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
     };
 }

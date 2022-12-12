@@ -82,30 +82,20 @@ namespace services {
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch
-#ifdef DISTRIBICOM_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         , const seal::GaloisKeys &expansion_key
-#endif
+        #endif
     ) {
-        // TODO: delete old ledger.
+        shared_ptr<WorkDistributionLedger> ledger = new_ledger(db, all_clients);
 
-        auto ledger = std::make_shared<WorkDistributionLedger>();
-        {
-            // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
-            std::shared_lock lock(mtx);
-            ledgers.insert({{rnd, epoch}, ledger});
-            ledger->worker_list = std::vector<std::string>();
-            ledger->worker_list.reserve(work_streams.size());
-            all_clients.mutex.lock_shared();
-            ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                db.cols, all_clients.client_counter);
-            all_clients.mutex.unlock_shared();
-            for (auto &worker: work_streams) {
-                ledger->worker_list.push_back(worker.first);
-            }
-        }
-#ifdef DISTRIBICOM_DEBUG
+        mtx.lock();
+        ledgers.insert({{rnd, epoch}, ledger});
+        mtx.unlock();
+
+        #ifdef DISTRIBICOM_DEBUG
         create_res_matrix(db, all_clients, expansion_key, ledger);
-#endif
+        #endif
+
         if (rnd == 1) {
             grpc::ClientContext context;
             utils::add_metadata_size(context, services::constants::round_md, rnd);
@@ -114,9 +104,24 @@ namespace services {
             send_queries(all_clients);
         }
 
-
-        // TODO: process the DB for frievalds.
         send_db(db, rnd, epoch);
+
+        return ledger;
+    }
+
+    shared_ptr<WorkDistributionLedger>
+    Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
+        auto ledger = make_shared<WorkDistributionLedger>();
+
+        ledger->worker_list = vector<string>();
+        ledger->worker_list.reserve(work_streams.size());
+        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
+
+        // need to compute DB X epoch_data.query_matrix.
+        shared_lock lock(mtx);
+        for (auto &worker: work_streams) {
+            ledger->worker_list.push_back(worker.first);
+        }
 
         return ledger;
     }
@@ -130,7 +135,6 @@ namespace services {
         auto exp = expansion_key;
         auto expand_sz = db.cols;
 
-        all_clients.mutex.lock_shared();
         math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
         auto col = -1;
         for (const auto &client: all_clients.id_to_info) {
@@ -144,7 +148,6 @@ namespace services {
                 query_mat(i, col) = expanded[i];
             }
         }
-        all_clients.mutex.unlock_shared();
 
         matops->to_ntt(query_mat.data);
 
@@ -196,8 +199,6 @@ namespace services {
 
     void
     Manager::send_queries(const ClientDB &all_clients) {
-
-        std::shared_lock client_db_lock(all_clients.mutex);
         std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
 
@@ -331,6 +332,18 @@ namespace services {
         return stream;
     }
 
+    void randomise_scalar_vec(std::vector<std::uint64_t> &vec, std::uint64_t n_elems) {
+        seal::Blake2xbPRNGFactory factory;
+        auto prng = factory.create({(random_device()) ()});
+        uniform_int_distribution<unsigned long long> dist(
+            numeric_limits<uint64_t>::min(),
+            numeric_limits<uint64_t>::max()
+        );
+
+        vec.reserve(n_elems);
+        for (auto &i: vec) { i = prng->generate(); }
+    }
+
     // TODO: add epoch number so we can throw out old work and not be confused by it.
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
@@ -343,7 +356,6 @@ namespace services {
 
         auto expand_size = app_configs.configs().db_cols();
         for (const auto &info: db.id_to_info) {
-            // expanding the first dimension asynchrounously.
             ed.queries[info.first] = expander->async_expand(
                 info.second->query[0],
                 expand_size,
@@ -351,19 +363,8 @@ namespace services {
             );
         }
 
-        // fill random vector:
-        ed.random_scalar_vector->reserve(db.client_counter);
+        randomise_scalar_vec(*ed.random_scalar_vector, db.client_counter);
 
-        seal::Blake2xbPRNGFactory factory;
-        auto prng = factory.create({(std::random_device()) ()});
-        std::uniform_int_distribution<unsigned long long> dist(
-            std::numeric_limits<std::uint64_t>::min(),
-            std::numeric_limits<std::uint64_t>::max()
-        );
-
-        for (auto &i: *(ed.random_scalar_vector)) { i = prng->generate(); }
-
-        // todo: take queries and multiply once from the right by a frievalds vector.
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
