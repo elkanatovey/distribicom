@@ -63,7 +63,7 @@ namespace services {
         // following the same key as the client's db.
         std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
 
-        // following the same key as the client's db.
+        // following the same key as the client's db. [NTT FORM]
         std::map<std::uint64_t, std::shared_ptr<math_utils::matrix<seal::Ciphertext>>> queries_dim2;
 
         // the following vector will be used to be multiplied against incoming work.
@@ -178,7 +178,6 @@ namespace services {
 
             for (const auto &client: all_clients.id_to_info) {
                 auto current_query = *epoch_data.queries_dim2[client.first];
-//                matops->to_ntt(current_query.data);
                 matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
             }
         };

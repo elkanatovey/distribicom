@@ -29,8 +29,6 @@ namespace services {
         distribicom::MatrixPart tmp;
         std::vector<ResultMatPart> parts;
         while (reader->Read(&tmp)) {
-            std::uint32_t row = tmp.row();
-            std::uint32_t col = tmp.col();
 
 //#ifdef DISTRIBICOM_DEBUG
 //            matops->w_evaluator->evaluator->sub_inplace(
@@ -368,11 +366,25 @@ namespace services {
                 info.second->galois_keys
             );
 
-            qs2[info.first] = expander->async_expand_to_matrix(
-                info.second->query[1],
-                expand_size_dim2,
-                info.second->galois_keys
+            // setting dim2 in matrix<seal::ciphertext> and ntt form.
+            auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
+            pool->submit(
+                {
+                    .f = [&, p]() {
+                        auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                            1, expand_size_dim2, // row vec.
+                            expander->expand_query(
+                                info.second->query[1],
+                                expand_size_dim2,
+                                info.second->galois_keys
+                            ));
+                        matops->to_ntt(mat->data);
+                        p->set(mat);
+                    },
+                    .wg  = p->get_latch(),
+                }
             );
+            qs2[info.first] = p;
 
         }
 
