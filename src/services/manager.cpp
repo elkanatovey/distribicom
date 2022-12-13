@@ -363,23 +363,20 @@ namespace services {
             );
         }
 
-        for (std::uint64_t i = 0; i < qs.size(); i++) {
-            ed.queries[i] = qs[i]->get();
-        }
-        qs.clear();
-
         randomise_scalar_vec(*ed.random_scalar_vector, db.client_counter);
 
         auto rows = expand_size;
-        // first of all, run over the queries and put them in a matrix.
         auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
-        for (const auto &col_to_vec: epoch_data.queries) {
-            auto column = col_to_vec.first;
-            auto &v = col_to_vec.second;
+
+        for (std::uint64_t column = 0; column < qs.size(); column++) {
+            auto v = qs[column]->get();
+            ed.queries[column] = v;
+
             for (std::uint64_t i = 0; i < rows; i++) {
                 (*query_mat)(i, column) = (*v)[i];
             }
         }
+        qs.clear();
 
         epoch_data.query_mat_times_randvec = matops->async_scalar_dot_product(
             query_mat,
