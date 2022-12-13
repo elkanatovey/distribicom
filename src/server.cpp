@@ -6,7 +6,13 @@
 std::string get_listening_address(const distribicom::AppConfigs &cnfgs);
 
 shared_ptr<services::FullServer>
-full_server_instance(const distribicom::AppConfigs &configs);
+full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
+                     PirParams &pir_params);
+
+std::vector<PIRClient>
+create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
+               const seal::EncryptionParameters &enc_params,
+               PirParams &pir_params);
 
 std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribicom::AppConfigs &);
 
@@ -14,7 +20,9 @@ int main(int, char *[]) {
     // todo: load configs from config file in specific folder.
     auto cnfgs = services::configurations::create_app_configs("197.201.3.3:5432", 4096, 20, 5, 5, 256);
     cnfgs.set_number_of_workers(5); // todo: should load with this value from config file.
-    auto server = full_server_instance(cnfgs);
+    auto enc_params = services::utils::setup_enc_params(cnfgs);
+    PirParams pir_params;
+    auto server = full_server_instance(cnfgs, enc_params, pir_params);
 
     std::cout << "setting server" << std::endl;
     std::latch wg(1);
@@ -85,7 +93,56 @@ std::string get_listening_address(const distribicom::AppConfigs &cnfgs) {
     return "0.0.0.0" + address.substr(address.find(':'), address.size());
 }
 
-shared_ptr<services::FullServer> full_server_instance(const distribicom::AppConfigs &configs) {
+
+std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
+                                      const seal::EncryptionParameters &enc_params,
+                                      PirParams &pir_params) {
+    seal::SEALContext seal_context(enc_params, true);
+    const auto &configs = app_configs.configs();
+    gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
+                   configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
+                   configs.use_batching(), configs.use_recursive_mod_switching());
+    std::vector<PIRClient> clients;
+    for (size_t i = 0; i < size; i++) {
+        clients.emplace_back(enc_params, pir_params);
+    }
+    return clients;
+}
+
+
+std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
+create_client_db(const distribicom::AppConfigs &app_configs, const seal::EncryptionParameters &enc_params,
+                 PirParams &pir_params, std::vector<PIRClient> &clients) {
+    seal::SEALContext seal_context(enc_params, true);
+    const auto &configs = app_configs.configs();
+    gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
+                   configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
+                   configs.use_batching(), configs.use_recursive_mod_switching());
+
+    std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
+    auto m = marshal::Marshaller::Create(enc_params);
+    for (size_t i = 0; i < clients.size(); i++) {
+        seal::GaloisKeys gkey = clients[i].generate_galois_keys();
+        auto gkey_serialised = m->marshal_seal_object(gkey);
+        PirQuery query = clients[i].generate_query(i / (configs.db_rows() * configs.db_cols()));
+        distribicom::ClientQueryRequest query_marshaled;
+        m->marshal_query_vector(query, query_marshaled);
+        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
+
+        services::set_client(math_utils::compute_expansion_ratio(seal_context.last_context_data()->parms()) * 2,
+                             app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
+                             client_info);
+
+        cdb.insert(
+                {i, std::move(client_info)});
+    }
+    return cdb;
+}
+
+
+shared_ptr<services::FullServer>
+full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
+                     PirParams &pir_params) {
     auto cols = configs.configs().db_cols();
     auto rows = configs.configs().db_rows();
 
@@ -94,16 +151,9 @@ shared_ptr<services::FullServer> full_server_instance(const distribicom::AppConf
     for (auto &ptx: db.data) {
         ptx = i++;
     }
-    std::map<uint32_t, std::unique_ptr<services::ClientInfo>> client_db;
-    std::uint64_t max_clients = 1 << 16;
-    for (std::uint64_t j = 0; j < max_clients; ++j) {
-        // TODO: create queries.
-        client_db.insert(
-            {
-                j,
-                std::make_unique<services::ClientInfo>(),
-            }
-        );
-    }
+
+    std::uint64_t num_clients = 30;
+    auto clients = create_clients(num_clients, configs, enc_params, pir_params);
+    auto client_db = create_client_db(configs, enc_params, pir_params, clients);
     return std::make_shared<services::FullServer>(db, client_db, configs);
 }
