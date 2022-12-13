@@ -7,7 +7,7 @@ std::string get_listening_address(const distribicom::AppConfigs &cnfgs);
 
 shared_ptr<services::FullServer>
 full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
-                     PirParams &pir_params);
+                     PirParams &pir_params, std::vector<PIRClient> &clients);
 
 std::vector<PIRClient>
 create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
@@ -22,7 +22,10 @@ int main(int, char *[]) {
     cnfgs.set_number_of_workers(5); // todo: should load with this value from config file.
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
-    auto server = full_server_instance(cnfgs, enc_params, pir_params);
+    std::uint64_t num_clients = 30;
+    auto clients = create_clients(num_clients, cnfgs, enc_params, pir_params);
+
+    auto server = full_server_instance(cnfgs, enc_params, pir_params, clients);
 
     std::cout << "setting server" << std::endl;
     std::latch wg(1);
@@ -97,7 +100,6 @@ std::string get_listening_address(const distribicom::AppConfigs &cnfgs) {
 std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
                                       const seal::EncryptionParameters &enc_params,
                                       PirParams &pir_params) {
-    seal::SEALContext seal_context(enc_params, true);
     const auto &configs = app_configs.configs();
     gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
                    configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
@@ -142,7 +144,7 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
 
 shared_ptr<services::FullServer>
 full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
-                     PirParams &pir_params) {
+                     PirParams &pir_params, std::vector<PIRClient> &clients) {
     auto cols = configs.configs().db_cols();
     auto rows = configs.configs().db_rows();
 
@@ -151,9 +153,6 @@ full_server_instance(const distribicom::AppConfigs &configs, const seal::Encrypt
     for (auto &ptx: db.data) {
         ptx = i++;
     }
-
-    std::uint64_t num_clients = 30;
-    auto clients = create_clients(num_clients, configs, enc_params, pir_params);
     auto client_db = create_client_db(configs, enc_params, pir_params, clients);
     return std::make_shared<services::FullServer>(db, client_db, configs);
 }
