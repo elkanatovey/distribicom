@@ -7,10 +7,10 @@
 
 
 services::FullServer::FullServer(math_utils::matrix<seal::Plaintext> &db, std::map<uint32_t,
-        std::unique_ptr<services::ClientInfo>> &client_db,
+    std::unique_ptr<services::ClientInfo>> &client_db,
                                  const distribicom::AppConfigs &app_configs) :
-         manager(app_configs, client_db, db), pir_configs(app_configs.configs()),
-        enc_params(utils::setup_enc_params(app_configs)) {
+    manager(app_configs, client_db, db), pir_configs(app_configs.configs()),
+    enc_params(utils::setup_enc_params(app_configs)) {
     init_pir_data(app_configs);
 
 }
@@ -94,7 +94,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
         ledger = manager.distribute_work(db_handle.mat, manager.client_query_manager, 1, 1
 #ifdef DISTRIBICOM_DEBUG
-                                         , manager.client_query_manager.id_to_info.begin()->second->galois_keys
+            , manager.client_query_manager.id_to_info.begin()->second->galois_keys
 #endif
         );
     }
@@ -130,7 +130,7 @@ void services::FullServer::send_stop_signal() {
 }
 
 void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>) {
-    throw std::logic_error("not implemented");
+    manager.wait_on_verification();
 }
 
 void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {

@@ -54,7 +54,7 @@ namespace services {
         // stored in ntt form.
         math_utils::matrix<seal::Ciphertext> db_x_queries_x_randvec;
 
-        std::map<std::string, std::unique_ptr<concurrency::promise<bool>>> verify_worker_result;
+        std::map<std::string, std::unique_ptr<concurrency::promise<bool>>> worker_verification_results;
         // open completion will be closed to indicate to anyone waiting.
         concurrency::Channel<int> done;
     };
@@ -167,16 +167,16 @@ namespace services {
                                 temp);
                             auto is_valid = verify_row(workers_db_row_x_query, rows[i]);
                             if (!is_valid) {
-                                epoch_data.ledger->verify_worker_result[worker_creds]->set(
+                                epoch_data.ledger->worker_verification_results[worker_creds]->set(
                                     std::make_unique<bool>(false)
                                 );
                                 return;
                             }
                         }
 
-                        epoch_data.ledger->verify_worker_result[worker_creds]->set(std::make_unique<bool>(true));
+                        epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
                     },
-                    .wg = epoch_data.ledger->verify_worker_result[worker_creds]->get_latch()
+                    .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch()
                 }
             );
 
@@ -257,5 +257,10 @@ namespace services {
 
         shared_ptr<WorkDistributionLedger>
         new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
+
+        /**
+         * Waits on freivalds verify, returns (if any) parts that need to be re-evaluated.
+         */
+        void wait_on_verification();
     };
 }

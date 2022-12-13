@@ -113,7 +113,7 @@ namespace services {
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
-            ledger->verify_worker_result.insert(
+            ledger->worker_verification_results.insert(
                 {
                     worker.first,
                     std::make_unique<concurrency::promise<bool>>(1, nullptr)
@@ -419,5 +419,14 @@ namespace services {
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
+    }
+
+    void Manager::wait_on_verification() {
+        for (const auto &v: epoch_data.ledger->worker_verification_results) {
+            auto is_valid = *(v.second->get());
+            if (!is_valid) {
+                throw std::runtime_error("wait_on_verification:: invalid verification");
+            }
+        }
     }
 }
