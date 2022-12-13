@@ -134,7 +134,7 @@ void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistrib
 }
 
 void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {
-    throw std::logic_error("not implemented");
+    manager.calculate_final_answer();
 }
 
 void services::FullServer::tell_new_round() {

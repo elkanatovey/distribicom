@@ -198,9 +198,8 @@ namespace services {
             all_clients.mutex->unlock_shared();
         };
 
-        void calculate_final_answer(const ClientDB &all_clients) {
-
-            for (const auto &client: all_clients.id_to_info) {
+        void calculate_final_answer() {
+            for (const auto &client: client_query_manager.id_to_info) {
                 auto current_query = *epoch_data.queries_dim2[client.first];
                 matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
             }
