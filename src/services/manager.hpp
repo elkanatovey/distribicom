@@ -53,6 +53,8 @@ namespace services {
 
         // stored in ntt form.
         math_utils::matrix<seal::Ciphertext> db_x_queries_x_randvec;
+
+        std::map<std::string, std::unique_ptr<concurrency::promise<bool>>> verify_worker_result;
         // open completion will be closed to indicate to anyone waiting.
         concurrency::Channel<int> done;
     };

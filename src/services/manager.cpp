@@ -106,7 +106,7 @@ namespace services {
 
     std::shared_ptr<WorkDistributionLedger>
     Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
-        auto ledger = make_shared<WorkDistributionLedger>();
+        auto ledger = std::make_shared<WorkDistributionLedger>();
 
         ledger->worker_list = vector<string>();
         ledger->worker_list.reserve(work_streams.size());
@@ -119,6 +119,12 @@ namespace services {
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
+            ledger->verify_worker_result.insert(
+                {
+                    worker.first,
+                    std::make_unique<concurrency::promise<bool>>(1, nullptr)
+                }
+            );
         }
 
         return ledger;
