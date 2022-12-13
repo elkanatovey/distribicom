@@ -3,6 +3,7 @@
 #include <seal/seal.h>
 #include <vector>
 #include "concurrency/concurrency.h"
+#include "matrix.h"
 
 namespace math_utils {
     /***
@@ -28,6 +29,16 @@ namespace math_utils {
 
         std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>
         async_expand(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey);
+
+        /**
+         * retiurns a promise of a query that is expanded into a col vector
+         * @param query_i query to expand
+         * @param n_i number of cols
+         * @param galkey
+         * @return expanded query promise
+         */
+        std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>
+        async_expand_to_matrix(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey);
 
         std::vector<seal::Ciphertext> __expand_query(const seal::Ciphertext &encrypted,
                                                      uint32_t m, seal::GaloisKeys &galkey) const;

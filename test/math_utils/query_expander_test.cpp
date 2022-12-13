@@ -10,26 +10,30 @@ void correct_expansion_test(TestUtils::SetupConfigs);
 
 void expanding_full_dimension_query(TestUtils::SetupConfigs);
 
+void async_expansion(TestUtils::SetupConfigs);
+
 int query_expander_test(int, char *[]) {
     // encryption parameters ensure that we have enough multiplication depth.
     // coefficient modulus is set automatically.
     auto cnfgs = TestUtils::SetupConfigs{
-            .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bfv,
-                    .polynomial_degree = 4096 * 2,
-                    .log_coefficient_modulus = 20,
-            },
-            .pir_params_configs = {
-                    .number_of_items = 2048,
-                    .size_per_item = 288,
-                    .dimensions= 2,
-                    .use_symmetric = false,
-                    .use_batching = true,
-                    .use_recursive_mod_switching = true,
-            },
+        .encryption_params_configs = {
+            .scheme_type = seal::scheme_type::bfv,
+            .polynomial_degree = 4096 * 2,
+            .log_coefficient_modulus = 20,
+        },
+        .pir_params_configs = {
+            .number_of_items = 2048,
+            .size_per_item = 288,
+            .dimensions= 2,
+            .use_symmetric = false,
+            .use_batching = true,
+            .use_recursive_mod_switching = true,
+        },
     };
 
     expanding_full_dimension_query(cnfgs);
+    async_expansion(cnfgs);
+
     cnfgs.encryption_params_configs.polynomial_degree = 4096;
     cnfgs.pir_params_configs.number_of_items = 512;
     cnfgs.pir_params_configs.dimensions = 1;
@@ -67,17 +71,14 @@ void correct_expansion_test(TestUtils::SetupConfigs cnfgs) {
 
             if (decryption.is_zero() && index != i) {
                 continue;
-            }
-            else if (decryption.is_zero()) {
+            } else if (decryption.is_zero()) {
                 o << "Found zero where index should be";
                 throw std::runtime_error(o.str());
-            }
-            else if (std::stoi(decryption.to_string()) != 1) {
+            } else if (std::stoi(decryption.to_string()) != 1) {
                 o << "Query vector at index " << index
                   << " should be 1 but is instead " << decryption.to_string();
                 throw std::runtime_error(o.str());
-            }
-            else {
+            } else {
                 if (decryption.to_string() != "1") {
                     o << "Query vector at index " << index << " is not 1";
                     throw std::runtime_error(o.str());
@@ -176,4 +177,36 @@ std::shared_ptr<Database> gen_db(const shared_ptr<TestUtils::CryptoObjects> &all
 
     server.set_database(move(db), number_of_items, size_per_item);
     return server.get_db();
+}
+
+void async_expansion(TestUtils::SetupConfigs cnfgs) {
+
+    assert(cnfgs.pir_params_configs.dimensions == 2);
+    auto all = TestUtils::setup(cnfgs);
+
+
+    auto db_ptr = gen_db(all);
+
+
+    PIRClient client(all->encryption_params, all->pir_params);
+    seal::GaloisKeys galois_keys = client.generate_galois_keys();
+    std::uint64_t dim0_size = all->pir_params.nvec[0];
+    std::uint64_t dim1_size = all->pir_params.nvec[1];
+
+    std::uint64_t ele_index = 71; // Choosing the SECOND plaintext that is stored in the DB. that is cell number 71.
+    std::uint64_t index = client.get_fv_index(ele_index);   // index of FV plaintext
+    std::cout << "Main: element index = " << ele_index << " from [0, "
+              << all->pir_params.ele_num - 1 << "]" << std::endl;
+    PirQuery query = client.generate_query(index);
+
+    auto expander = math_utils::QueryExpander::Create(all->encryption_params);
+    auto promise = expander->async_expand(query[0], dim0_size, galois_keys);
+    auto expanded_query_dim_0 = expander->expand_query(query[0], dim0_size, galois_keys);
+
+    auto expanded2 = promise->get();
+    for (int i = 0; i < expanded_query_dim_0.size(); ++i) {
+        all->w_evaluator->evaluator->sub_inplace(expanded_query_dim_0[i], (*expanded2)[i]);
+        assert(expanded_query_dim_0[i].is_transparent());
+    }
+
 }

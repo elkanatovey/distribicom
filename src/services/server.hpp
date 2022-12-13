@@ -14,8 +14,6 @@ namespace services {
 
     // uses both the Manager and the Server services to complete a full distribicom server.
     class FullServer final : public distribicom::Server::Service {
-        // used for tests
-        services::DB<seal::Plaintext> db;
 
         // using composition to implement the interface of the manager.
         services::Manager manager;
@@ -24,8 +22,6 @@ namespace services {
         PirParams pir_params;
         seal::EncryptionParameters enc_params;
 
-        // concurrency stuff
-        ClientDB client_query_manager;
 
 
         std::vector<std::future<int>> db_write_requests;
@@ -36,7 +32,7 @@ namespace services {
                             std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db,
                             const distribicom::AppConfigs &app_configs);
 
-        explicit FullServer(const distribicom::AppConfigs &app_configs);
+//        explicit FullServer(const distribicom::AppConfigs &app_configs);
 
 
         grpc::Status

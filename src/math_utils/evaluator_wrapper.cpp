@@ -1,5 +1,20 @@
 #include "evaluator_wrapper.hpp"
 
+namespace math_utils{
+
+    /*
+     * for the correct expansion ratio take last_parms_id() times 2
+     */
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters &params) {
+        uint32_t expansion_ratio = 0;
+        uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
+            double coeff_bit_size = log2(params.coeff_modulus()[i].value());
+            expansion_ratio += ceil(coeff_bit_size / pt_bits_per_coeff);
+        }
+        return expansion_ratio;
+    }
+}
 namespace {
     uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params) {
         uint32_t expansion_ratio = 0;

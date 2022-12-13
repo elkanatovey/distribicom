@@ -42,8 +42,20 @@ namespace math_utils {
             w_evaluator->evaluator->transform_to_ntt_inplace(tmp_result);
         }
 
+        // assume that in seal::Plaintext case we don't want to turn into splitPlaintexts
         for (uint64_t k = 0; k < left.cols; ++k) {
-            w_evaluator->mult(left(i, k), right(k, j), tmp);
+            if constexpr ((std::is_same_v<U, seal::Plaintext>))
+            {
+                w_evaluator->mult_reg(left(i, k), right(k, j), tmp);
+            }
+            else if constexpr (std::is_same_v<V, seal::Plaintext>)
+            {
+                w_evaluator->mult_reg(right(k, j), left(i, k), tmp);
+            }
+            else
+            {
+                w_evaluator->mult(left(i, k), right(k, j), tmp);
+            }
             w_evaluator->add(tmp, tmp_result, tmp_result);
         }
         return tmp_result;
@@ -55,7 +67,7 @@ namespace math_utils {
                                matrix<seal::Ciphertext> &result) const {
         verify_correct_dimension(left, right);
         verify_not_empty_matrices(left, right);
-        auto wg = std::make_shared<std::latch>(int(left.rows * right.cols));
+        auto wg = std::make_shared<concurrency::safelatch>(int(left.rows * right.cols));
         for (uint64_t i = 0; i < left.rows; ++i) {
             for (uint64_t j = 0; j < right.cols; ++j) {
 
@@ -172,6 +184,53 @@ namespace math_utils {
         }
 
         return p;
+    }
+
+    template<typename U>
+    std::shared_ptr<matrix<seal::Ciphertext>>
+    MatrixOperations::scalar_dot_product(
+            const std::shared_ptr<matrix<U>> &mat,
+            const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(mat->rows==vec->size());
+#endif
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->cols, 1);
+        for (uint64_t k = 0; k < mat->cols; k++) {
+            seal::Ciphertext tmp;
+            seal::Ciphertext rslt(w_evaluator->context);
+            for (uint64_t j = 0; j < mat->rows; j++) {
+                w_evaluator->scalar_multiply((*vec)[j], (*mat)(j, k), tmp);
+                w_evaluator->add(tmp, rslt, rslt);
+            }
+            (*result_vec)(k, 0) = rslt;
+
+        }
+
+        return result_vec;
+    }
+
+
+    template<typename U>
+    std::shared_ptr<matrix<seal::Ciphertext>>
+    MatrixOperations::scalar_dot_product_col_major(
+            const std::shared_ptr<matrix<U>> &mat,
+            const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(mat->cols==vec->size());
+#endif
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->rows, 1);
+        for (uint64_t k = 0; k < mat->rows; k++) {
+            seal::Ciphertext tmp;
+            seal::Ciphertext rslt(w_evaluator->context);
+            for (uint64_t j = 0; j < mat->cols; j++) {
+                w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
+                w_evaluator->add(tmp, rslt, rslt);
+            }
+            (*result_vec)(k, 0) = rslt;
+
+        }
+
+        return result_vec;
     }
 
 

@@ -219,4 +219,27 @@ namespace math_utils {
         return promise;
     }
 
+
+    std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>
+    QueryExpander::async_expand_to_matrix(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey) {
+        auto query_i_cpy = std::make_shared<std::vector<seal::Ciphertext>>(query_i);
+        auto galkey_cpy = std::make_shared<seal::GaloisKeys>(galkey);
+        math_utils::matrix<seal::Ciphertext> s;
+        auto promise = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
+
+        pool->submit(
+                {
+                        .f =
+                        [&, promise, query_i_cpy, galkey_cpy, n_i]() {
+                            promise->set(
+                                    std::make_shared<math_utils::matrix<seal::Ciphertext>>(1,n_i,expand_query(*query_i_cpy, n_i, *galkey_cpy))
+                            );
+                        },
+                        .wg = promise->get_latch(),
+
+                }
+        );
+        return promise;
+    }
+
 }

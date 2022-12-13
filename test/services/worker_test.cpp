@@ -21,12 +21,12 @@ int worker_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     auto cfgs = services::configurations::create_app_configs(
-            "localhost:" + std::string(server_port),
-            int(all->encryption_params.poly_modulus_degree()),
-            20,
-            5,
-            5,
-            256
+        "localhost:" + std::string(server_port),
+        int(all->encryption_params.poly_modulus_degree()),
+        20,
+        6,
+        6,
+        256
     );
     services::FullServer fs = full_server_instance(all, cfgs);
 
@@ -43,7 +43,7 @@ int worker_test(int, char *[]) {
 
     fs.wait_for_workers(1);
     fs.start_epoch();
-    fs.distribute_work();
+    fs.learn_about_rouge_workers(fs.distribute_work());
 
     sleep(5);
     std::cout << "\nshutting down.\n" << std::endl;
@@ -55,41 +55,40 @@ int worker_test(int, char *[]) {
     return 0;
 }
 
+
 std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
-create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all) {
+create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &app_configs) {
     auto m = marshal::Marshaller::Create(all->encryption_params);
     std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
     for (int i = 0; i < size; i++) {
-        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
         auto gkey = all->gal_keys;
-        client_info->galois_keys = gkey;
         auto gkey_serialised = m->marshal_seal_object(gkey);
-        client_info->galois_keys_marshaled.set_keys(gkey_serialised);
-        client_info->galois_keys_marshaled.set_key_pos(i);
         std::vector<std::vector<seal::Ciphertext>> query = {{all->random_ciphertext()},
                                                             {all->random_ciphertext()}};
         distribicom::ClientQueryRequest query_marshaled;
         m->marshal_query_vector(query, query_marshaled);
-        client_info->query_info_marshaled.CopyFrom(query_marshaled);
-        client_info->query_info_marshaled.set_mailbox_id(i);
-        client_info->query = std::move(query);
+        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
+
+        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.last_context_data()->parms()) * 2,
+                             app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
+                             client_info);
 
         cdb.insert(
-                {i, std::move(client_info)});
+            {i, std::move(client_info)});
     }
     return cdb;
 }
 
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
-    auto n = 5;
-    math_utils::matrix<seal::Plaintext> db(n, n);
+    auto num_clients = configs.configs().db_rows() * 2;
+    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_rows());
 
     for (auto &p: db.data) {
         p = all->random_plaintext();
     }
 
-    auto cdb = create_client_db(n, all);
+    auto cdb = create_client_db(num_clients, all, configs);
 
     return services::FullServer(db, cdb, configs);
 }
@@ -100,11 +99,11 @@ std::thread setupWorker(std::latch &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
             services::Worker worker(
-                    services::configurations::create_worker_configs(
-                            configs,
-                            std::stoi(std::string(worker_port)),
-                            "0.0.0.0"
-                    )
+                services::configurations::create_worker_configs(
+                    configs,
+                    std::stoi(std::string(worker_port)),
+                    "0.0.0.0"
+                )
             );
 
             wg.wait();

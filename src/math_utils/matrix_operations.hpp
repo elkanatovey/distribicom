@@ -81,6 +81,7 @@ namespace math_utils {
 
         void to_ntt(std::vector<seal::Ciphertext> &m) const;
 
+        void to_ntt(std::vector<seal::Plaintext> &m) const;
 
         void from_ntt(std::vector<seal::Ciphertext> &m) const;
 
@@ -184,6 +185,30 @@ namespace math_utils {
         std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
         async_scalar_dot_product(const std::shared_ptr<matrix<U>> &mat,
                                  const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
+        /***
+         *
+         * @tparam
+         * @param mat matrix where num of rows equals vec length
+         * @param vec vec of ints
+         * @return mat*vec where vec is of size mat.row_len()
+         */
+        template<typename U>
+        std::shared_ptr<matrix<seal::Ciphertext>>
+        scalar_dot_product(const std::shared_ptr<matrix<U>> &mat,
+                                 const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
+
+
+        /***
+         *
+         * @tparam
+         * @param mat matrix where num of cols equals vec length
+         * @param vec vec of ints
+         * @return mat*vec where vec is of size mat.col_len()
+         */
+        template<typename U>
+        std::shared_ptr<matrix<seal::Ciphertext>>
+        scalar_dot_product_col_major(const std::shared_ptr<matrix<U>> &mat,
+                           const std::shared_ptr<std::vector<std::uint64_t>> &vec) const;
 
     private:
         void
@@ -192,7 +217,6 @@ namespace math_utils {
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
 
-        void to_ntt(std::vector<seal::Plaintext> &m) const;
     };
 
 }

@@ -127,4 +127,8 @@ namespace math_utils {
 
         void transform_to_ntt_inplace(EmbeddedCiphertext &encoded) const;
     };
+    /*
+ * for the correct expansion ratio take last_parms_id() times 2
+ */
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params);
 }

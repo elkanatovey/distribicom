@@ -11,8 +11,8 @@ namespace services {
                                             ::distribicom::Ack *resp) {
         UNUSED(resp);
         std::string worker_creds = utils::extract_string_from_metadata(
-                context->client_metadata(),
-                constants::credentials_md
+            context->client_metadata(),
+            constants::credentials_md
         );
 
         mtx.lock_shared();
@@ -23,34 +23,26 @@ namespace services {
             return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
         }
 
-        auto round = utils::extract_size_from_metadata(context->client_metadata(), constants::round_md);
-        auto epoch = utils::extract_size_from_metadata(context->client_metadata(), constants::epoch_md);
-
-        mtx.lock_shared();
-        exists = ledgers.find({round, epoch}) != ledgers.end();
-        auto ledger = ledgers[{round, epoch}];
-        mtx.unlock_shared();
-
-        if (!exists) {
-            return {
-                    grpc::StatusCode::INVALID_ARGUMENT,
-                    "ledger not found in {round,epoch}" + std::to_string(round) + "," + std::to_string(epoch)
-            };
-        }
-
-        // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
         distribicom::MatrixPart tmp;
-        while (reader->Read(&tmp)) {
-            std::uint32_t row = tmp.row();
-            std::uint32_t col = tmp.col();
+        auto parts = std::make_shared<std::vector<ResultMatPart>>();
 
-#ifdef DISTRIBICOM_DEBUG
-            matops->w_evaluator->evaluator->sub_inplace(
-                    ledger->result_mat(row, col),
-                    marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
-            assert(ledger->result_mat(row, col).is_transparent());
-#endif
+        auto &parts_vec = *parts;
+        while (reader->Read(&tmp)) {
+            // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
+            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+            parts_vec.push_back(
+                {
+                    std::move(current_ctx),
+                    tmp.row(),
+                    tmp.col()
+                }
+            );
         }
+
+        async_verify_worker(parts, worker_creds);
+        put_in_result_matrix(parts_vec, this->client_query_manager);
+
+        auto ledger = epoch_data.ledger;
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);
@@ -62,19 +54,6 @@ namespace services {
             ledger->done.close();
         }
 
-        // mat = matrix<n,j>;
-        // while (reader->Read(&tmp)) {
-        //      tmp == [ctx, 0, j]
-        //       mat[0,j] = ctx;;
-        // }
-
-        // A
-        // B
-        // C
-
-        // Frievalds(A, B, C)
-        // Frievalds: DB[:, :]
-
         return {};
     }
 
@@ -82,29 +61,16 @@ namespace services {
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch
-#ifdef DISTRIBICOM_DEBUG
-                             ,const seal::GaloisKeys &expansion_key
-#endif
+        #ifdef DISTRIBICOM_DEBUG
+        , const seal::GaloisKeys &expansion_key
+        #endif
     ) {
+        epoch_data.ledger = new_ledger(db, all_clients);
 
-        auto ledger = std::make_shared<WorkDistributionLedger>();
-        {
-            // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
-            std::shared_lock lock(mtx);
-            ledgers.insert({{rnd, epoch}, ledger});
-            ledger->worker_list = std::vector<std::string>();
-            ledger->worker_list.reserve(work_streams.size());
-            all_clients.mutex.lock_shared();
-            ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                    db.cols, all_clients.client_counter);
-            all_clients.mutex.unlock_shared();
-            for (auto &worker: work_streams) {
-                ledger->worker_list.push_back(worker.first);
-            }
-        }
-#ifdef DISTRIBICOM_DEBUG
-        create_res_matrix(db, all_clients, expansion_key, ledger);
-#endif
+        #ifdef DISTRIBICOM_DEBUG
+        create_res_matrix(db, all_clients, expansion_key);
+        #endif
+
         if (rnd == 1) {
             grpc::ClientContext context;
             utils::add_metadata_size(context, services::constants::round_md, rnd);
@@ -115,19 +81,44 @@ namespace services {
 
         send_db(db, rnd, epoch);
 
+        return epoch_data.ledger;
+    }
+
+    std::shared_ptr<WorkDistributionLedger>
+    Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
+        auto ledger = std::make_shared<WorkDistributionLedger>();
+
+        ledger->worker_list = vector<string>();
+        ledger->worker_list.reserve(work_streams.size());
+        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
+
+        // need to compute DB X epoch_data.query_matrix.
+        matops->multiply(db, *epoch_data.query_mat_times_randvec, ledger->db_x_queries_x_randvec);
+        matops->from_ntt(ledger->db_x_queries_x_randvec.data);
+
+        shared_lock lock(mtx);
+        for (auto &worker: work_streams) {
+            ledger->worker_list.push_back(worker.first);
+            ledger->worker_verification_results.insert(
+                {
+                    worker.first,
+                    std::make_unique<concurrency::promise<bool>>(1, nullptr)
+                }
+            );
+        }
+
         return ledger;
     }
 
 
     void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
                                     const ClientDB &all_clients,
-                                    const seal::GaloisKeys &expansion_key,
-                                    std::shared_ptr<WorkDistributionLedger> &ledger) const {
+                                    const seal::GaloisKeys &expansion_key) const {
 #ifdef DISTRIBICOM_DEBUG
+        auto ledger = epoch_data.ledger;
         auto exp = expansion_key;
         auto expand_sz = db.cols;
 
-        all_clients.mutex.lock_shared();
         math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
         auto col = -1;
         for (const auto &client: all_clients.id_to_info) {
@@ -141,7 +132,6 @@ namespace services {
                 query_mat(i, col) = expanded[i];
             }
         }
-        all_clients.mutex.unlock_shared();
 
         matops->to_ntt(query_mat.data);
 
@@ -194,7 +184,6 @@ namespace services {
     void
     Manager::send_queries(const ClientDB &all_clients) {
 
-        std::shared_lock client_db_lock(all_clients.mutex);
         std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
 
@@ -328,26 +317,101 @@ namespace services {
         return stream;
     }
 
-    // TODO: add epoch number so we can throw out old work and not be confused by it.
+    void randomise_scalar_vec(std::vector<std::uint64_t> &vec) {
+        seal::Blake2xbPRNGFactory factory;
+        auto prng = factory.create({(random_device()) ()});
+        uniform_int_distribution<unsigned long long> dist(
+            numeric_limits<uint64_t>::min(),
+            numeric_limits<uint64_t>::max()
+        );
+
+        for (auto &i: vec) { i = prng->generate(); }
+    }
+
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
-                .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
-                .queries = {},
+            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+            .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
+            .queries_dim2 = {},
+            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(db.client_counter),
+            .query_mat_times_randvec = {},
         };
 
         auto expand_size = app_configs.configs().db_cols();
+        auto expand_size_dim2 = app_configs.configs().db_rows();
+
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
+        std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> qs2(
+            db.id_to_info.size());
+
         for (const auto &info: db.id_to_info) {
-            // expanding the first dimension asynchrounously.
-            ed.queries[info.first] = expander->async_expand(
-                    info.second->query[0],
-                    expand_size,
-                    info.second->galois_keys
+            qs[info.first] = expander->async_expand(
+                info.second->query[0],
+                expand_size,
+                info.second->galois_keys
             );
+
+            // setting dim2 in matrix<seal::ciphertext> and ntt form.
+            auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
+            pool->submit(
+                {
+                    .f = [&, p]() {
+                        auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                            1, expand_size_dim2, // row vec.
+                            expander->expand_query(
+                                info.second->query[1],
+                                expand_size_dim2,
+                                info.second->galois_keys
+                            ));
+                        matops->to_ntt(mat->data);
+                        p->set(mat);
+                    },
+                    .wg  = p->get_latch(),
+                }
+            );
+            qs2[info.first] = p;
+
         }
+
+        randomise_scalar_vec(*ed.random_scalar_vector);
+
+        auto rows = expand_size;
+        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+
+        for (std::uint64_t column = 0; column < qs.size(); column++) {
+            auto v = qs[column]->get();
+            ed.queries[column] = v;
+
+            for (std::uint64_t i = 0; i < rows; i++) {
+                (*query_mat)(i, column) = (*v)[i];
+            }
+        }
+        qs.clear();
+
+        auto promise = matops->async_scalar_dot_product(
+            query_mat,
+            ed.random_scalar_vector
+        );
+
+        for (std::uint64_t column = 0; column < qs2.size(); column++) {
+            ed.queries_dim2[column] = qs2[column]->get();
+        }
+        qs2.clear();
+
+        ed.query_mat_times_randvec = promise->get();
+        matops->to_ntt(ed.query_mat_times_randvec->data);
 
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
     }
 
+    void Manager::wait_on_verification() {
+        for (const auto &v: epoch_data.ledger->worker_verification_results) {
+            auto is_valid = *(v.second->get());
+            if (!is_valid) {
+                throw std::runtime_error("wait_on_verification:: invalid verification");
+            }
+        }
+    }
 }

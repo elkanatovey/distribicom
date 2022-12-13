@@ -22,17 +22,16 @@ int main(int, char *[]) {
     threads.emplace_back(run_server(wg, server, cnfgs));
 
     server->wait_for_workers(int(cnfgs.number_of_workers()));
-    server->publish_galois_keys();
     // 1 epoch
     for (int i = 0; i < 1; ++i) {
+        server->start_epoch();
 
         // 5 rounds in an epoch.
-        for (int j = 0; j < 5; ++j) {
-            server->tell_new_round();
-
+        for (int j = 0; j < 10; ++j) {
+            // todo: start timing a full round here.
             auto ledger = server->distribute_work();
 
-            ledger->done.read_for(std::chrono::milliseconds(5000)); // todo: get wait time from the configs.
+            ledger->done.read_for(std::chrono::milliseconds(5000)); // todo: how much time should we wait?
 
             // server should now inspect missing items and run the calculations for them.
             // server should also be notified by ledger about the rouge workers.
@@ -41,9 +40,8 @@ int main(int, char *[]) {
             // perform step 2.
             server->run_step_2(ledger);
 
-            server->publish_answers();
+//            server->publish_answers();
         }
-
     }
 
     server->send_stop_signal();
@@ -91,13 +89,21 @@ shared_ptr<services::FullServer> full_server_instance(const distribicom::AppConf
     auto cols = configs.configs().db_cols();
     auto rows = configs.configs().db_rows();
 
-    // todo: fill with random client's data, queries, and galois keys.
     math_utils::matrix<seal::Plaintext> db(rows, cols);
-    // a single row of ctxs and their respective gal_key.
-    math_utils::matrix<seal::Ciphertext> queries(2, cols);
-    math_utils::matrix<seal::GaloisKeys> gal_keys(1, cols);
-
-    // Copies the matrices. (not efficient, but it's fast enough to ignore).
-    return nullptr;
-//    return std::make_shared<services::FullServer>(db, queries, gal_keys, configs);
+    std::uint64_t i = 0;
+    for (auto &ptx: db.data) {
+        ptx = i++;
+    }
+    std::map<uint32_t, std::unique_ptr<services::ClientInfo>> client_db;
+    std::uint64_t max_clients = 1 << 16;
+    for (std::uint64_t j = 0; j < max_clients; ++j) {
+        // TODO: create queries.
+        client_db.insert(
+            {
+                j,
+                std::make_unique<services::ClientInfo>(),
+            }
+        );
+    }
+    return std::make_shared<services::FullServer>(db, client_db, configs);
 }
