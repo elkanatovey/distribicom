@@ -126,8 +126,8 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 void services::FullServer::start_epoch() {
     std::shared_lock client_db_lock(client_query_manager.mutex);
 
-    manager.new_epoch(client_query_manager);
     manager.send_galois_keys(client_query_manager);
+    manager.new_epoch(client_query_manager);
 }
 
 void services::FullServer::wait_for_workers(int i) {

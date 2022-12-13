@@ -18,9 +18,6 @@
 namespace {
     template<typename T>
     using promise = concurrency::promise<T>;
-
-    template<typename T>
-    using promise_of_promise = promise<promise<T>>;
 }
 
 
@@ -36,13 +33,13 @@ namespace services {
     struct EpochData {
         std::map<std::string, WorkerInfo> worker_to_responsibilities;
         // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
+        std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
 
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
 
         // contains promised computation for expanded_queries X random_scalar_vector
-        std::shared_ptr<promise_of_promise < math_utils::matrix<seal::Ciphertext>>> query_mat_times_randvec;
+        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
     };
     /**
  * WorkDistributionLedger keeps track on a distributed task.
@@ -80,12 +77,6 @@ namespace services {
         std::shared_ptr<math_utils::QueryExpander> expander;
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
-
-        #ifdef DISTRIBICOM_DEBUG
-
-        void verify_query_x_rand_vec(const ClientDB &db);
-
-        #endif
 
     public:
         explicit Manager() : pool(std::make_shared<concurrency::threadpool>()) {};

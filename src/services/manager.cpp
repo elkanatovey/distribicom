@@ -350,91 +350,44 @@ namespace services {
             .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
             .queries = {},
             .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
-            .query_mat_times_randvec = std::make_shared<promise_of_promise<math_utils::matrix<seal::Ciphertext>>>(
-                1, nullptr),
+            .query_mat_times_randvec = {},
         };
 
         auto expand_size = app_configs.configs().db_cols();
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs;
         for (const auto &info: db.id_to_info) {
-            ed.queries[info.first] = expander->async_expand(
+            qs[info.first] = expander->async_expand(
                 info.second->query[0],
                 expand_size,
                 info.second->galois_keys
             );
         }
 
+        for (std::uint64_t i = 0; i < qs.size(); i++) {
+            ed.queries[i] = qs[i]->get();
+        }
+        qs.clear();
+
         randomise_scalar_vec(*ed.random_scalar_vector, db.client_counter);
+
+        auto rows = expand_size;
+        // first of all, run over the queries and put them in a matrix.
+        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+        for (const auto &col_to_vec: epoch_data.queries) {
+            auto column = col_to_vec.first;
+            auto &v = col_to_vec.second;
+            for (std::uint64_t i = 0; i < rows; i++) {
+                (*query_mat)(i, column) = (*v)[i];
+            }
+        }
+
+        epoch_data.query_mat_times_randvec = matops->async_scalar_dot_product(
+            query_mat,
+            epoch_data.random_scalar_vector
+        )->get();
 
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
-
-        // this task relies on the random vec and the query matrix.
-        // due to them being sent to be computed before the following task they
-        // should be available once this task is picked up.
-        pool->submit(
-            {
-                .f = [&, expand_size] {
-                    auto rows = expand_size;
-                    // first of all, run over the queries and put them in a matrix.
-                    auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
-                    for (const auto &col_to_vec: epoch_data.queries) {
-                        auto column = col_to_vec.first;
-                        auto v = col_to_vec.second->get();
-                        for (std::uint64_t i = 0; i < rows; i++) {
-                            (*query_mat)(i, column) = (*v)[i];
-                        }
-                    }
-
-                    // async multiply by the random vector.
-                    epoch_data.query_mat_times_randvec->set(
-                        matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector)
-                    );
-                },
-                .wg = epoch_data.query_mat_times_randvec->get_latch(),
-            }
-        );
-
-        #ifdef DISTRIBICOM_DEBUG
-        this->verify_query_x_rand_vec(db);
-        #endif
     }
-
-    #ifdef DISTRIBICOM_DEBUG
-
-    void Manager::verify_query_x_rand_vec(const ClientDB &db) {
-        auto expand_size = app_configs.configs().db_cols();
-        auto rows = expand_size;
-        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
-
-        auto column = 0;
-        for (const auto &info: db.id_to_info) {
-            // expanding the first dimension asynchrounously.
-            auto exp = expander->expand_query(
-                info.second->query[0],
-                expand_size,
-                info.second->galois_keys
-            );
-
-            for (std::uint64_t i = 0; i < rows; i++) {
-                (*query_mat)(i, column) = exp[i];
-            }
-            column += 1;
-        }
-
-        auto promise = matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector);
-        auto evaluator = math_utils::EvaluatorWrapper::Create(
-            utils::setup_enc_params(app_configs)
-        );
-
-        auto result_vec = promise->get();
-        auto res_vec_async = epoch_data.query_mat_times_randvec->get()->get();
-        for (std::uint64_t i = 0; i < result_vec->data.size(); ++i) {
-            matops->w_evaluator->evaluator->sub_inplace(result_vec->data[i], (*res_vec_async).data[i]);
-            assert(result_vec->data[i].is_transparent());
-        }
-    }
-
-    #endif
-
 }
