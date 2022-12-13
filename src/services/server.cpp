@@ -126,7 +126,7 @@ void services::FullServer::publish_answers() {
 }
 
 void services::FullServer::send_stop_signal() {
-    throw std::logic_error("not implemented");
+    manager.close();
 }
 
 void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>) {
