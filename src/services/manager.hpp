@@ -141,23 +141,45 @@ namespace services {
             }
         }
 
-        void verify_worker(const std::vector<ResultMatPart> &parts, std::string worker_creds) {
-            auto work_responsibility = this->epoch_data.worker_to_responsibilities[worker_creds];
-            auto rows = work_responsibility.db_rows;
-            auto query_row_len = work_responsibility.query_range_end - work_responsibility.query_range_start;
-            if (query_row_len != epoch_data.queries.size()) { throw std::runtime_error("unimplemented"); }
+        void
+        async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds) {
+            pool->submit(
+                {
+                    .f=[&, parts_ptr, worker_creds]() {
+                        auto &parts = *parts_ptr;
 
-            for (size_t i = 0; i < rows.size(); i++) {
-                std::vector<seal::Ciphertext> temp;
-                temp.reserve(query_row_len);
-                for (size_t j = 0; j < query_row_len; j++) {
-                    temp.push_back(parts[j + i * query_row_len].ctx);
+                        auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
+                        auto rows = work_responsibility.db_rows;
+                        auto query_row_len =
+                            work_responsibility.query_range_end - work_responsibility.query_range_start;
+
+                        if (query_row_len != epoch_data.queries.size()) { throw std::runtime_error("unimplemented"); }
+
+                        for (size_t i = 0; i < rows.size(); i++) {
+                            std::vector<seal::Ciphertext> temp;
+                            temp.reserve(query_row_len);
+                            for (size_t j = 0; j < query_row_len; j++) {
+                                temp.push_back(parts[j + i * query_row_len].ctx);
+                            }
+
+                            auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                                query_row_len, 1,
+                                temp);
+                            auto is_valid = verify_row(workers_db_row_x_query, rows[i]);
+                            if (!is_valid) {
+                                epoch_data.ledger->verify_worker_result[worker_creds]->set(
+                                    std::make_unique<bool>(false)
+                                );
+                                return;
+                            }
+                        }
+
+                        epoch_data.ledger->verify_worker_result[worker_creds]->set(std::make_unique<bool>(true));
+                    },
+                    .wg = epoch_data.ledger->verify_worker_result[worker_creds]->get_latch()
                 }
+            );
 
-                auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(query_row_len, 1,
-                                                                                                     temp);
-                assert(verify_row(workers_db_row_x_query, rows[i]));
-            }
         };
 
         void put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients) {

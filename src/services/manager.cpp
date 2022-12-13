@@ -25,28 +25,22 @@ namespace services {
 
         // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
 
-        // finished verification...................................
         distribicom::MatrixPart tmp;
-        std::vector<ResultMatPart> parts;
+        auto parts = std::make_shared<std::vector<ResultMatPart>>();
+        auto &parts_vec = *parts;
         while (reader->Read(&tmp)) {
-
-//#ifdef DISTRIBICOM_DEBUG
-//            matops->w_evaluator->evaluator->sub_inplace(
-//                ledger->result_mat(row, col),
-//                marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
-//            assert(ledger->result_mat(row, col).is_transparent());
-//#endif
-            //stage 2
-            //1. create data structure of right size
-            //2. store in data structure
-            //3.
-
             auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
-            parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
+            parts_vec.push_back(
+                {
+                    std::move(current_ctx),
+                    tmp.row(),
+                    tmp.col()
+                }
+            );
         }
         //currently assumes one worker due to testing
-        verify_worker(parts, worker_creds);
-        put_in_result_matrix(parts, this->client_query_manager);
+        async_verify_worker(parts, worker_creds);
+        put_in_result_matrix(parts_vec, this->client_query_manager);
         calculate_final_answer(this->client_query_manager);
 
         auto ledger = epoch_data.ledger;
