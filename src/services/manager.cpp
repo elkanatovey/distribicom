@@ -23,12 +23,12 @@ namespace services {
             return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
         }
 
-        // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
-
         distribicom::MatrixPart tmp;
         auto parts = std::make_shared<std::vector<ResultMatPart>>();
+
         auto &parts_vec = *parts;
         while (reader->Read(&tmp)) {
+            // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
             auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
             parts_vec.push_back(
                 {
@@ -38,10 +38,9 @@ namespace services {
                 }
             );
         }
-        //currently assumes one worker due to testing
+
         async_verify_worker(parts, worker_creds);
         put_in_result_matrix(parts_vec, this->client_query_manager);
-        calculate_final_answer(this->client_query_manager);
 
         auto ledger = epoch_data.ledger;
 
@@ -54,19 +53,6 @@ namespace services {
         if (n_contributions == ledger->worker_list.size()) {
             ledger->done.close();
         }
-
-        // mat = matrix<n,j>;
-        // while (reader->Read(&tmp)) {
-        //      tmp == [ctx, 0, j]
-        //       mat[0,j] = ctx;;
-        // }
-
-        // A
-        // B
-        // C
-
-        // Frievalds(A, B, C)
-        // Frievalds: DB[:, :]
 
         return {};
     }
@@ -342,7 +328,6 @@ namespace services {
         for (auto &i: vec) { i = prng->generate(); }
     }
 
-    // TODO: add epoch number so we can throw out old work and not be confused by it.
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
             .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
