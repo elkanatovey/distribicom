@@ -61,6 +61,7 @@ namespace services {
             auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
             parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
         }
+        //currently assumes one worker due to testing
         verify_worker(parts, worker_creds);
         put_in_result_matrix(parts, this->client_query_manager);
         calculate_final_answer(this->client_query_manager);
