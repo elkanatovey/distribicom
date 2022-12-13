@@ -36,24 +36,10 @@ namespace services {
         std::vector<std::uint64_t> db_rows;
     };
 
-    struct EpochData {
-        std::map<std::string, WorkerInfo> worker_to_responsibilities;
-        // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
-
-        // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<math_utils::matrix<seal::Ciphertext>>> queries_dim2;
-
-        // the following vector will be used to be multiplied against incoming work.
-        std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
-
-        // contains promised computation for expanded_queries X random_scalar_vector [NTT FORM]
-        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
-    };
     /**
- * WorkDistributionLedger keeps track on a distributed task.
- * it should keep hold on a working task.
- */
+    * WorkDistributionLedger keeps track on a distributed task for a single round.
+    * it should keep hold on a working task.
+    */
     struct WorkDistributionLedger {
         std::shared_mutex mtx;
         // states the workers that have already contributed their share of the work.
@@ -71,6 +57,22 @@ namespace services {
         concurrency::Channel<int> done;
     };
 
+    struct EpochData {
+        std::shared_ptr<WorkDistributionLedger> ledger;
+        std::map<std::string, WorkerInfo> worker_to_responsibilities;
+        // following the same key as the client's db.
+        std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
+
+        // following the same key as the client's db.
+        std::map<std::uint64_t, std::shared_ptr<math_utils::matrix<seal::Ciphertext>>> queries_dim2;
+
+        // the following vector will be used to be multiplied against incoming work.
+        std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
+
+        // contains promised computation for expanded_queries X random_scalar_vector [NTT FORM]
+        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
+    };
+
 
     class Manager : distribicom::Manager::WithCallbackMethod_RegisterAsWorker<distribicom::Manager::Service> {
     private:
@@ -80,8 +82,6 @@ namespace services {
         std::shared_ptr<concurrency::threadpool> pool;
 
         concurrency::Counter worker_counter;
-        // todo: on new round/ new distribute work delete old ledgers...
-        std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
 
         std::shared_ptr<marshal::Marshaller> marshal;
         std::shared_ptr<math_utils::MatrixOperations> matops;
@@ -123,25 +123,26 @@ namespace services {
                         ::distribicom::Ack *response) override;
 
 
-        bool verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &a_times_b, std::uint64_t row_id) {
-            auto challenge_vec = epoch_data.random_scalar_vector;
+        bool verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query,
+                        std::uint64_t row_id) {
+            try {
+                auto challenge_vec = epoch_data.random_scalar_vector;
 
-            auto a_times_b_times_challenge11 = matops->async_scalar_dot_product(a_times_b, challenge_vec);
-            auto a_times_b_times_challenge1 = a_times_b_times_challenge11->get();
-            auto &b_times_chall = *epoch_data.query_mat_times_randvec;
-            auto a = db.many_reads().mat;
+                auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query, challenge_vec);
+                auto expected_result = epoch_data.ledger->db_x_queries_x_randvec.data[row_id];
 
-            auto a_times_b_times_challenge2 = matops->mult_row(row_id, 0, a, b_times_chall);
-
-            seal::Ciphertext c;
-            matops->w_evaluator->evaluator->sub(a_times_b_times_challenge1->data[0], a_times_b_times_challenge2, c);
-            return c.is_transparent();
+                matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
+                return db_row_x_query_x_challenge_vec->data[0].is_transparent();
+            } catch (std::exception &e) {
+                std::cout << e.what() << std::endl;
+                return false;
+            }
         }
 
         void verify_worker(const std::vector<ResultMatPart> &parts, std::string worker_creds) {
-            auto creds = this->epoch_data.worker_to_responsibilities[worker_creds];
-            auto rows = creds.db_rows;
-            auto query_row_len = creds.query_range_end - creds.query_range_start;
+            auto work_responsibility = this->epoch_data.worker_to_responsibilities[worker_creds];
+            auto rows = work_responsibility.db_rows;
+            auto query_row_len = work_responsibility.query_range_end - work_responsibility.query_range_start;
             if (query_row_len != epoch_data.queries.size()) { throw std::runtime_error("unimplemented"); }
 
             for (size_t i = 0; i < rows.size(); i++) {
@@ -150,9 +151,10 @@ namespace services {
                 for (size_t j = 0; j < query_row_len; j++) {
                     temp.push_back(parts[j + i * query_row_len].ctx);
                 }
-                auto to_check = std::make_shared<math_utils::matrix<seal::Ciphertext>>(query_row_len, 1, temp);
-                auto res = verify_row(to_check, rows[i]);
-                assert(res == true);
+
+                auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(query_row_len, 1,
+                                                                                                     temp);
+                assert(verify_row(workers_db_row_x_query, rows[i]));
             }
         };
 
@@ -196,11 +198,10 @@ namespace services {
 
         void wait_for_workers(int i);
 
-
         void create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
                                const ClientDB &all_clients,
-                               const seal::GaloisKeys &expansion_key,
-                               std::shared_ptr<WorkDistributionLedger> &ledger) const;
+                               const seal::GaloisKeys &expansion_key
+        ) const;
 
         /**
          *  assumes num workers map well to db and queries

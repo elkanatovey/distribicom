@@ -23,21 +23,6 @@ namespace services {
             return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
         }
 
-        auto round = utils::extract_size_from_metadata(context->client_metadata(), constants::round_md);
-        auto epoch = utils::extract_size_from_metadata(context->client_metadata(), constants::epoch_md);
-
-        mtx.lock_shared();
-        exists = ledgers.find({round, epoch}) != ledgers.end();
-        auto ledger = ledgers[{round, epoch}];
-        mtx.unlock_shared();
-
-        if (!exists) {
-            return {
-                grpc::StatusCode::INVALID_ARGUMENT,
-                "ledger not found in {round,epoch}" + std::to_string(round) + "," + std::to_string(epoch)
-            };
-        }
-
         // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
 
         // finished verification...................................
@@ -62,9 +47,11 @@ namespace services {
             parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
         }
         //currently assumes one worker due to testing
-//        verify_worker(parts, worker_creds);
+        verify_worker(parts, worker_creds);
         put_in_result_matrix(parts, this->client_query_manager);
         calculate_final_answer(this->client_query_manager);
+
+        auto ledger = epoch_data.ledger;
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);
@@ -100,15 +87,10 @@ namespace services {
         , const seal::GaloisKeys &expansion_key
         #endif
     ) {
-        shared_ptr<WorkDistributionLedger> ledger = new_ledger(db, all_clients);
-
-
-        mtx.lock();
-        ledgers.insert({{rnd, epoch}, ledger});
-        mtx.unlock();
+        epoch_data.ledger = new_ledger(db, all_clients);
 
         #ifdef DISTRIBICOM_DEBUG
-        create_res_matrix(db, all_clients, expansion_key, ledger);
+        create_res_matrix(db, all_clients, expansion_key);
         #endif
 
         if (rnd == 1) {
@@ -121,10 +103,10 @@ namespace services {
 
         send_db(db, rnd, epoch);
 
-        return ledger;
+        return epoch_data.ledger;
     }
 
-    shared_ptr<WorkDistributionLedger>
+    std::shared_ptr<WorkDistributionLedger>
     Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
         auto ledger = make_shared<WorkDistributionLedger>();
 
@@ -134,6 +116,7 @@ namespace services {
 
         // need to compute DB X epoch_data.query_matrix.
         matops->multiply(db, *epoch_data.query_mat_times_randvec, ledger->db_x_queries_x_randvec);
+        matops->from_ntt(ledger->db_x_queries_x_randvec.data);
 
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
@@ -146,9 +129,9 @@ namespace services {
 
     void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
                                     const ClientDB &all_clients,
-                                    const seal::GaloisKeys &expansion_key,
-                                    std::shared_ptr<WorkDistributionLedger> &ledger) const {
+                                    const seal::GaloisKeys &expansion_key) const {
 #ifdef DISTRIBICOM_DEBUG
+        auto ledger = epoch_data.ledger;
         auto exp = expansion_key;
         auto expand_sz = db.cols;
 
