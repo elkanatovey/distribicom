@@ -191,15 +191,42 @@ namespace math_utils {
     MatrixOperations::scalar_dot_product(
             const std::shared_ptr<matrix<U>> &mat,
             const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(mat->rows==vec->size());
+#endif
+        auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->cols, 1);
+        for (uint64_t k = 0; k < mat->cols; k++) {
+            seal::Ciphertext tmp;
+            seal::Ciphertext rslt(w_evaluator->context);
+            for (uint64_t j = 0; j < mat->rows; j++) {
+                w_evaluator->scalar_multiply((*vec)[j], (*mat)(j, k), tmp);
+                w_evaluator->add(tmp, rslt, rslt);
+            }
+            (*result_vec)(k, 0) = rslt;
+
+        }
+
+        return result_vec;
+    }
+
+
+    template<typename U>
+    std::shared_ptr<matrix<seal::Ciphertext>>
+    MatrixOperations::scalar_dot_product_col_major(
+            const std::shared_ptr<matrix<U>> &mat,
+            const std::shared_ptr<std::vector<std::uint64_t>> &vec) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(mat->cols==vec->size());
+#endif
         auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->rows, 1);
         for (uint64_t k = 0; k < mat->rows; k++) {
-                seal::Ciphertext tmp;
-                seal::Ciphertext rslt(w_evaluator->context);
-                for (uint64_t j = 0; j < mat->cols; j++) {
-                    w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
-                    w_evaluator->add(tmp, rslt, rslt);
-                }
-                (*result_vec)(k, 0) = rslt;
+            seal::Ciphertext tmp;
+            seal::Ciphertext rslt(w_evaluator->context);
+            for (uint64_t j = 0; j < mat->cols; j++) {
+                w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
+                w_evaluator->add(tmp, rslt, rslt);
+            }
+            (*result_vec)(k, 0) = rslt;
 
         }
 
