@@ -7,7 +7,7 @@ namespace services {
 
     // todo: take a const ref of the app_configs:
     Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
-            : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
+        : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
         inspect_configs();
         seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
 
@@ -16,10 +16,10 @@ namespace services {
 
         // todo: put in a different function.
         auto manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
-                grpc::CreateChannel(
-                        cnfgs.appconfigs().main_server_hostname(),
-                        grpc::InsecureChannelCredentials()
-                )
+            grpc::CreateChannel(
+                cnfgs.appconfigs().main_server_hostname(),
+                grpc::InsecureChannelCredentials()
+            )
         ));
 
         grpc::ClientContext context;
@@ -31,31 +31,32 @@ namespace services {
 
 
         symmetric_secret_key.resize(32);
-        auto gen = seal::Blake2xbPRNGFactory({1, 2, 3, cnfgs.workerport()}).create();
+        std::random_device rand;
+        auto gen = seal::Blake2xbPRNGFactory({rand()}).create();
         std::generate(
-                symmetric_secret_key.begin(),
-                symmetric_secret_key.end(),
-                [gen = std::move(gen)]() { return std::byte(gen->generate() % 256); }
+            symmetric_secret_key.begin(),
+            symmetric_secret_key.end(),
+            [gen = std::move(gen)]() { return std::byte(gen->generate() % 256); }
         );
 
 
         strategy = std::make_shared<work_strategy::RowMultiplicationStrategy>(
-                enc_params,
-                mrshl, std::move(manager_conn), utils::byte_vec_to_64base_string(symmetric_secret_key)
+            enc_params,
+            mrshl, std::move(manager_conn), utils::byte_vec_to_64base_string(symmetric_secret_key)
         );
 
         threads.emplace_back(
-                [&]() {
-                    std::cout << "worker main thread: running" << std::endl;
-                    for (;;) {
-                        auto task_ = chan.read();
-                        if (!task_.ok) {
-                            std::cout << "worker main thread: stopping execution" << std::endl;
-                            break;
-                        }
-                        strategy->process_task(std::move(task_.answer));
+            [&]() {
+                std::cout << "worker main thread: running" << std::endl;
+                for (;;) {
+                    auto task_ = chan.read();
+                    if (!task_.ok) {
+                        std::cout << "worker main thread: stopping execution" << std::endl;
+                        break;
                     }
-                });
+                    strategy->process_task(std::move(task_.answer));
+                }
+            });
 
         setup_stream();
     }
@@ -88,7 +89,7 @@ namespace services {
                 throw std::invalid_argument("Invalid column index, too big");
             }
             task.ptx_rows[row][col]
-                    = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
+                = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
             return;
         }
 
@@ -115,8 +116,8 @@ namespace services {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
                     std::cout << "received galois keys" << std::endl;
                     strategy->store_galois_key(
-                            mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
-                            int(read_val.gkey().key_pos())
+                        mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
+                        int(read_val.gkey().key_pos())
                     );
 
                     break;
@@ -193,11 +194,11 @@ namespace services {
             ch_args.SetMaxReceiveMessageSize(constants::max_message_size);
             ch_args.SetMaxSendMessageSize(constants::max_message_size);
             this->stub = distribicom::Manager::NewStub(
-                    grpc::CreateCustomChannel(
-                            cnfgs.appconfigs().main_server_hostname(),
-                            grpc::InsecureChannelCredentials(),
-                            ch_args
-                    )
+                grpc::CreateCustomChannel(
+                    cnfgs.appconfigs().main_server_hostname(),
+                    grpc::InsecureChannelCredentials(),
+                    ch_args
+                )
             );
 
             distribicom::WorkerRegistryRequest rqst;

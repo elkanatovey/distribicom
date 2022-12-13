@@ -319,7 +319,7 @@ namespace services {
 
     void randomise_scalar_vec(std::vector<std::uint64_t> &vec) {
         seal::Blake2xbPRNGFactory factory;
-        auto prng = factory.create({(random_device()) ()});
+        auto prng = factory.create({(std::random_device()) ()});
         uniform_int_distribution<unsigned long long> dist(
             numeric_limits<uint64_t>::min(),
             numeric_limits<uint64_t>::max()
