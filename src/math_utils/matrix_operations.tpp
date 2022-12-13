@@ -67,7 +67,7 @@ namespace math_utils {
                                matrix<seal::Ciphertext> &result) const {
         verify_correct_dimension(left, right);
         verify_not_empty_matrices(left, right);
-        auto wg = std::make_shared<std::latch>(int(left.rows * right.cols));
+        auto wg = std::make_shared<concurrency::safelatch>(int(left.rows * right.cols));
         for (uint64_t i = 0; i < left.rows; ++i) {
             for (uint64_t j = 0; j < right.cols; ++j) {
 

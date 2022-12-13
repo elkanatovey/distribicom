@@ -62,9 +62,9 @@ namespace services {
             parts.push_back({std::move(current_ctx), tmp.row(), tmp.col()});
         }
         //currently assumes one worker due to testing
-        verify_worker(parts, worker_creds);
-        put_in_result_matrix(parts, this->client_query_manager);
-        calculate_final_answer(this->client_query_manager);
+//        verify_worker(parts, worker_creds);
+//        put_in_result_matrix(parts, this->client_query_manager);
+//        calculate_final_answer(this->client_query_manager);
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);
@@ -96,30 +96,21 @@ namespace services {
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch
-#ifdef DISTRIBICOM_DEBUG
+        #ifdef DISTRIBICOM_DEBUG
         , const seal::GaloisKeys &expansion_key
-#endif
+        #endif
     ) {
-        // TODO: delete old ledger.
+        shared_ptr<WorkDistributionLedger> ledger = new_ledger(db, all_clients);
 
-        auto ledger = std::make_shared<WorkDistributionLedger>();
-        {
-            // currently, there is no work distribution. everyone receives the entire DB and the entire queries.
-            std::shared_lock lock(mtx);
-            ledgers.insert({{rnd, epoch}, ledger});
-            ledger->worker_list = std::vector<std::string>();
-            ledger->worker_list.reserve(work_streams.size());
-            all_clients.mutex->lock_shared();
-            ledger->result_mat = math_utils::matrix<seal::Ciphertext>(
-                db.cols, all_clients.client_counter);
-            all_clients.mutex->unlock_shared();
-            for (auto &worker: work_streams) {
-                ledger->worker_list.push_back(worker.first);
-            }
-        }
-#ifdef DISTRIBICOM_DEBUG
+
+        mtx.lock();
+        ledgers.insert({{rnd, epoch}, ledger});
+        mtx.unlock();
+
+        #ifdef DISTRIBICOM_DEBUG
         create_res_matrix(db, all_clients, expansion_key, ledger);
-#endif
+        #endif
+
         if (rnd == 1) {
             grpc::ClientContext context;
             utils::add_metadata_size(context, services::constants::round_md, rnd);
@@ -128,9 +119,24 @@ namespace services {
             send_queries(all_clients);
         }
 
-
-        // TODO: process the DB for frievalds.
         send_db(db, rnd, epoch);
+
+        return ledger;
+    }
+
+    shared_ptr<WorkDistributionLedger>
+    Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
+        auto ledger = make_shared<WorkDistributionLedger>();
+
+        ledger->worker_list = vector<string>();
+        ledger->worker_list.reserve(work_streams.size());
+        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
+
+        // need to compute DB X epoch_data.query_matrix.
+        shared_lock lock(mtx);
+        for (auto &worker: work_streams) {
+            ledger->worker_list.push_back(worker.first);
+        }
 
         return ledger;
     }
@@ -144,7 +150,6 @@ namespace services {
         auto exp = expansion_key;
         auto expand_sz = db.cols;
 
-        all_clients.mutex->lock_shared();
         math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
         auto col = -1;
         for (const auto &client: all_clients.id_to_info) {
@@ -158,7 +163,6 @@ namespace services {
                 query_mat(i, col) = expanded[i];
             }
         }
-        all_clients.mutex->unlock_shared();
 
         matops->to_ntt(query_mat.data);
 
@@ -211,7 +215,6 @@ namespace services {
     void
     Manager::send_queries(const ClientDB &all_clients) {
 
-        std::shared_lock client_db_lock(*all_clients.mutex);
         std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
 
@@ -345,22 +348,34 @@ namespace services {
         return stream;
     }
 
+    void randomise_scalar_vec(std::vector<std::uint64_t> &vec) {
+        seal::Blake2xbPRNGFactory factory;
+        auto prng = factory.create({(random_device()) ()});
+        uniform_int_distribution<unsigned long long> dist(
+            numeric_limits<uint64_t>::min(),
+            numeric_limits<uint64_t>::max()
+        );
+
+        for (auto &i: vec) { i = prng->generate(); }
+    }
+
     // TODO: add epoch number so we can throw out old work and not be confused by it.
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
             .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
             .queries = {},
             .queries_dim2 = {},
-            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(),
-            .query_mat_times_randvec = std::make_shared<promise_of_promise<math_utils::matrix<seal::Ciphertext>>>(
-                1, nullptr),
+            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(db.client_counter),
+            .query_mat_times_randvec = {},
         };
 
         auto expand_size = app_configs.configs().db_cols();
         auto expand_size_dim2 = app_configs.configs().db_rows();
+
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs;
+        qs.resize(db.id_to_info.size());
         for (const auto &info: db.id_to_info) {
-            // expanding the first dimension asynchrounously.
-            ed.queries[info.first] = expander->async_expand(
+            qs[info.first] = expander->async_expand(
                 info.second->query[0],
                 expand_size,
                 info.second->galois_keys
@@ -368,56 +383,35 @@ namespace services {
 
             // expanding the second dimension asynchrounously.
             ed.queries_dim2[info.first] = expander->async_expand_to_matrix(
-                    info.second->query[1],
-                    expand_size_dim2,
-                    info.second->galois_keys
+                info.second->query[1],
+                expand_size_dim2,
+                info.second->galois_keys
             );
 
         }
 
-        // fill random vector:
-        ed.random_scalar_vector->reserve(db.client_counter);
+        randomise_scalar_vec(*ed.random_scalar_vector);
 
-        seal::Blake2xbPRNGFactory factory;
-        auto prng = factory.create({(std::random_device()) ()});
-        std::uniform_int_distribution<unsigned long long> dist(
-            std::numeric_limits<std::uint64_t>::min(),
-            std::numeric_limits<std::uint64_t>::max()
-        );
+        auto rows = expand_size;
+        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
 
-        for (size_t i=0;i<db.client_counter;i++)
-        { ed.random_scalar_vector->push_back(prng->generate()%256); }
+        for (std::uint64_t column = 0; column < qs.size(); column++) {
+            auto v = qs[column]->get();
+            ed.queries[column] = v;
 
-        // todo: take queries and multiply once from the right by a frievalds vector.
+            for (std::uint64_t i = 0; i < rows; i++) {
+                (*query_mat)(i, column) = (*v)[i];
+            }
+        }
+        qs.clear();
+
+        ed.query_mat_times_randvec = matops->async_scalar_dot_product(
+            query_mat,
+            ed.random_scalar_vector
+        )->get();
+
         mtx.lock();
         epoch_data = std::move(ed);
         mtx.unlock();
-
-        // this task relies on the random vec and the query matrix.
-        // due to them being sent to be computed before the following task they
-        // should be available once this task is picked up.
-        pool->submit(
-            {
-                .f = [&, expand_size] {
-                    auto rows = expand_size;
-                    // first of all, run over the queries and put them in a matrix.
-                    auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
-                    for (const auto &col_to_vec: epoch_data.queries) {
-                        auto column = col_to_vec.first;
-                        auto v = col_to_vec.second->get();
-                        for (std::uint64_t i = 0; i < rows; i++) {
-                            (*query_mat)(i, column) = (*v)[i];
-                        }
-                    }
-
-                    // async multiply by the random vector.
-                    epoch_data.query_mat_times_randvec->set(
-                        matops->async_scalar_dot_product(query_mat, epoch_data.random_scalar_vector)
-                    );
-                },
-                .wg = epoch_data.query_mat_times_randvec->get_latch(),
-            }
-        );
     }
-
 }

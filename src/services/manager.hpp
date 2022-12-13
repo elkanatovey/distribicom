@@ -15,12 +15,9 @@
 #include "manager_workstream.hpp"
 
 
-namespace{
+namespace {
     template<typename T>
     using promise = concurrency::promise<T>;
-
-    template<typename T>
-    using promise_of_promise = promise<promise<T>>;
 }
 
 
@@ -42,7 +39,7 @@ namespace services {
     struct EpochData {
         std::map<std::string, WorkerInfo> worker_to_responsibilities;
         // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> queries;
+        std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
 
         // following the same key as the client's db.
         std::map<std::uint64_t, std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> queries_dim2;
@@ -51,7 +48,7 @@ namespace services {
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
 
         // contains promised computation for expanded_queries X random_scalar_vector
-        std::shared_ptr<promise_of_promise < math_utils::matrix<seal::Ciphertext>>> query_mat_times_randvec;
+        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
     };
     /**
  * WorkDistributionLedger keeps track on a distributed task.
@@ -81,6 +78,7 @@ namespace services {
         std::shared_ptr<concurrency::threadpool> pool;
 
         concurrency::Counter worker_counter;
+        // todo: on new round/ new distribute work delete old ledgers...
         std::map<std::pair<int, int>, std::shared_ptr<WorkDistributionLedger>> ledgers;
 
         std::shared_ptr<marshal::Marshaller> marshal;
@@ -129,10 +127,10 @@ namespace services {
 
             auto a_times_b_times_challenge11 = matops->async_scalar_dot_product(a_times_b, challenge_vec);
             auto a_times_b_times_challenge1 =  a_times_b_times_challenge11->get();
-            auto b_times_chall = epoch_data.query_mat_times_randvec->get()->get().get();
+            auto &b_times_chall = *epoch_data.query_mat_times_randvec;
             auto a = db.many_reads().mat;
 
-            auto a_times_b_times_challenge2 = matops->mult_row(row_id, 0, a, *b_times_chall);
+            auto a_times_b_times_challenge2 = matops->mult_row(row_id, 0, a, b_times_chall);
 
             seal::Ciphertext c;
             matops->w_evaluator->evaluator->sub(a_times_b_times_challenge1->data[0], a_times_b_times_challenge2, c);
@@ -155,11 +153,6 @@ namespace services {
                 auto res = verify_row(to_check, rows[i]);
                 assert(res==true);
             }
-
-
-
-
-            epoch_data.query_mat_times_randvec->get()->get();
         };
 
         void put_in_result_matrix(const std::vector<ResultMatPart>& parts, ClientDB& all_clients){
@@ -236,5 +229,8 @@ namespace services {
          * assumes the given db is thread-safe.
          */
         void new_epoch(const ClientDB &db);
+
+        shared_ptr<WorkDistributionLedger>
+        new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
     };
 }
