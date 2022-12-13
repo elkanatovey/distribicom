@@ -363,7 +363,7 @@ namespace services {
     void Manager::new_epoch(const ClientDB &db) {
         EpochData ed{
             .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
-            .queries = {},
+            .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
             .queries_dim2 = {},
             .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(db.client_counter),
             .query_mat_times_randvec = {},
@@ -372,8 +372,10 @@ namespace services {
         auto expand_size = app_configs.configs().db_cols();
         auto expand_size_dim2 = app_configs.configs().db_rows();
 
-        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs;
-        qs.resize(db.id_to_info.size());
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
+        std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> qs2(
+            db.id_to_info.size());
+
         for (const auto &info: db.id_to_info) {
             qs[info.first] = expander->async_expand(
                 info.second->query[0],
@@ -381,8 +383,7 @@ namespace services {
                 info.second->galois_keys
             );
 
-            // expanding the second dimension asynchrounously.
-            ed.queries_dim2[info.first] = expander->async_expand_to_matrix(
+            qs2[info.first] = expander->async_expand_to_matrix(
                 info.second->query[1],
                 expand_size_dim2,
                 info.second->galois_keys
@@ -405,10 +406,17 @@ namespace services {
         }
         qs.clear();
 
-        ed.query_mat_times_randvec = matops->async_scalar_dot_product(
+        auto promise = matops->async_scalar_dot_product(
             query_mat,
             ed.random_scalar_vector
-        )->get();
+        );
+
+        for (std::uint64_t column = 0; column < qs2.size(); column++) {
+            ed.queries_dim2[column] = qs2[column]->get();
+        }
+        qs2.clear();
+
+        ed.query_mat_times_randvec = promise->get();
 
         mtx.lock();
         epoch_data = std::move(ed);
