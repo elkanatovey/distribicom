@@ -47,7 +47,7 @@ namespace services {
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
 
-        // contains promised computation for expanded_queries X random_scalar_vector
+        // contains promised computation for expanded_queries X random_scalar_vector [NTT FORM]
         std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
     };
     /**
@@ -65,6 +65,8 @@ namespace services {
         // result_mat is the work result of all workers.
         math_utils::matrix<seal::Ciphertext> result_mat;
 
+        // stored in ntt form.
+        math_utils::matrix<seal::Ciphertext> db_x_queries_x_randvec;
         // open completion will be closed to indicate to anyone waiting.
         concurrency::Channel<int> done;
     };

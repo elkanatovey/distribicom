@@ -133,6 +133,8 @@ namespace services {
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
 
         // need to compute DB X epoch_data.query_matrix.
+        matops->multiply(db, *epoch_data.query_mat_times_randvec, ledger->db_x_queries_x_randvec);
+
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
@@ -417,6 +419,7 @@ namespace services {
         qs2.clear();
 
         ed.query_mat_times_randvec = promise->get();
+        matops->to_ntt(ed.query_mat_times_randvec->data);
 
         mtx.lock();
         epoch_data = std::move(ed);
