@@ -175,9 +175,7 @@ namespace services {
         void calculate_final_answer(const ClientDB &all_clients) {
 
             for (const auto &client: all_clients.id_to_info) {
-                auto result = math_utils::matrix<seal::Ciphertext>(1, client.second->partial_answer->cols);
                 auto current_query = *epoch_data.queries_dim2[client.first];
-                if (!current_query.data[0].is_ntt_form()) { matops->to_ntt(current_query.data); }
                 matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
             }
         };

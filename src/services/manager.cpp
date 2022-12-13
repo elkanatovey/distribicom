@@ -47,12 +47,12 @@ namespace services {
             std::uint32_t row = tmp.row();
             std::uint32_t col = tmp.col();
 
-#ifdef DISTRIBICOM_DEBUG
-            matops->w_evaluator->evaluator->sub_inplace(
-                ledger->result_mat(row, col),
-                marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
-            assert(ledger->result_mat(row, col).is_transparent());
-#endif
+//#ifdef DISTRIBICOM_DEBUG
+//            matops->w_evaluator->evaluator->sub_inplace(
+//                ledger->result_mat(row, col),
+//                marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
+//            assert(ledger->result_mat(row, col).is_transparent());
+//#endif
             //stage 2
             //1. create data structure of right size
             //2. store in data structure
@@ -63,8 +63,8 @@ namespace services {
         }
         //currently assumes one worker due to testing
 //        verify_worker(parts, worker_creds);
-//        put_in_result_matrix(parts, this->client_query_manager);
-//        calculate_final_answer(this->client_query_manager);
+        put_in_result_matrix(parts, this->client_query_manager);
+        calculate_final_answer(this->client_query_manager);
 
         ledger->mtx.lock();
         ledger->contributed.insert(worker_creds);
