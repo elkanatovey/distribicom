@@ -24,8 +24,8 @@ int worker_test(int, char *[]) {
             "localhost:" + std::string(server_port),
             int(all->encryption_params.poly_modulus_degree()),
             20,
-            5,
-            5,
+            6,
+            6,
             256
     );
     services::FullServer fs = full_server_instance(all, cfgs);
@@ -79,14 +79,14 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all,const 
 
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
-    auto n = 5;
-    math_utils::matrix<seal::Plaintext> db(n, n);
+    auto num_clients = configs.configs().db_rows()*2;
+    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_rows());
 
     for (auto &p: db.data) {
         p = all->random_plaintext();
     }
 
-    auto cdb = create_client_db(n, all, configs);
+    auto cdb = create_client_db(num_clients, all, configs);
 
     return services::FullServer(db, cdb, configs);
 }
