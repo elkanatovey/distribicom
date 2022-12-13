@@ -45,8 +45,6 @@ namespace services {
         // The following are calls done by gRPC.
         void OnDone(const grpc::Status &s) override;
 
-        grpc::Status wait_for_stream_termination();
-
         void OnReadDone(bool ok) override;
 
         void inspect_configs() const;
@@ -54,6 +52,7 @@ namespace services {
         void update_current_task();
 
     public:
+        grpc::Status wait_for_stream_termination();
         // making this public for now, so that we can test it.
         std::shared_ptr<work_strategy::RowMultiplicationStrategy> strategy;
 

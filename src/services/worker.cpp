@@ -171,7 +171,7 @@ namespace services {
     grpc::Status Worker::wait_for_stream_termination() {
         std::unique_lock<std::mutex> l(mu_);
         cv_.wait(l, [this] { return done_; });
-        return std::move(status_);
+        return status_;
     }
 
     void Worker::close() {

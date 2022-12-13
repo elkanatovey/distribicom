@@ -12,7 +12,7 @@ std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribi
 
 int main(int, char *[]) {
     // todo: load configs from config file in specific folder.
-    auto cnfgs = services::configurations::create_app_configs("197.201.3.3:5432", 4096, 20, 5, 5, 256);
+    auto cnfgs = services::configurations::create_app_configs("0.0.0.0:5432", 4096, 20, 5, 5, 256);
     cnfgs.set_number_of_workers(5); // todo: should load with this value from config file.
     auto server = full_server_instance(cnfgs);
 
