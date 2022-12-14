@@ -20,7 +20,7 @@ target_link_libraries(distribicom_services_tests services multiplication_utils d
 
 # remove the test driver source file
 set(TestsToRun ${Tests})
-remove(TestsToRun services_tests.cpp)
+remove(TestsToRun distribicom_services_tests.cpp)
 
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})

@@ -71,7 +71,7 @@ void verify_results(shared_ptr<services::FullServer> &server, vector<PIRClient> 
     const auto &db = server->get_client_db();
     for (auto &[id, info]: db.id_to_info) {
         auto ptx = clients[id].decode_reply(info->final_answer->data);
-        std::cout << ptx.to_string() << std::endl;
+        std::cout << "result for client " << id << ": "<<ptx.to_string() << std::endl;
     }
 }
 
@@ -138,12 +138,12 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
     for (size_t i = 0; i < clients.size(); i++) {
         seal::GaloisKeys gkey = clients[i].generate_galois_keys();
         auto gkey_serialised = m->marshal_seal_object(gkey);
-        PirQuery query = clients[i].generate_query(i / (configs.db_rows() * configs.db_cols()));
+        PirQuery query = clients[i].generate_query(i % (configs.db_rows() * configs.db_cols()));
         distribicom::ClientQueryRequest query_marshaled;
         m->marshal_query_vector(query, query_marshaled);
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(seal_context.last_context_data()->parms()) * 2,
+        services::set_client(math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms())* 2,
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 

@@ -30,6 +30,7 @@ int async_mat_mult(int, char *[]) {
     // test:
     async_mult_test(all);
     async_scalar_vec_mult(all);
+    return 0;
 }
 
 void async_scalar_vec_mult(const std::shared_ptr<TestUtils::CryptoObjects> &all) {

@@ -69,7 +69,7 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
         m->marshal_query_vector(query, query_marshaled);
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.last_context_data()->parms()) * 2,
+        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.first_context_data()->parms())* 2,
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 

@@ -202,6 +202,7 @@ namespace services {
             for (const auto &client: client_query_manager.id_to_info) {
                 auto current_query = *epoch_data.queries_dim2[client.first];
                 matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
+                matops->from_ntt(client.second->final_answer->data);
             }
         };
 

@@ -252,14 +252,14 @@ namespace math_utils {
 
     void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const {
 
-        ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx));
+        ptx_decomposition =  std::move(decompose_to_plaintexts(context.first_context_data()->parms(), ctx));
 
 
     }
 
     void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
         seal::Ciphertext ctx_copy(context, context.last_parms_id());
-        compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
+        compose_to_ciphertext( context.first_context_data()->parms(), ptx_decomposition, ctx_copy);
         decoded = std::move(ctx_copy);
     }
 
