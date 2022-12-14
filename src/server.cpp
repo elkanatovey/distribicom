@@ -135,8 +135,7 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 
-        cdb.insert(
-                {i, std::move(client_info)});
+        cdb.insert({i, std::move(client_info)});
     }
     return cdb;
 }

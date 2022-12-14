@@ -165,7 +165,7 @@ namespace services {
         std::unique_lock<std::mutex> l(mu_);
         status_ = s;
         done_ = true;
-        cv_.notify_one();
+        cv_.notify_all();
     }
 
     grpc::Status Worker::wait_for_stream_termination() {
@@ -210,9 +210,12 @@ namespace services {
             StartCall();
 
             auto status = wait_for_stream_termination();
+
             if (!status.ok()) {
                 std::cout << "Worker stream terminated with error: " << status.error_message() << std::endl;
+                return;
             }
+            std::cout << "Worker stream terminated successfully." << std::endl;
         });
     }
 

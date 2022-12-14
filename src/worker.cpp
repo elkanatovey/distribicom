@@ -14,6 +14,11 @@ int main(int, char *[]) {
     );
 
     services::Worker w(std::move(wcnfgs));
-    w.wait_for_stream_termination();
+    std::cout << "waiting for stream termination" << std::endl;
+    auto status = w.wait_for_stream_termination();
+    if (!status.ok()) {
+        std::cout << "terminated stream, result:" << status.error_message() << std::endl;;
+    }
+
     w.close();
 }
