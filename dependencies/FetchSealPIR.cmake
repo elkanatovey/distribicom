@@ -7,6 +7,12 @@ FetchContent_Declare(
         USES_TERMINAL_DOWNLOAD ON
 )
 
+FetchContent_GetProperties(com_sealpir)
+
 if(NOT com_sealpir_POPULATED)
-    FetchContent_MakeAvailable(com_sealpir)
+    FetchContent_Populate(com_sealpir)
+    add_subdirectory(
+            ${com_sealpir_SOURCE_DIR}
+            ${com_sealpir_BINARY_DIR}
+            EXCLUDE_FROM_ALL)
 endif()

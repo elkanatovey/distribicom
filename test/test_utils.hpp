@@ -1,6 +1,6 @@
 #pragma once
 
-#include "matrix_multiplier.hpp"
+#include "matrix_operations.hpp"
 #include <seal/seal.h>
 #include <evaluator_wrapper.hpp>
 #include <pir.hpp>
@@ -43,16 +43,18 @@ namespace TestUtils {
         seal::SEALContext seal_context;
         seal::KeyGenerator keygen;
         seal::SecretKey secret_key;
-        std::shared_ptr<multiplication_utils::EvaluatorWrapper> w_evaluator;
+        std::shared_ptr<math_utils::EvaluatorWrapper> w_evaluator;
 
 
         seal::Encryptor encryptor;
         seal::Decryptor decryptor;
         seal::BatchEncoder encoder;
+        seal::GaloisKeys gal_keys;
 
         seal::Plaintext random_plaintext();
 
         seal::Ciphertext random_ciphertext();
+
         seal::GaloisKeys generate_galois_keys();
     };
 
@@ -61,7 +63,9 @@ namespace TestUtils {
     extern TestEncryptionParamsConfigs DEFAULT_ENCRYPTION_PARAMS_CONFIGS;
     extern TestPIRParamsConfigs DEFAULT_PIR_PARAMS_CONFIGS;
 
-    extern SetupConfigs DEFAULT_SETUP_CONFIGS ;
+    extern SetupConfigs DEFAULT_SETUP_CONFIGS;
 
+    long time_func(const std::function<void()> &f);
 
+    void time_func_print(const std::string &name, const std::function<void()> &f);
 }

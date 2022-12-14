@@ -1,40 +1,123 @@
 #include "evaluator_wrapper.hpp"
 
-namespace multiplication_utils {
+namespace math_utils{
 
-    void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Plaintext &right,
-                                        seal::Plaintext &sum) const {
-        if (left == 0) {
-            return;
+    /*
+     * for the correct expansion ratio take last_parms_id() times 2
+     */
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters &params) {
+        uint32_t expansion_ratio = 0;
+        uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
+            double coeff_bit_size = log2(params.coeff_modulus()[i].value());
+            expansion_ratio += ceil(coeff_bit_size / pt_bits_per_coeff);
         }
+        return expansion_ratio;
+    }
+}
+namespace {
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params) {
+        uint32_t expansion_ratio = 0;
+        uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
+            double coeff_bit_size = log2(params.coeff_modulus()[i].value());
+            expansion_ratio += ceil(coeff_bit_size / pt_bits_per_coeff);
+        }
+        return expansion_ratio;
+    }
 
-        auto ptx_mod = enc_params.plain_modulus().value();
+    std::vector<seal::Plaintext> decompose_to_plaintexts(const seal::EncryptionParameters& params,
+                                                         const seal::Ciphertext &ct) {
+        const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        const auto coeff_count = params.poly_modulus_degree();
+        const auto coeff_mod_count = params.coeff_modulus().size();
+        const uint64_t pt_bitmask = (1 << pt_bits_per_coeff) - 1;
 
-        auto coeff_count = right.coeff_count();
-        for (std::uint64_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
-            sum[current_coeff] += (left * right[current_coeff]);
-            if (sum[current_coeff] >= ptx_mod) {
-                sum[current_coeff] -= ptx_mod;
+        std::vector<seal::Plaintext> result(compute_expansion_ratio(params) * ct.size());
+        auto pt_iter = result.begin();
+        for (size_t poly_index = 0; poly_index < ct.size(); ++poly_index) {
+            for (size_t coeff_mod_index = 0; coeff_mod_index < coeff_mod_count;
+                 ++coeff_mod_index) {
+                const double coeff_bit_size =
+                        log2(params.coeff_modulus()[coeff_mod_index].value());
+                const size_t local_expansion_ratio =
+                        ceil(coeff_bit_size / pt_bits_per_coeff);
+                size_t shift = 0;
+                for (size_t i = 0; i < local_expansion_ratio; ++i) {
+                    pt_iter->resize(coeff_count);
+                    for (size_t c = 0; c < coeff_count; ++c) {
+                        (*pt_iter)[c] =
+                                (ct.data(poly_index)[coeff_mod_index * coeff_count + c] >>
+                                                                                        shift) &
+                                pt_bitmask;
+                    }
+                    ++pt_iter;
+                    shift += pt_bits_per_coeff;
+                }
+            }
+        }
+        return result;
+    }
+
+    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+                               std::vector<seal::Plaintext>::const_iterator pt_iter,
+                               const size_t ct_poly_count, seal::Ciphertext &ct) {
+        const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
+        const auto coeff_count = params.poly_modulus_degree();
+        const auto coeff_mod_count = params.coeff_modulus().size();
+
+        ct.resize(ct_poly_count);
+        for (size_t poly_index = 0; poly_index < ct_poly_count; ++poly_index) {
+            for (size_t coeff_mod_index = 0; coeff_mod_index < coeff_mod_count;
+                 ++coeff_mod_index) {
+                const double coeff_bit_size =
+                        log2(params.coeff_modulus()[coeff_mod_index].value());
+                const size_t local_expansion_ratio =
+                        ceil(coeff_bit_size / pt_bits_per_coeff);
+                size_t shift = 0;
+                for (size_t i = 0; i < local_expansion_ratio; ++i) {
+                    for (size_t c = 0; c < pt_iter->coeff_count(); ++c) {
+                        if (shift == 0) {
+                            ct.data(poly_index)[coeff_mod_index * coeff_count + c] =
+                                    (*pt_iter)[c];
+                        } else {
+                            ct.data(poly_index)[coeff_mod_index * coeff_count + c] +=
+                                    ((*pt_iter)[c] << shift);
+                        }
+                    }
+                    ++pt_iter;
+                    shift += pt_bits_per_coeff;
+                }
             }
         }
     }
 
-    void EvaluatorWrapper::multiply_add(const std::uint64_t left, const seal::Ciphertext &right,
-                                        seal::Ciphertext &sum) const {
-        if (left == 0) {
-            return;
-        }
-        evaluator->add_inplace(sum, right);
+    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+                               const std::vector<seal::Plaintext> &pts, seal::Ciphertext &ct) {
+        return compose_to_ciphertext(
+                params, pts.begin(), pts.size() / compute_expansion_ratio(params), ct);
     }
+}
+
+namespace math_utils {
 
     void EvaluatorWrapper::add_plain(const seal::Plaintext &a, const seal::Plaintext &b,
-                                     seal::Plaintext &c) {
+                                     seal::Plaintext &c) const {
         seal::Plaintext tmp;
         tmp = a;
 
         add_plain_in_place(tmp, b);
         c = tmp;
     }
+
+    void EvaluatorWrapper::add_plain_trivial(const seal::Plaintext &a, const seal::Plaintext &b,
+                                             seal::Ciphertext &out) const {
+        seal::Ciphertext tmp_a, tmp_b;
+        trivial_ciphertext(a, tmp_a);
+        trivial_ciphertext(b, tmp_b);
+        evaluator->add(tmp_a, tmp_b, out);
+    }
+
 
     void EvaluatorWrapper::add_plain_in_place(seal::Plaintext &a, const seal::Plaintext &b) const {
         auto ptx_mod = enc_params.plain_modulus().value();
@@ -58,9 +141,9 @@ namespace multiplication_utils {
      * The resulted SplitPlaintextNTTForm is in NTT.
      */
     SplitPlaintextNTTForm EvaluatorWrapper::split_plaintext(const seal::Plaintext &a) const {
-        #ifdef MY_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
-        #endif
+#endif
 
         seal::Plaintext a1(enc_params.poly_modulus_degree());
         seal::Plaintext a2(enc_params.poly_modulus_degree());
@@ -74,12 +157,16 @@ namespace multiplication_utils {
                 // skipping if to perform + 1 in case a[current_coeff] is odd.
                 a1[current_coeff] = (a[current_coeff] >> 1) + (a[current_coeff] & 1);
                 a2[current_coeff] = (a[current_coeff] >> 1);
-            }
-            else {
+            } else {
                 a1[current_coeff] = a[current_coeff];
                 a2[current_coeff] = 0;
             }
         }
+
+#ifdef DISTRIBICOM_DEBUG
+        assert_plain_is_under_threshold(a1);
+        assert_plain_is_under_threshold(a2);
+#endif
 
         evaluator->transform_to_ntt_inplace(a1, context.first_parms_id());
         evaluator->transform_to_ntt_inplace(a2, context.first_parms_id());
@@ -91,14 +178,15 @@ namespace multiplication_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+    EvaluatorWrapper::mult(const SplitPlaintextNTTForm &a, const seal::Ciphertext &b,
+                           seal::Ciphertext &c) const {
+#ifdef DISTRIBICOM_DEBUG
         assert(2 == a.size());
         for (auto &a_i: a) {
             assert(a_i.is_ntt_form());
         }
         assert(b.is_ntt_form());
-        #endif
+#endif
         evaluator->multiply_plain(b, a[0], c);
 
         seal::Ciphertext tmp;
@@ -108,28 +196,30 @@ namespace multiplication_utils {
     }
 
     void
-    EvaluatorWrapper::mult_modified(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+    EvaluatorWrapper::mult(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+#ifdef DISTRIBICOM_DEBUG
         assert(!a.is_ntt_form());
         assert(b.is_ntt_form());
-        #endif
+#endif
         auto split_ptx = split_plaintext(a);
-        mult_modified(split_ptx, b, c);
+        mult(split_ptx, b, c);
     }
 
     void EvaluatorWrapper::mult_reg(const seal::Plaintext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
+#ifdef DISTRIBICOM_DEBUG
         assert(a.is_ntt_form());
         assert(b.is_ntt_form());
-        #endif
+#endif
 
         evaluator->multiply_plain(b, a, c);
     }
 
-    void EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
-        #ifdef MY_DEBUG
-        assert(!a.is_ntt_form() && !b.is_ntt_form());
-        #endif
+    void
+    EvaluatorWrapper::mult(const seal::Ciphertext &a, const seal::Ciphertext &b, seal::Ciphertext &c) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(!a.is_ntt_form());
+        assert(!b.is_ntt_form());
+#endif
 
         evaluator->multiply(a, b, c);
     }
@@ -148,8 +238,78 @@ namespace multiplication_utils {
         trivial_zero.resize(2);
     }
 
-    void EvaluatorWrapper::trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) {
+    void EvaluatorWrapper::trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const {
         evaluator->add_plain(trivial_zero, ptx, result);
+    }
+
+    void EvaluatorWrapper::assert_plain_is_under_threshold(const seal::Plaintext &plaintext) const {
+        auto threshold = (enc_params.plain_modulus().value() + 1) >> 1;
+        auto coeff_count = plaintext.coeff_count();
+        for (uint32_t current_coeff = 0; current_coeff < coeff_count; current_coeff++) {
+            assert(plaintext[current_coeff] < threshold);
+        }
+    }
+
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const {
+
+        ptx_decomposition =  std::move(decompose_to_plaintexts(context.last_context_data()->parms(), ctx));
+
+
+    }
+
+    void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
+        seal::Ciphertext ctx_copy(context, context.last_parms_id());
+        compose_to_ciphertext( context.last_context_data()->parms(), ptx_decomposition, ctx_copy);
+        decoded = std::move(ctx_copy);
+    }
+
+
+    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertext &ptx_decomposition, const seal::Ciphertext &ctx, EncryptedEmbeddedCiphertext  &result) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(ptx_decomposition[0].is_ntt_form());
+        assert(ctx.is_ntt_form());
+#endif
+
+        std::vector<seal::Ciphertext> result_copy(ptx_decomposition.size());
+        for(auto i=0; i<ptx_decomposition.size(); i++){
+            evaluator->multiply_plain(ctx, ptx_decomposition[i], result_copy[i]);
+        }
+        result = std::move(result_copy);
+    }
+
+    void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
+                                           seal::Ciphertext &sum) const {
+        seal::Plaintext ptx;
+        ptx = scalar;
+        evaluator->multiply_plain(right, ptx, sum);
+    }
+
+    void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Plaintext &ptx,
+                                           seal::Ciphertext &sum) const {
+        trivial_ciphertext(ptx, sum);
+        scalar_multiply(scalar, sum, sum);
+    }
+
+
+    void EvaluatorWrapper::transform_to_ntt_inplace(EmbeddedCiphertext  &encoded) const {
+        for(auto & ptx_piece : encoded) {
+            evaluator->transform_to_ntt_inplace(ptx_piece, context.first_parms_id());
+        }
+    }
+
+
+    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1, const EncryptedEmbeddedCiphertext &ctx_decomposition2, EncryptedEmbeddedCiphertext  &result) const {
+#ifdef DISTRIBICOM_DEBUG
+        assert(ctx_decomposition1[0].is_ntt_form());
+        assert(ctx_decomposition2[0].is_ntt_form());
+        assert(ctx_decomposition1.size()==ctx_decomposition2.size());
+#endif
+
+        EncryptedEmbeddedCiphertext result_copy(ctx_decomposition1.size());
+        for(auto i=0; i<ctx_decomposition1.size(); i++){
+            evaluator->add(ctx_decomposition1[i], ctx_decomposition2[i], result_copy[i]);
+        }
+        result = std::move(result_copy);
     }
 
 }

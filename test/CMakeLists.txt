@@ -1,18 +1,19 @@
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMY_DEBUG")
-
 
 add_library(test_utils test_utils.hpp test_utils.cpp)
 
 target_include_directories(test_utils PUBLIC ${SealPIR_SOURCE_DIR}/src)
 target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src)
 target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/math_utils)
+target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/services)
+
 target_include_directories(test_utils PUBLIC ${distribicom_SOURCE_DIR}/src/marshal)
 
-target_link_libraries(test_utils sealpir multiplication_utils marshal_package)
+target_link_libraries(test_utils sealpir services multiplication_utils marshal_package)
 
 add_subdirectory(general_tests)
 add_subdirectory(math_utils)
 add_subdirectory(marshal)
+add_subdirectory(services)
 
 # create the testing file and list of tests
 create_test_sourcelist(Tests
@@ -25,8 +26,14 @@ create_test_sourcelist(Tests
         )
 
 # add the executable
-add_executable(CommonTests ${Tests})
-target_link_libraries(CommonTests distribicom_cpp test_utils)
+add_executable(distribicom_CommonTests ${Tests})
+set_target_properties(
+        distribicom_CommonTests
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
+)
+
+target_link_libraries(distribicom_CommonTests distribicom_cpp test_utils)
 
 # remove the test driver source file
 set(TestsToRun ${Tests})
@@ -35,6 +42,6 @@ remove(TestsToRun CommonTests.cpp)
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
     get_filename_component(TName ${test} NAME_WE)
-    add_test(NAME ${TName} COMMAND CommonTests ${TName})
+    add_test(NAME ${TName} COMMAND distribicom_CommonTests ${TName})
 endforeach ()
 
