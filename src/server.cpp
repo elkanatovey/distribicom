@@ -16,10 +16,12 @@ create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
 
 std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribicom::AppConfigs &);
 
+void verify_results(shared_ptr<services::FullServer> &sharedPtr, vector<PIRClient> &vector1);
+
 int main(int, char *[]) {
     // todo: load configs from config file in specific folder.
     auto cnfgs = services::configurations::create_app_configs("0.0.0.0:5432", 4096, 20, 5, 5, 256);
-    cnfgs.set_number_of_workers(5); // todo: should load with this value from config file.
+    cnfgs.set_number_of_workers(1); // todo: should load with this value from config file.
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
     std::uint64_t num_clients = 30;
@@ -51,6 +53,8 @@ int main(int, char *[]) {
             // perform step 2.
             server->run_step_2(ledger);
 
+            // verify results.
+            verify_results(server, clients);
 //            server->publish_answers();
         }
     }
@@ -61,6 +65,14 @@ int main(int, char *[]) {
         t.join();
     }
     std::cout << "done." << std::endl;
+}
+
+void verify_results(shared_ptr<services::FullServer> &server, vector<PIRClient> &clients) {
+    const auto &db = server->get_client_db();
+    for (auto &[id, info]: db.id_to_info) {
+        auto ptx = clients[id].decode_reply(info->final_answer->data);
+        std::cout << ptx.to_string() << std::endl;
+    }
 }
 
 std::thread

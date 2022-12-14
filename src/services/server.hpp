@@ -23,7 +23,6 @@ namespace services {
         seal::EncryptionParameters enc_params;
 
 
-
         std::vector<std::future<int>> db_write_requests;
 
     public:
@@ -70,6 +69,9 @@ namespace services {
         void run_step_2(std::shared_ptr<WorkDistributionLedger>);
 
         void close() { manager.close(); }
+
+        // for testing:
+        const ClientDB &get_client_db() { return manager.client_query_manager; }
 
     private:
         void init_pir_data(const distribicom::AppConfigs &app_configs);
