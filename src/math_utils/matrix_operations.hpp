@@ -21,13 +21,13 @@ namespace math_utils {
     private:
         std::shared_ptr<concurrency::threadpool> pool;
 
-#ifdef DISTRIBICOM_DEBUG
+// #ifdef DISTRIBICOM_DEBUG
     public:
         std::shared_ptr<EvaluatorWrapper> w_evaluator;
-#else
-        std::shared_ptr<EvaluatorWrapper> w_evaluator;
-        public:
-#endif
+// #else
+//         std::shared_ptr<EvaluatorWrapper> w_evaluator;
+//         public:
+// #endif
 
         explicit MatrixOperations(std::shared_ptr<EvaluatorWrapper> w_evaluator) :
                 w_evaluator(w_evaluator),
