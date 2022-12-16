@@ -1,3 +1,4 @@
+import json
 from sys import stdout
 from typing import Dict, Any
 
@@ -17,6 +18,7 @@ def elements_per_ptxt(logt: int, N: int, ele_size: int):
 
 def create_protobuf_config(configs: Dict[str, Any]) -> Configs:
     c = Configs()
+
     c.scheme = configs["scheme"]
     c.polynomial_degree = configs["polynomial_degree"]
     c.logarithm_plaintext_coefficient = configs["logarithm_plaintext_coefficient"]
@@ -36,25 +38,15 @@ def create_protobuf_config(configs: Dict[str, Any]) -> Configs:
 
 
 if __name__ == '__main__':
-    configs = {
-        "db_rows": 5,
-        "db_cols": 5,
-        # enc_params:
-        "scheme": "bgv",
-        "polynomial_degree": 4096,
-        "logarithm_plaintext_coefficient": 20,
-        # pir params:
-        "size_per_element": 256
-    }
+    with open('test_setting.json', 'r') as f:
+        configs = json.load(f)
 
-    a = AppConfigs()
-    a.main_server_hostname = "todo:port"
-    a.number_of_workers = 1
-    a.query_wait_time = 10  # seconds
-    a.configs.CopyFrom(create_protobuf_config(configs))
+        a = AppConfigs()
+        a.main_server_hostname = "todo:port"
+        a.number_of_workers = configs["number_of_workers"]
 
-    print(a)
-    print()
-    print(a.SerializeToString())
+        a.query_wait_time = 10  # seconds
+        a.configs.CopyFrom(create_protobuf_config(configs))
 
-    # load config file.
+    with open('test_setting.pb', 'wb') as f:
+        f.write(a.SerializeToString())
