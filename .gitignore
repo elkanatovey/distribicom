@@ -6,3 +6,4 @@ CmakeFiles
 .DS_Store
 bin
 *checks*
+venv
