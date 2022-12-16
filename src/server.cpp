@@ -18,10 +18,19 @@ std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribi
 
 void verify_results(shared_ptr<services::FullServer> &sharedPtr, vector<PIRClient> &vector1);
 
-int main(int, char *[]) {
-    // todo: load configs from config file in specific folder.
-    auto cnfgs = services::configurations::create_app_configs("0.0.0.0:5432", 4096, 20, 5, 5, 256);
-    cnfgs.set_number_of_workers(1); // todo: should load with this value from config file.
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
+        return -1;
+    }
+    if (!std::filesystem::exists(argv[1])) {
+        std::cout << "Config file " << argv[1] << " does not exist" << std::endl;
+        return -1;
+    }
+
+    distribicom::AppConfigs cnfgs;
+    cnfgs.ParseFromString(load_from_file(argv[1]));
+
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
     std::uint64_t num_clients = 30;
@@ -71,7 +80,7 @@ void verify_results(shared_ptr<services::FullServer> &server, vector<PIRClient> 
     const auto &db = server->get_client_db();
     for (auto &[id, info]: db.id_to_info) {
         auto ptx = clients[id].decode_reply(info->final_answer->data);
-        std::cout << "result for client " << id << ": "<<ptx.to_string() << std::endl;
+        std::cout << "result for client " << id << ": " << ptx.to_string() << std::endl;
     }
 }
 
@@ -143,7 +152,7 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
         m->marshal_query_vector(query, query_marshaled);
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms())* 2,
+        services::set_client(math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms()) * 2,
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 
