@@ -1,12 +1,12 @@
 import json
+import os
 import subprocess
+import tempfile
 import time
-from sys import stdout
 from typing import Dict, Any
-
-import google.protobuf.text_format as tx
 import math
 
+import google.protobuf.text_format as tx
 from distribicom_pb2 import *
 
 
@@ -44,7 +44,7 @@ def create_app_configs(configs: Dict[str, Any], server_hostname) -> Configs:
     app_cnfgs.number_of_workers = configs["number_of_workers"]
     app_cnfgs.main_server_hostname = f'{server_hostname}:{54341}'
     app_cnfgs.query_wait_time = 10  # seconds
-    app_cnfgs.configs.CopyFrom(create_app_configs(configs))
+    app_cnfgs.configs.CopyFrom(cnfgs)
 
     return app_cnfgs
 
@@ -55,23 +55,57 @@ def load_test_settings(test_settings_file: str):
         return all
 
 
+def get_all_hostnames(dir_path, hostname_suffix):
+    hostname_files = filter(lambda x: hostname_suffix in x, os.listdir(dir_path))
+    for hostname_file in hostname_files:
+        with open(os.path.join(dir_path, hostname_file), 'r') as f:
+            yield f.read().strip()
+
+
+class Settings:
+    def __init__(self, settings_file_name):
+        self.sleep_time = 5
+        self.hostname_suffix = ".hostname"
+
+        self.all = load_test_settings("test_setting.json")
+        self.configs = self.all["configs"]
+        self.test_dir = self.all["test_setup"]["shared_folder"]
+        self.binaries = self.all["binaries"]
+
+        self.worker_bin = self.binaries["worker"]
+        self.server_bin = self.binaries["main_server"]
+
+        self.app_configs_filename = os.path.join(self.test_dir, "app_configs.txt")
+
+
 if __name__ == '__main__':
-    all = load_test_settings("test_setting.json")
-    configs = all["configs"]
-
-
+    settings = Settings("test_setting.json")
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
-    print(f'hostname: "{hostname}"')
-    time.sleep(5)
 
-    #
-    # my_host_name = ""
-    #
-    # if my_host_name == "":
-    #     time.sleep(3)
-    #
-    # app_cnfgs = create_app_configs(configs, "0.0.0.0")
-    # with open('test_setting.pb', 'wb') as f:
-    #     f.write(app_cnfgs.SerializeToString())
-    #
-    # # setting created. but does it make sense? I think not.
+    fd, filename = tempfile.mkstemp(dir=settings.test_dir, suffix=settings.hostname_suffix, prefix="distribicom_")
+    os.write(fd, hostname.encode("utf-8"))
+    os.close(fd)
+
+    print(f"written hostname to {filename}")
+    print(f"waiting {settings.sleep_time} seconds for all other running processes to write.")
+    time.sleep(settings.sleep_time)
+
+    all_hostnames = sorted(get_all_hostnames(settings.test_dir, settings.hostname_suffix))
+    is_main_server = hostname == all_hostnames[0]
+
+    binary = settings.worker_bin
+    if is_main_server:
+        print("main server creating configs file")
+        app_configs = create_app_configs(settings.configs, hostname)
+        with open(settings.app_configs_filename, 'wb') as f:
+            f.write(app_configs.SerializeToString())
+            print(f"configs written to {settings.app_configs_filename}")
+        binary = settings.server_bin
+    else:
+        print("waiting for main server")
+        time.sleep(settings.sleep_time)
+
+    out = subprocess.run([binary, settings.app_configs_filename], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
+
+    printer = "main_server" if is_main_server else f"worker-{hostname}"
+    print(f"{printer}: {out}")

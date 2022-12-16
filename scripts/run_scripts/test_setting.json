@@ -9,8 +9,8 @@
     "number_of_workers": 1
   },
   "binaries": {
-    "main_server_bin_path": "",
-    "worker_bin_path": ""
+    "main_server": "/tmp/tmp.MJQfR5J0VS/bin/main_server",
+    "worker": "/tmp/tmp.MJQfR5J0VS/bin/worker"
   },
   "test_setup": {
     "shared_folder": "/sci/labs/yossigi/mcboomy/nosnap/tmp/distribicom-test"
