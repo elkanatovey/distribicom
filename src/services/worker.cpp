@@ -6,10 +6,10 @@
 namespace services {
 
     // todo: take a const ref of the app_configs:
-    Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
-        : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
+    Worker::Worker(distribicom::AppConfigs &&wcnfgs)
+        : symmetric_secret_key(), appcnfgs(std::move(wcnfgs)), chan(), mrshl() {
         inspect_configs();
-        seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
+        seal::EncryptionParameters enc_params = utils::setup_enc_params(appcnfgs);
 
         mrshl = marshal::Marshaller::Create(enc_params);
 
@@ -17,7 +17,7 @@ namespace services {
         // todo: put in a different function.
         auto manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
             grpc::CreateChannel(
-                cnfgs.appconfigs().main_server_hostname(),
+                appcnfgs.main_server_hostname(),
                 grpc::InsecureChannelCredentials()
             )
         ));
@@ -25,9 +25,6 @@ namespace services {
         grpc::ClientContext context;
         distribicom::Ack response;
         distribicom::WorkerRegistryRequest request;
-
-        request.set_workerport(cnfgs.workerport());
-        request.set_worker_ip(cnfgs.worker_ip());
 
 
         symmetric_secret_key.resize(32);
@@ -62,11 +59,11 @@ namespace services {
     }
 
     void Worker::inspect_configs() const {
-        if (cnfgs.appconfigs().configs().scheme() != "bgv") {
+        if (appcnfgs.configs().scheme() != "bgv") {
             throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
         }
 
-        auto row_size = cnfgs.appconfigs().configs().db_cols();
+        auto row_size = appcnfgs.configs().db_cols();
         if (row_size <= 0) {
             throw std::invalid_argument("row size must be positive");
         }
@@ -141,7 +138,7 @@ namespace services {
 
                         // TODO: does this leak memory?
                         task = WorkerServiceTask();
-                        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+                        task.row_size = int(appcnfgs.configs().db_cols());
                     }
                     break;
 
@@ -184,7 +181,7 @@ namespace services {
     void Worker::setup_stream() {
         // TODO: setup any value that we need in our stream here:
 
-        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+        task.row_size = int(appcnfgs.configs().db_cols());
 
         // write worker's credentials here:
 
@@ -195,7 +192,7 @@ namespace services {
             ch_args.SetMaxSendMessageSize(constants::max_message_size);
             this->stub = distribicom::Manager::NewStub(
                 grpc::CreateCustomChannel(
-                    cnfgs.appconfigs().main_server_hostname(),
+                    appcnfgs.main_server_hostname(),
                     grpc::InsecureChannelCredentials(),
                     ch_args
                 )

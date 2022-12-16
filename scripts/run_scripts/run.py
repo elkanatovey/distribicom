@@ -39,10 +39,11 @@ def create_protobuf_config(configs: Dict[str, Any]) -> Configs:
 
 if __name__ == '__main__':
     with open('test_setting.json', 'r') as f:
-        configs = json.load(f)
+        all = json.load(f)
+        configs = all["configs"]
 
         a = AppConfigs()
-        a.main_server_hostname = "todo:port"
+        a.main_server_hostname = "0.0.0.0:53241"
         a.number_of_workers = configs["number_of_workers"]
 
         a.query_wait_time = 10  # seconds

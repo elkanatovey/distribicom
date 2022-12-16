@@ -39,7 +39,9 @@ int worker_test(int, char *[]) {
     sleep(3);
 
     std::cout << "setting up worker-service" << std::endl;
-    threads.emplace_back(setupWorker(wg, cfgs));
+    distribicom::AppConfigs moveable_appcnfgs;
+    moveable_appcnfgs.CopyFrom(cfgs);
+    threads.emplace_back(setupWorker(wg, moveable_appcnfgs));
 
     fs.wait_for_workers(1);
     fs.start_epoch();
@@ -69,7 +71,7 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
         m->marshal_query_vector(query, query_marshaled);
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.first_context_data()->parms())* 2,
+        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.first_context_data()->parms()) * 2,
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 
@@ -98,13 +100,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
 std::thread setupWorker(std::latch &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
-            services::Worker worker(
-                services::configurations::create_worker_configs(
-                    configs,
-                    std::stoi(std::string(worker_port)),
-                    "0.0.0.0"
-                )
-            );
+            services::Worker worker(std::move(configs));
 
             wg.wait();
             worker.close();

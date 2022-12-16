@@ -18,18 +18,31 @@ std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribi
 
 void verify_results(shared_ptr<services::FullServer> &sharedPtr, vector<PIRClient> &vector1);
 
-int main(int argc, char *argv[]) {
-    if (argc < 3) {
+
+bool is_valid_command_line_args(int argc, char *argv[]) {
+    if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
-        return -1;
+        return false;
     }
+
     if (!std::filesystem::exists(argv[1])) {
         std::cout << "Config file " << argv[1] << " does not exist" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+int main(int argc, char *argv[]) {
+    if (!is_valid_command_line_args(argc, argv)) {
         return -1;
     }
 
     distribicom::AppConfigs cnfgs;
     cnfgs.ParseFromString(load_from_file(argv[1]));
+
+    std::cout << "server set up with the following configs:" << std::endl;
+    std::cout << cnfgs.DebugString() << std::endl;
 
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
