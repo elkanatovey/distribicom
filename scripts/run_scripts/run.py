@@ -1,4 +1,6 @@
 import json
+import subprocess
+import time
 from sys import stdout
 from typing import Dict, Any
 
@@ -16,38 +18,60 @@ def elements_per_ptxt(logt: int, N: int, ele_size: int):
     return ele_per_ptxt
 
 
-def create_protobuf_config(configs: Dict[str, Any]) -> Configs:
-    c = Configs()
+def create_app_configs(configs: Dict[str, Any], server_hostname) -> Configs:
+    cnfgs = Configs()
 
-    c.scheme = configs["scheme"]
-    c.polynomial_degree = configs["polynomial_degree"]
-    c.logarithm_plaintext_coefficient = configs["logarithm_plaintext_coefficient"]
-    c.db_rows = configs["db_rows"]
-    c.db_cols = configs["db_cols"]
-    c.size_per_element = configs["size_per_element"]
-    c.dimensions = 2
-    c.number_of_elements = int(elements_per_ptxt(
-        c.logarithm_plaintext_coefficient,
-        c.polynomial_degree,
-        c.size_per_element
+    cnfgs.scheme = configs["scheme"]
+    cnfgs.polynomial_degree = configs["polynomial_degree"]
+    cnfgs.logarithm_plaintext_coefficient = configs["logarithm_plaintext_coefficient"]
+    cnfgs.db_rows = configs["db_rows"]
+    cnfgs.db_cols = configs["db_cols"]
+    cnfgs.size_per_element = configs["size_per_element"]
+
+    cnfgs.dimensions = 2
+    cnfgs.number_of_elements = int(elements_per_ptxt(
+        cnfgs.logarithm_plaintext_coefficient,
+        cnfgs.polynomial_degree,
+        cnfgs.size_per_element
     ))
-    c.use_symmetric = True
-    c.use_batching = True
-    c.use_recursive_mod_switching = False
-    return c
+
+    cnfgs.use_symmetric = True
+    cnfgs.use_batching = True
+    cnfgs.use_recursive_mod_switching = False
+
+    app_cnfgs = AppConfigs()
+
+    app_cnfgs.number_of_workers = configs["number_of_workers"]
+    app_cnfgs.main_server_hostname = f'{server_hostname}:{54341}'
+    app_cnfgs.query_wait_time = 10  # seconds
+    app_cnfgs.configs.CopyFrom(create_app_configs(configs))
+
+    return app_cnfgs
+
+
+def load_test_settings(test_settings_file: str):
+    with open(test_settings_file, 'r') as f:
+        all = json.load(f)
+        return all
 
 
 if __name__ == '__main__':
-    with open('test_setting.json', 'r') as f:
-        all = json.load(f)
-        configs = all["configs"]
+    all = load_test_settings("test_setting.json")
+    configs = all["configs"]
 
-        a = AppConfigs()
-        a.main_server_hostname = "0.0.0.0:53241"
-        a.number_of_workers = configs["number_of_workers"]
 
-        a.query_wait_time = 10  # seconds
-        a.configs.CopyFrom(create_protobuf_config(configs))
+    hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
+    print(f'hostname: "{hostname}"')
+    time.sleep(5)
 
-    with open('test_setting.pb', 'wb') as f:
-        f.write(a.SerializeToString())
+    #
+    # my_host_name = ""
+    #
+    # if my_host_name == "":
+    #     time.sleep(3)
+    #
+    # app_cnfgs = create_app_configs(configs, "0.0.0.0")
+    # with open('test_setting.pb', 'wb') as f:
+    #     f.write(app_cnfgs.SerializeToString())
+    #
+    # # setting created. but does it make sense? I think not.

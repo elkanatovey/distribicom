@@ -7,3 +7,5 @@ CmakeFiles
 bin
 *checks*
 venv
+__pycache__/
+*.py[cod]

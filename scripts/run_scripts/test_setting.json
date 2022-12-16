@@ -11,5 +11,8 @@
   "binaries": {
     "main_server_bin_path": "",
     "worker_bin_path": ""
+  },
+  "test_setup": {
+    "shared_folder": "/sci/labs/yossigi/mcboomy/nosnap/tmp/distribicom-test"
   }
 }
