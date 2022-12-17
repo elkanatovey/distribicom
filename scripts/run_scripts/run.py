@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import subprocess
@@ -78,8 +79,22 @@ class Settings:
         self.app_configs_filename = os.path.join(self.test_dir, "app_configs.txt")
 
 
+def command_line_args():
+    global parser, args
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c", "--config_file",
+        help="path to config file",
+        type=str,
+        default="test_setting.json"
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    settings = Settings("test_setting.json")
+    args = command_line_args()
+
+    settings = Settings(args.config_file)
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
 
     fd, filename = tempfile.mkstemp(dir=settings.test_dir, suffix=settings.hostname_suffix, prefix="distribicom_")

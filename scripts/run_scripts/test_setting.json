@@ -6,7 +6,7 @@
     "polynomial_degree": 4096,
     "logarithm_plaintext_coefficient": 20,
     "size_per_element": 256,
-    "number_of_workers": 1
+    "number_of_workers": 5
   },
   "binaries": {
     "main_server": "/tmp/tmp.MJQfR5J0VS/bin/main_server",
