@@ -163,7 +163,7 @@ message WorkerRegistryRequest {
   // the port the worker is listening to.
   uint32 workerPort = 2;
 
-  string worker_ip=3;
+  string worker_ip = 3;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
@@ -216,13 +216,7 @@ message AppConfigs {
   bytes main_server_cert = 3; // TODO: use for TLS connection.
   uint64 number_of_workers = 4;
   uint64 query_wait_time = 5;
-};
 
-message WorkerConfigs {
-  AppConfigs appConfigs = 1;
-
-  // the port the worker is listening to.
-  uint32 workerPort = 2;
-
-  string worker_ip=3;
+  // used for testing.
+  uint64 number_of_clients = 6;
 };

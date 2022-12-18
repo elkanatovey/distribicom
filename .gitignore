@@ -6,3 +6,6 @@ CmakeFiles
 .DS_Store
 bin
 *checks*
+venv
+__pycache__/
+*.py[cod]
