@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
             // verify results.
             verify_results(server, clients);
 //            server->publish_answers();
+            std::cout << "round " << j << " complete" << std::endl;
         }
     }
 
