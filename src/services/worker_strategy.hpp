@@ -41,6 +41,7 @@ namespace services::work_strategy {
 
     protected:
         // TODO: make a unique ptr!
+        std::shared_ptr<concurrency::threadpool> pool;
         std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::map<int, seal::GaloisKeys> gkeys;
@@ -70,10 +71,6 @@ namespace services::work_strategy {
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::string sym_key;
 
-        std::future<int>
-        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
-
-
         void expand_queries(WorkerServiceTask &task);
 
     public:
@@ -81,7 +78,7 @@ namespace services::work_strategy {
                                            std::shared_ptr<marshal::Marshaller> &m,
                                            std::unique_ptr<distribicom::Manager::Stub> &&manager_conn,
                                            std::string &&sym_key) :
-                WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m), sym_key(std::move(sym_key)) {
+            WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m), sym_key(std::move(sym_key)) {
         };
 
         math_utils::matrix<seal::Ciphertext> multiply_rows(WorkerServiceTask &task);
@@ -109,5 +106,8 @@ namespace services::work_strategy {
         }
 
         void queries_to_mat(const WorkerServiceTask &task);
+
+        std::vector<std::pair<int, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>>>
+        async_expand_promises(WorkerServiceTask &task);
     };
 }
