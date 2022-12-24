@@ -30,11 +30,12 @@ def create_app_configs(configs: Dict[str, Any], server_hostname) -> Configs:
     cnfgs.size_per_element = configs["size_per_element"]
 
     cnfgs.dimensions = 2
-    cnfgs.number_of_elements = int(elements_per_ptxt(
-        cnfgs.logarithm_plaintext_coefficient,
-        cnfgs.polynomial_degree,
-        cnfgs.size_per_element
-    ))
+    cnfgs.number_of_elements = cnfgs.db_rows * cnfgs.db_cols * \
+                               int(elements_per_ptxt(
+                                   cnfgs.logarithm_plaintext_coefficient,
+                                   cnfgs.polynomial_degree,
+                                   cnfgs.size_per_element
+                               ))
 
     cnfgs.use_symmetric = True
     cnfgs.use_batching = True
@@ -109,6 +110,7 @@ if __name__ == '__main__':
     is_main_server = hostname == all_hostnames[0]
 
     binary = settings.worker_bin
+    options = []
     if is_main_server:
         print("main server creating configs file")
         app_configs = create_app_configs(settings.configs, hostname)
