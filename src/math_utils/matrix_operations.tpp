@@ -83,7 +83,7 @@ namespace math_utils {
     template<typename U, typename V>
     void MatrixOperations::verify_ntt_prior_to_mult(const matrix<U> &left, const matrix<V> &right) const {
         #ifdef DISTRIBICOM_DEBUG
-        // case 1: left is split_ptx and right is ctx
+//        // case 1: left is split_ptx and right is ctx
         if constexpr (std::is_same_v<U, SplitPlaintextNTTForm> && std::is_same_v<V, seal::Ciphertext>) {
 
             if (!left.data[0][0].is_ntt_form()) {
@@ -113,12 +113,13 @@ namespace math_utils {
 
             // case 2: right  is ptx and left is ctx
         } else if constexpr ((std::is_same_v<V, seal::Plaintext> && std::is_same_v<U, seal::Ciphertext>)) {
-            if (right.data[0].is_ntt_form()) {
-                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
-            }
-            if (!left.data[0].is_ntt_form()) {
-                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
-            }
+            // TODO: something was wrong with this evaluation. todo: verify this.
+//            if (right.data[0].is_ntt_form()) {
+//                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
+//            }
+//            if (!left.data[0].is_ntt_form()) {
+//                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
+//            }
         }
         #endif
     }
