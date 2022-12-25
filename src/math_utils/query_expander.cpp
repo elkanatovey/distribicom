@@ -23,15 +23,15 @@ namespace math_utils {
 
         auto pool = seal::MemoryManager::GetPool();
 
-        std::cout << "Server: n_i = " << n_i << std::endl;
-        std::cout << "queryExpander: expanding " << query_i.size() << " query_i ctxts" << std::endl;
+//        std::cout << "Server: n_i = " << n_i << std::endl;
+//        std::cout << "queryExpander: expanding " << query_i.size() << " query_i ctxts" << std::endl;
         // Expand each dim according to its vector. the result should be equal `total` at most per ciphertext in that dimension. (N or n_i).
         for (uint32_t j = 0; j < query_i.size(); j++) {
             uint64_t total = N;
             if (j == query_i.size() - 1) {
                 total = n_i % N; // how much more should i expand.
             }
-            std::cout << "-- expanding one query_i ctxt into " << total << " ctxts " << std::endl;
+//            std::cout << "-- expanding one query_i ctxt into " << total << " ctxts " << std::endl;
             std::vector<seal::Ciphertext> expanded_query_part = __expand_query(query_i[j], total, galkey);
             expanded_query.insert(
                     expanded_query.end(),
@@ -39,7 +39,7 @@ namespace math_utils {
                     std::make_move_iterator(expanded_query_part.end()));
             expanded_query_part.clear();
         }
-        std::cout << "Server: expansion done " << std::endl;
+//        std::cout << "Server: expansion done " << std::endl;
         if (expanded_query.size() != n_i) {
 
             std::stringstream o;
