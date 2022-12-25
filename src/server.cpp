@@ -2,6 +2,7 @@
 #include "services/factory.hpp"
 #include "marshal/local_storage.hpp"
 #include "server.hpp"
+#include <chrono>
 
 std::string get_listening_address(const distribicom::AppConfigs &cnfgs);
 
@@ -20,13 +21,18 @@ void verify_results(shared_ptr<services::FullServer> &sharedPtr, vector<PIRClien
 
 
 bool is_valid_command_line_args(int argc, char *argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
+    if (argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <config_file>" << " <num_queries>" << std::endl;
         return false;
     }
 
     if (!std::filesystem::exists(argv[1])) {
         std::cout << "Config file " << argv[1] << " does not exist" << std::endl;
+        return false;
+    }
+
+    if (std::stoi(argv[2])<1) {
+        std::cout << "num queries " << argv[2] << " is invalid" << std::endl;
         return false;
     }
 
@@ -44,9 +50,11 @@ int main(int argc, char *argv[]) {
     std::cout << "server set up with the following configs:" << std::endl;
     std::cout << cnfgs.DebugString() << std::endl;
 
+    std::uint64_t num_clients = std::stoi(argv[2]);
+    std::cout << "server set up with "<< num_clients << " queries" << std::endl;
+
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
-    std::uint64_t num_clients = 30;
     auto clients = create_clients(num_clients, cnfgs, enc_params, pir_params);
 
     auto server = full_server_instance(cnfgs, enc_params, pir_params, clients);
@@ -67,6 +75,9 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < 10; ++j) {
             // todo: start timing a full round here.
             std::cout << "distributing work" << std::endl;
+
+            auto time_round_s = std::chrono::high_resolution_clock::now();
+
             auto ledger = server->distribute_work();
 
             ledger->done.read_for(std::chrono::milliseconds(5000)); // todo: how much time should we wait?
@@ -80,9 +91,14 @@ int main(int argc, char *argv[]) {
             server->run_step_2(ledger);
 
             // verify results.
+#ifdef DISTRIBICOM_DEBUG
             verify_results(server, clients);
+#endif
 //            server->publish_answers();
-            std::cout << "round " << j << " complete" << std::endl;
+
+            auto time_round_e = std::chrono::high_resolution_clock::now();
+            auto time_round_us = duration_cast<std::chrono::microseconds>(time_round_e - time_round_s).count();
+            std::cout << "Main_Server: round "<< j <<" running time: " << time_round_us / 1000 << " ms" << std::endl;
         }
     }
 

@@ -200,7 +200,8 @@ message Configs {
 
 
   // legacy from sealpir
-  uint32 number_of_elements = 8; //number of elements packed in ptx, referred to as items in sealpir
+  uint32 number_of_elements = 8; //number of elements packed all db ptxs, referred to as items in sealpir,
+  // rows*cols*elems_per_ptx
   bool use_symmetric = 9;
   bool use_batching = 10;
   bool use_recursive_mod_switching = 11;

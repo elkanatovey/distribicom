@@ -193,12 +193,12 @@ namespace services {
 
             for (std::uint64_t i = range_start;
                  i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
-                auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0);
+//                auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data();
 
                 auto part = std::make_unique<distribicom::WorkerTaskPart>();
                 part->mutable_matrixpart()->set_row(0);
                 part->mutable_matrixpart()->set_col(i);
-                part->mutable_matrixpart()->mutable_ctx()->CopyFrom(payload);
+                part->mutable_matrixpart()->mutable_ctx()->set_data(all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
 
                 worker.second->add_task_to_write(std::move(part));
             }
@@ -241,9 +241,22 @@ namespace services {
 
     }
 
-    std::vector<std::uint64_t> get_row_id_to_work_with(std::uint64_t id, std::uint64_t num_rows) {
+    std::vector<std::uint64_t> get_row_ids_to_work_with(std::uint64_t id, std::uint64_t num_rows, size_t num_workers) {
         auto row_id = id % num_rows;
-        return {row_id};
+        if(num_workers>=num_rows) {
+            return {row_id};
+        }
+        else{
+            auto num_rows_per_worker = num_rows / num_workers;
+            auto row_differential = num_rows/num_rows_per_worker;
+            std::vector<std::uint64_t> rows_responsible_for;
+            auto curr = row_id;
+            while(curr<num_rows){
+                rows_responsible_for.push_back(curr);
+                curr+=row_differential;
+            }
+            return rows_responsible_for;
+        }
     }
 
     std::pair<std::uint64_t, std::uint64_t>
@@ -264,13 +277,21 @@ namespace services {
 #endif
 
         auto num_workers_per_row = num_workers / num_rows;
+        if(num_workers_per_row == 0){num_workers_per_row=1;} // @todo find nicer way to handle fewer workers than rows
         auto num_queries_per_worker = num_queries / num_workers_per_row;
         return num_queries_per_worker;
     }
 
 
-    map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
+    std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
+#ifdef DISTRIBICOM_DEBUG
+        auto num_workers_per_row = work_streams.size() / num_rows;
+        //multiple query bucket support dependant on freivalds
+        if(num_workers_per_row>1){throw invalid_argument("currently we do not support multiple query buckets");}
+        if(num_rows % work_streams.size()!= 0){throw invalid_argument("each worker must get the same number of rows");}
+#endif
+
         std::uint32_t i = 0;
         std::shared_lock lock(mtx);
 
@@ -278,7 +299,8 @@ namespace services {
         std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for;
         for (auto &worker: work_streams) {
             worker_name_to_work_responsible_for[worker.first].worker_number = i;
-            worker_name_to_work_responsible_for[worker.first].db_rows = get_row_id_to_work_with(i, num_rows);
+            worker_name_to_work_responsible_for[worker.first].db_rows = get_row_ids_to_work_with(i, num_rows,
+                                                                                                work_streams.size());
 #ifdef DISTRIBICOM_DEBUG
             if (work_streams.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
@@ -414,4 +436,30 @@ namespace services {
             }
         }
     }
+
+    void Manager::put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients) {
+
+        all_clients.mutex->lock_shared();
+        for (const auto &partial_answer: parts) {
+            math_utils::EmbeddedCiphertext ptx_embedding;
+            this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
+            this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
+            for (size_t i = 0; i < ptx_embedding.size(); i++) {
+                (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
+                        ptx_embedding[i]);
+            }
+            all_clients.id_to_info[partial_answer.col]->answer_count += 1;
+        }
+        all_clients.mutex->unlock_shared();
+    }
+
+    void Manager::calculate_final_answer() {
+        for (const auto &client: client_query_manager.id_to_info) {
+            auto current_query = *epoch_data.queries_dim2[client.first];
+            matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
+            matops->from_ntt(client.second->final_answer->data);
+        }
+    }
+
+
 }

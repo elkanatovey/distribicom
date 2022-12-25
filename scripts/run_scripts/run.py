@@ -1,3 +1,4 @@
+#!/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/venv/bin/python3
 import argparse
 import json
 import os
@@ -71,6 +72,7 @@ class Settings:
 
         self.all = load_test_settings("test_setting.json")
         self.configs = self.all["configs"]
+        self.num_clients = self.all["num_clients"]
         self.test_dir = self.all["test_setup"]["shared_folder"]
         self.binaries = self.all["binaries"]
 
@@ -109,20 +111,25 @@ if __name__ == '__main__':
     all_hostnames = sorted(get_all_hostnames(settings.test_dir, settings.hostname_suffix))
     is_main_server = hostname == all_hostnames[0]
 
-    binary = settings.worker_bin
-    options = []
+    to_run = [settings.worker_bin, settings.app_configs_filename]
+
     if is_main_server:
         print("main server creating configs file")
         app_configs = create_app_configs(settings.configs, hostname)
         with open(settings.app_configs_filename, 'wb') as f:
             f.write(app_configs.SerializeToString())
             print(f"configs written to {settings.app_configs_filename}")
-        binary = settings.server_bin
+
+        to_run = [settings.server_bin, settings.app_configs_filename, settings.num_clients]
     else:
         print("waiting for main server")
         time.sleep(settings.sleep_time)
 
-    out = subprocess.run([binary, settings.app_configs_filename], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
+    out = subprocess.run(to_run, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+
+    out_reg = out.stdout.decode("utf-8").strip()
+    out_err = out.stderr.decode("utf-8").strip()
 
     printer = "main_server" if is_main_server else f"worker-{hostname}"
-    print(f"{printer}: {out}")
+    print(f"{printer}: {out_reg}")
+    print(f"{printer}: {out_err}")
