@@ -59,11 +59,14 @@ int main(int argc, char *argv[]) {
     server->wait_for_workers(int(cnfgs.number_of_workers()));
     // 1 epoch
     for (int i = 0; i < 1; ++i) {
+        std::cout << "setting up epoch" << std::endl;
+
         server->start_epoch();
 
         // 5 rounds in an epoch.
         for (int j = 0; j < 10; ++j) {
             // todo: start timing a full round here.
+            std::cout << "distributing work" << std::endl;
             auto ledger = server->distribute_work();
 
             ledger->done.read_for(std::chrono::milliseconds(5000)); // todo: how much time should we wait?
@@ -72,6 +75,7 @@ int main(int argc, char *argv[]) {
             // server should also be notified by ledger about the rouge workers.
             server->learn_about_rouge_workers(ledger);
 
+            std::cout << "done receiving" << std::endl;
             // perform step 2.
             server->run_step_2(ledger);
 
