@@ -198,7 +198,8 @@ namespace services {
                 auto part = std::make_unique<distribicom::WorkerTaskPart>();
                 part->mutable_matrixpart()->set_row(0);
                 part->mutable_matrixpart()->set_col(i);
-                part->mutable_matrixpart()->mutable_ctx()->set_data(all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
+                part->mutable_matrixpart()->mutable_ctx()->set_data(
+                    all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
 
                 worker.second->add_task_to_write(std::move(part));
             }
@@ -243,17 +244,16 @@ namespace services {
 
     std::vector<std::uint64_t> get_row_ids_to_work_with(std::uint64_t id, std::uint64_t num_rows, size_t num_workers) {
         auto row_id = id % num_rows;
-        if(num_workers>=num_rows) {
+        if (num_workers >= num_rows) {
             return {row_id};
-        }
-        else{
+        } else {
             auto num_rows_per_worker = num_rows / num_workers;
-            auto row_differential = num_rows/num_rows_per_worker;
+            auto row_differential = num_rows / num_rows_per_worker;
             std::vector<std::uint64_t> rows_responsible_for;
             auto curr = row_id;
-            while(curr<num_rows){
+            while (curr < num_rows) {
                 rows_responsible_for.push_back(curr);
-                curr+=row_differential;
+                curr += row_differential;
             }
             return rows_responsible_for;
         }
@@ -277,19 +277,71 @@ namespace services {
 #endif
 
         auto num_workers_per_row = num_workers / num_rows;
-        if(num_workers_per_row == 0){num_workers_per_row=1;} // @todo find nicer way to handle fewer workers than rows
+        if (num_workers_per_row ==
+            0) { num_workers_per_row = 1; } // @todo find nicer way to handle fewer workers than rows
         auto num_queries_per_worker = num_queries / num_workers_per_row;
         return num_queries_per_worker;
     }
 
+    std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities2(std::uint64_t num_queries) {
+        // Assuming more workers than rows.
+        auto num_groups = work_streams.size() / app_configs.configs().db_rows();
+        if (num_groups == 0) {
+            num_groups = 1;
+        }
+        // num groups is the amount of duplication of the DB.
+        auto num_queries_per_group = num_queries / num_groups;
+
+        std::map<string, WorkerInfo> worker_to_responsibilities;
+
+
+        // todo: num rows per worker in a group.
+
+        auto num_rows_per_worker = work_streams.size() / num_groups;
+
+        std::uint64_t i = 0;
+        for (auto const &[worker_name, stream]: work_streams) {
+            (void) stream; // not using val.
+
+            auto worker_id = i++;
+            auto group_id = worker_id % num_groups;
+
+            // group_id determines that part of queries each worker receives.
+            auto range_start = group_id * num_queries_per_group;
+            auto range_end = range_start + num_queries_per_group;
+
+            // worker should get a range of all rows:
+            // I want each worker to have a sequential range of rows for each worker.
+
+            std::vector<std::uint64_t> db_rows;
+            db_rows.reserve(num_rows_per_worker);
+
+            auto partition_start = (worker_id % num_groups) * num_rows_per_worker;
+            for (std::uint64_t j = 0; j < num_rows_per_worker; ++j) {
+                db_rows.push_back(j + partition_start);
+            }
+
+            worker_to_responsibilities[worker_name] = WorkerInfo{
+                .worker_number = worker_id,
+                .group_number = group_id,
+                .query_range_start= range_start,
+                .query_range_end = range_end,
+                .db_rows = db_rows
+            };
+        }
+
+        return worker_to_responsibilities;
+    }
 
     std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
 #ifdef DISTRIBICOM_DEBUG
         auto num_workers_per_row = work_streams.size() / num_rows;
         //multiple query bucket support dependant on freivalds
-        if(num_workers_per_row>1){throw invalid_argument("currently we do not support multiple query buckets");}
-        if(num_rows % work_streams.size()!= 0){throw invalid_argument("each worker must get the same number of rows");}
+        if (num_workers_per_row > 1) { throw invalid_argument("currently we do not support multiple query buckets"); }
+        if (num_rows % work_streams.size() != 0) {
+            throw invalid_argument("each worker must get the same number of rows");
+        }
 #endif
 
         std::uint32_t i = 0;
@@ -300,7 +352,7 @@ namespace services {
         for (auto &worker: work_streams) {
             worker_name_to_work_responsible_for[worker.first].worker_number = i;
             worker_name_to_work_responsible_for[worker.first].db_rows = get_row_ids_to_work_with(i, num_rows,
-                                                                                                work_streams.size());
+                                                                                                 work_streams.size());
 #ifdef DISTRIBICOM_DEBUG
             if (work_streams.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
@@ -446,7 +498,7 @@ namespace services {
             this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
             for (size_t i = 0; i < ptx_embedding.size(); i++) {
                 (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
-                        ptx_embedding[i]);
+                    ptx_embedding[i]);
             }
             all_clients.id_to_info[partial_answer.col]->answer_count += 1;
         }

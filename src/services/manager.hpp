@@ -31,6 +31,7 @@ namespace services {
 
     struct WorkerInfo {
         std::uint64_t worker_number;
+        std::uint64_t group_number;
         std::uint64_t query_range_start;
         std::uint64_t query_range_end;
         std::vector<std::uint64_t> db_rows;
@@ -153,7 +154,9 @@ namespace services {
                         auto query_row_len =
                             work_responsibility.query_range_end - work_responsibility.query_range_start;
 
-                        if (query_row_len != epoch_data.queries.size()) { throw std::runtime_error("unimplemented case: query_row_len != epoch_data.queries.size()"); }
+                        if (query_row_len != epoch_data.queries.size()) {
+                            throw std::runtime_error("unimplemented case: query_row_len != epoch_data.queries.size()");
+                        }
 
                         for (size_t i = 0; i < rows.size(); i++) {
                             std::vector<seal::Ciphertext> temp;
@@ -211,6 +214,8 @@ namespace services {
          *  assumes num workers map well to db and queries
          */
         map<string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
+
+        map<string, WorkerInfo> map_workers_to_responsibilities2(uint64_t num_queries);
 
         void send_galois_keys(const ClientDB &all_clients);
 
