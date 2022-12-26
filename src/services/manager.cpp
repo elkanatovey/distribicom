@@ -292,13 +292,9 @@ namespace services {
         // num groups is the amount of duplication of the DB.
         auto num_queries_per_group = num_queries / num_groups;
 
-        std::map<string, WorkerInfo> worker_to_responsibilities;
-
-
-        // todo: num rows per worker in a group.
-
         auto num_rows_per_worker = work_streams.size() / num_groups;
 
+        std::map<string, WorkerInfo> worker_to_responsibilities;
         std::uint64_t i = 0;
         for (auto const &[worker_name, stream]: work_streams) {
             (void) stream; // not using val.
