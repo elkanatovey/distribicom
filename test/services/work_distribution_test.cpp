@@ -52,9 +52,6 @@ int work_distribution_test(int, char *[]) {
 
     auto partitions = manager.map_workers_to_responsibilities2(num_queries);
 
-    /* todo:
-         verify all groups together have all queries.
-     */
 
     verify_partitions_hold_the_same_amount_of_work(partitions);
     verify_workers_in_group_contain_the_full_db(partitions, cfgs);
