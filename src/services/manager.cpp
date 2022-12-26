@@ -294,20 +294,19 @@ namespace services {
         // num groups is the amount of duplication of the DB.
         auto num_queries_per_group = num_queries / num_groups;
 
-        auto num_rows_per_worker = app_configs.configs().db_rows() / num_groups;
+        auto num_workers_per_group = max(size_t(1), work_streams.size() / num_groups);
+
+        auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_per_group;
         if (num_rows_per_worker == 0) {
-            num_rows_per_worker = 1;
+            num_rows_per_worker = num_workers_per_group / app_configs.configs().db_rows();
         }
 
         std::map<string, WorkerInfo> worker_to_responsibilities;
         std::uint64_t i = 0;
-        std::uint64_t group_id = -1;
+        std::uint64_t group_id = 0;
         for (auto const &[worker_name, stream]: work_streams) {
             (void) stream; // not using val.
 
-            if (i / num_groups == 0) {
-                group_id++;
-            }
             auto worker_id = i++;
 
             // group_id determines that part of queries each worker receives.
@@ -332,6 +331,11 @@ namespace services {
                 .query_range_end = range_end,
                 .db_rows = db_rows
             };
+            if (i % num_groups == 0) {
+                group_id++;
+                if(group_id>=num_groups){group_id = 0;}
+            }
+
         }
 
         return worker_to_responsibilities;
