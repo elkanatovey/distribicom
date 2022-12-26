@@ -19,6 +19,8 @@ std::set<std::uint64_t> get_group_ids(map<string, services::WorkerInfo> &partiti
 void verify_workers_in_group_contain_the_full_db(map<string, services::WorkerInfo> &partitions,
                                                  distribicom::AppConfigs &app_cfgs);
 
+void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions);
+
 int work_distribution_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
@@ -47,25 +49,37 @@ int work_distribution_test(int, char *[]) {
     auto partitions = manager.map_workers_to_responsibilities2(num_queries);
 
     /* todo:
-         verify each group has different workers.
          verify each group has different queries.
          verify all groups together have all queries.
      */
 
     verify_partitions_hold_the_same_amount_of_work(partitions);
     verify_workers_in_group_contain_the_full_db(partitions, cfgs);
+    verify_disjoint_groups(partitions);
     return 0;
+}
+
+// assumes each worker has a different number.
+void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions) {
+    std::set<std::uint64_t> workers;
+
+    for (auto &group_id: get_group_ids(partitions)) {
+        auto group = split_partitions_by_group(partitions, group_id);
+        assert(!group.empty());
+
+        for (auto &worker: group) {
+            assert(workers.find(worker.worker_number) == workers.end());
+            workers.insert(worker.worker_number);
+        }
+    }
 }
 
 void
 verify_workers_in_group_contain_the_full_db(map<string, services::WorkerInfo> &partitions,
                                             distribicom::AppConfigs &app_cfgs) {
-    auto grp_ids = get_group_ids(partitions);
-    for (const auto &grp_id: grp_ids) {
+    for (const auto &grp_id: get_group_ids(partitions)) {
         auto splits = split_partitions_by_group(partitions, grp_id);
-        if (splits.empty()) {
-            throw std::runtime_error("no splits for group");
-        }
+        assert(!splits.empty());
 
         std::set<uint64_t> db_rows;
         for (std::uint64_t i = 0; i < app_cfgs.configs().db_rows(); ++i) {
@@ -107,12 +121,9 @@ split_partitions_by_group(map<string, services::WorkerInfo> &partitions, uint64_
 }
 
 void verify_partitions_hold_the_same_amount_of_work(map<string, services::WorkerInfo> &partition) {
-    auto grp_ids = get_group_ids(partition);
-    for (const auto &grp_id: grp_ids) {
+    for (const auto &grp_id: get_group_ids(partition)) {
         auto splits = split_partitions_by_group(partition, grp_id);
-        if (splits.empty()) {
-            throw std::runtime_error("no splits for group");
-        }
+        assert(!splits.empty());
 
         auto query_range_start = splits[0].query_range_start;
         auto query_range_end = splits[0].query_range_end;
