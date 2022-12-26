@@ -6,6 +6,7 @@ create_test_sourcelist(Tests
         worker_test.cpp
         client_test.cpp
         db_many_reads_test.cpp
+        work_distribution_test.cpp
         )
 
 # add the executable
