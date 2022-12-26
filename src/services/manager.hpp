@@ -164,10 +164,11 @@ namespace services {
                         auto query_row_len =
                             work_responsibility.query_range_end - work_responsibility.query_range_start;
 
-                        if (query_row_len != epoch_data.queries.size()) {
-                            throw std::runtime_error("unimplemented case: query_row_len != epoch_data.queries.size()");
+#ifdef DISTRIBICOM_DEBUG
+                        if (query_row_len != epoch_data.size_freivalds_group) {
+                            throw std::runtime_error("unimplemented case: query_row_len != epoch_data.size_freivalds_group");
                         }
-
+#endif
                         for (size_t i = 0; i < rows.size(); i++) {
                             std::vector<seal::Ciphertext> temp;
                             temp.reserve(query_row_len);

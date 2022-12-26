@@ -467,7 +467,8 @@ namespace services {
             auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, ed.size_freivalds_group);
 
             auto range_start = current_query_group * ed.size_freivalds_group;
-            for (std::uint64_t column=range_start; column < range_start+qs.size(); column++) {
+            auto range_end = range_start + ed.size_freivalds_group;
+            for (std::uint64_t column=range_start; column < range_end; column++) {
                 auto v = qs[column]->get();
                 ed.queries[column] = v;
 
