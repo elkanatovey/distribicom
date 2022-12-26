@@ -89,8 +89,13 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> marshal;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
+
+        #ifdef DISTRIBICOM_DEBUG
+    public: // making the data here public: for debugging/testing purposes.
+        #endif
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
+
 
     public:
         ClientDB client_query_manager;
