@@ -30,14 +30,11 @@ int work_distribution_test(int, char *[]) {
         3,
         256
     );
+
     auto num_workers = 9;
     auto num_queries = 18;
 
-    math_utils::matrix<seal::Plaintext> db(cfgs.configs().db_rows(), cfgs.configs().db_rows());
-
-    for (auto &p: db.data) {
-        p = all->random_plaintext();
-    }
+    math_utils::matrix<seal::Plaintext> db(0, 0);
 
     auto cdb = create_client_db(1, all, cfgs);
     //const distribicom::AppConfigs &app_configs, std::map<uint32_t, std::unique_ptr<services::ClientInfo>> &client_db, math_utils::matrix<seal::Plaintext> &db
