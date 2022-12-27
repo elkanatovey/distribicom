@@ -291,22 +291,25 @@ namespace services {
         if (num_groups == 0) {
             num_groups = 1;
         }
+        auto num_workers_in_group = work_streams.size() / num_groups;
+
         // num groups is the amount of duplication of the DB.
-        auto num_queries_per_group = num_queries / num_groups;
+        auto num_queries_per_group = num_queries / num_groups; // assume num_queries>=num_groups
 
-        auto num_workers_per_group = max(size_t(1), work_streams.size() / num_groups);
-
-        auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_per_group;
+        auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_in_group;
         if (num_rows_per_worker == 0) {
-            num_rows_per_worker = num_workers_per_group / app_configs.configs().db_rows();
+            num_rows_per_worker = 1;
         }
 
         std::map<string, WorkerInfo> worker_to_responsibilities;
         std::uint64_t i = 0;
-        std::uint64_t group_id = 0;
+        std::uint64_t group_id = -1;
         for (auto const &[worker_name, stream]: work_streams) {
             (void) stream; // not using val.
 
+            if (i % num_workers_in_group == 0) {
+                group_id++;
+            }
             auto worker_id = i++;
 
             // group_id determines that part of queries each worker receives.
@@ -319,23 +322,18 @@ namespace services {
             std::vector<std::uint64_t> db_rows;
             db_rows.reserve(num_rows_per_worker);
 
-            auto partition_start = (worker_id % num_groups) * num_rows_per_worker;
+            auto partition_start = (worker_id % num_workers_in_group) * num_rows_per_worker;
             for (std::uint64_t j = 0; j < num_rows_per_worker; ++j) {
                 db_rows.push_back(j + partition_start);
             }
 
             worker_to_responsibilities[worker_name] = WorkerInfo{
-                .worker_number = worker_id,
-                .group_number = group_id,
-                .query_range_start= range_start,
-                .query_range_end = range_end,
-                .db_rows = db_rows
+                    .worker_number = worker_id,
+                    .group_number = group_id,
+                    .query_range_start= range_start,
+                    .query_range_end = range_end,
+                    .db_rows = db_rows
             };
-            if (i % num_groups == 0) {
-                group_id++;
-                if(group_id>=num_groups){group_id = 0;}
-            }
-
         }
 
         return worker_to_responsibilities;

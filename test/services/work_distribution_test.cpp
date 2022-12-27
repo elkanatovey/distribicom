@@ -23,7 +23,7 @@ void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions);
 
 void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &partitions);
 
-void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions);
+void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions, std::uint64_t num_queries);
 
 int work_distribution_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
@@ -52,20 +52,25 @@ int work_distribution_test(int, char *[]) {
 
     auto partitions = manager.map_workers_to_responsibilities2(num_queries);
 
-    /* todo:
-         verify all groups together have all queries.
-     */
 
     verify_partitions_hold_the_same_amount_of_work(partitions);
     verify_workers_in_group_contain_the_full_db(partitions, cfgs);
     verify_disjoint_groups(partitions);
     verify_each_group_has_different_queries(partitions);
-    verify_all_queries_are_covered(partitions);
+    verify_all_queries_are_covered(partitions, num_queries);
     return 0;
 }
 
-void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions) {
+void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions, std::uint64_t num_queries) {
+    std::set<std::uint64_t> queries;
+    for (auto grp_id: get_group_ids(partitions)) {
+        auto workers = split_partitions_by_group(partitions, grp_id);
 
+        for (auto i = workers[0].query_range_start; i < workers[0].query_range_end; ++i) {
+            queries.insert(i);
+        }
+    }
+    assert(queries.size() == num_queries);
 }
 
 void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &partitions) {
@@ -80,6 +85,9 @@ void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &
 
     for (auto &grp_id1: grps) {
         for (auto &grp_id2: grps) {
+            if (grp_id1 == grp_id2) {
+                continue;
+            }
             auto query_start_end1 = id_to_query_start_end[grp_id1];
             auto query_start_end2 = id_to_query_start_end[grp_id2];
             assert(query_start_end1.first != query_start_end2.first);
