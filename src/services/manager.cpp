@@ -92,9 +92,11 @@ namespace services {
         ledger->worker_list.reserve(work_streams.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
 
-        // need to compute DB X epoch_data.query_matrix.
-        matops->multiply(db, *epoch_data.query_mat_times_randvec, ledger->db_x_queries_x_randvec);
-        matops->from_ntt(ledger->db_x_queries_x_randvec.data);
+        for(size_t i=0; i<epoch_data.num_freivalds_groups; i++){
+            // need to compute DB X epoch_data.query_matrix.
+            matops->multiply(db, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
+            matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
+        }
 
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
@@ -292,7 +294,7 @@ namespace services {
         auto num_workers_in_group = work_streams.size() / num_groups;
 
         // num groups is the amount of duplication of the DB.
-        auto num_queries_per_group = num_queries / num_groups;
+        auto num_queries_per_group = num_queries / num_groups; // assume num_queries>=num_groups
 
         auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_in_group;
         if (num_rows_per_worker == 0) {
@@ -326,11 +328,11 @@ namespace services {
             }
 
             worker_to_responsibilities[worker_name] = WorkerInfo{
-                .worker_number = worker_id,
-                .group_number = group_id,
-                .query_range_start= range_start,
-                .query_range_end = range_end,
-                .db_rows = db_rows
+                    .worker_number = worker_id,
+                    .group_number = group_id,
+                    .query_range_start= range_start,
+                    .query_range_end = range_end,
+                    .db_rows = db_rows
             };
         }
 
@@ -407,18 +409,23 @@ namespace services {
     }
 
     void Manager::new_epoch(const ClientDB &db) {
+        auto num_freivalds_groups = max(size_t(1), work_streams.size() / app_configs.configs().db_rows());
+        auto size_freivalds_group = db.client_counter/num_freivalds_groups;
+
         EpochData ed{
-            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+            .worker_to_responsibilities = map_workers_to_responsibilities2(db.client_counter),
             .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
             .queries_dim2 = {},
-            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(db.client_counter),
+            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
             .query_mat_times_randvec = {},
+            .num_freivalds_groups = num_freivalds_groups,
+            .size_freivalds_group = size_freivalds_group,
         };
 
         auto expand_size = app_configs.configs().db_cols();
         auto expand_size_dim2 = app_configs.configs().db_rows();
 
-        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size()); // promises for expanded queries
         std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> qs2(
             db.id_to_info.size());
 
@@ -454,30 +461,41 @@ namespace services {
         randomise_scalar_vec(*ed.random_scalar_vector);
 
         auto rows = expand_size;
-        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+        std::vector<std::unique_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> promises;
 
-        for (std::uint64_t column = 0; column < qs.size(); column++) {
-            auto v = qs[column]->get();
-            ed.queries[column] = v;
+        auto current_query_group = 0;
+        while (current_query_group < ed.num_freivalds_groups){
 
-            for (std::uint64_t i = 0; i < rows; i++) {
-                (*query_mat)(i, column) = (*v)[i];
+            auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, ed.size_freivalds_group);
+
+            auto range_start = current_query_group * ed.size_freivalds_group;
+            auto range_end = range_start + ed.size_freivalds_group;
+            for (std::uint64_t column=range_start; column < range_end; column++) {
+                auto v = qs[column]->get();
+                ed.queries[column] = v;
+
+                for (std::uint64_t i = 0; i < rows; i++) {
+                    (*current_query_mat)(i, column-range_start) = (*v)[i];
+                }
             }
+
+            promises.push_back(matops->async_scalar_dot_product(
+                    current_query_mat,
+                    ed.random_scalar_vector
+            ));
+
+            current_query_group++;
+        }
+        for(size_t i = 0; i<ed.num_freivalds_groups;i++){
+            ed.query_mat_times_randvec[i]=promises[i]->get();
+            matops->to_ntt(ed.query_mat_times_randvec[i]->data);
         }
         qs.clear();
-
-        auto promise = matops->async_scalar_dot_product(
-            query_mat,
-            ed.random_scalar_vector
-        );
 
         for (std::uint64_t column = 0; column < qs2.size(); column++) {
             ed.queries_dim2[column] = qs2[column]->get();
         }
         qs2.clear();
-
-        ed.query_mat_times_randvec = promise->get();
-        matops->to_ntt(ed.query_mat_times_randvec->data);
 
         mtx.lock();
         epoch_data = std::move(ed);
