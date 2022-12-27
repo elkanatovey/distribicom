@@ -289,10 +289,12 @@ namespace services {
         if (num_groups == 0) {
             num_groups = 1;
         }
+        auto num_workers_in_group = work_streams.size() / num_groups;
+
         // num groups is the amount of duplication of the DB.
         auto num_queries_per_group = num_queries / num_groups;
 
-        auto num_rows_per_worker = app_configs.configs().db_rows() / num_groups;
+        auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_in_group;
         if (num_rows_per_worker == 0) {
             num_rows_per_worker = 1;
         }
@@ -303,7 +305,7 @@ namespace services {
         for (auto const &[worker_name, stream]: work_streams) {
             (void) stream; // not using val.
 
-            if (i % num_groups == 0) {
+            if (i % num_workers_in_group == 0) {
                 group_id++;
             }
             auto worker_id = i++;
@@ -318,7 +320,7 @@ namespace services {
             std::vector<std::uint64_t> db_rows;
             db_rows.reserve(num_rows_per_worker);
 
-            auto partition_start = (worker_id % num_groups) * num_rows_per_worker;
+            auto partition_start = (worker_id % num_workers_in_group) * num_rows_per_worker;
             for (std::uint64_t j = 0; j < num_rows_per_worker; ++j) {
                 db_rows.push_back(j + partition_start);
             }
