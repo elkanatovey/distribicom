@@ -97,6 +97,7 @@ namespace services {
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
 
+        // TODO: use friendship, instead of ifdef!
         #ifdef DISTRIBICOM_DEBUG
     public: // making the data here public: for debugging/testing purposes.
         #endif
