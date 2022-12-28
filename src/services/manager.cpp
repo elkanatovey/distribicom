@@ -92,9 +92,11 @@ namespace services {
         ledger->worker_list.reserve(work_streams.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
 
-        // need to compute DB X epoch_data.query_matrix.
-        matops->multiply(db, *epoch_data.query_mat_times_randvec, ledger->db_x_queries_x_randvec);
-        matops->from_ntt(ledger->db_x_queries_x_randvec.data);
+        for (size_t i = 0; i < epoch_data.num_freivalds_groups; i++) {
+            // need to compute DB X epoch_data.query_matrix.
+            matops->multiply(db, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
+            matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
+        }
 
         shared_lock lock(mtx);
         for (auto &worker: work_streams) {
@@ -198,7 +200,8 @@ namespace services {
                 auto part = std::make_unique<distribicom::WorkerTaskPart>();
                 part->mutable_matrixpart()->set_row(0);
                 part->mutable_matrixpart()->set_col(i);
-                part->mutable_matrixpart()->mutable_ctx()->set_data(all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
+                part->mutable_matrixpart()->mutable_ctx()->set_data(
+                    all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
 
                 worker.second->add_task_to_write(std::move(part));
             }
@@ -243,17 +246,16 @@ namespace services {
 
     std::vector<std::uint64_t> get_row_ids_to_work_with(std::uint64_t id, std::uint64_t num_rows, size_t num_workers) {
         auto row_id = id % num_rows;
-        if(num_workers>=num_rows) {
+        if (num_workers >= num_rows) {
             return {row_id};
-        }
-        else{
+        } else {
             auto num_rows_per_worker = num_rows / num_workers;
-            auto row_differential = num_rows/num_rows_per_worker;
+            auto row_differential = num_rows / num_rows_per_worker;
             std::vector<std::uint64_t> rows_responsible_for;
             auto curr = row_id;
-            while(curr<num_rows){
+            while (curr < num_rows) {
                 rows_responsible_for.push_back(curr);
-                curr+=row_differential;
+                curr += row_differential;
             }
             return rows_responsible_for;
         }
@@ -277,19 +279,77 @@ namespace services {
 #endif
 
         auto num_workers_per_row = num_workers / num_rows;
-        if(num_workers_per_row == 0){num_workers_per_row=1;} // @todo find nicer way to handle fewer workers than rows
+        if (num_workers_per_row ==
+            0) { num_workers_per_row = 1; } // @todo find nicer way to handle fewer workers than rows
         auto num_queries_per_worker = num_queries / num_workers_per_row;
         return num_queries_per_worker;
     }
 
+    std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities2(std::uint64_t num_queries) {
+        // Assuming more workers than rows.
+        std::uint64_t num_groups = thread_unsafe_compute_number_of_groups();
+
+        auto num_workers_in_group = work_streams.size() / num_groups;
+
+        // num groups is the amount of duplication of the DB.
+        auto num_queries_per_group = num_queries / num_groups; // assume num_queries>=num_groups
+
+        auto num_rows_per_worker = app_configs.configs().db_rows() / num_workers_in_group;
+        if (num_rows_per_worker == 0) {
+            num_rows_per_worker = 1;
+        }
+
+        std::map<string, WorkerInfo> worker_to_responsibilities;
+        std::uint64_t i = 0;
+        std::uint64_t group_id = -1;
+        for (auto const &[worker_name, stream]: work_streams) {
+            (void) stream; // not using val.
+
+            if (i % num_workers_in_group == 0) {
+                group_id++;
+            }
+            auto worker_id = i++;
+
+            // group_id determines that part of queries each worker receives.
+            auto range_start = group_id * num_queries_per_group;
+            auto range_end = range_start + num_queries_per_group;
+
+            // worker should get a range of all rows:
+            // I want each worker to have a sequential range of rows for each worker.
+
+            std::vector<std::uint64_t> db_rows;
+            db_rows.reserve(num_rows_per_worker);
+
+            auto partition_start = (worker_id % num_workers_in_group) * num_rows_per_worker;
+            for (std::uint64_t j = 0; j < num_rows_per_worker; ++j) {
+                db_rows.push_back(j + partition_start);
+            }
+
+            worker_to_responsibilities[worker_name] = WorkerInfo{
+                .worker_number = worker_id,
+                .group_number = group_id,
+                .query_range_start= range_start,
+                .query_range_end = range_end,
+                .db_rows = db_rows
+            };
+        }
+
+        return worker_to_responsibilities;
+    }
+
+    std::uint64_t Manager::thread_unsafe_compute_number_of_groups() const {
+        return std::uint64_t(max(size_t(1), work_streams.size() / app_configs.configs().db_rows()));
+    }
 
     std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
 #ifdef DISTRIBICOM_DEBUG
         auto num_workers_per_row = work_streams.size() / num_rows;
         //multiple query bucket support dependant on freivalds
-        if(num_workers_per_row>1){throw invalid_argument("currently we do not support multiple query buckets");}
-        if(num_rows % work_streams.size()!= 0){throw invalid_argument("each worker must get the same number of rows");}
+        if (num_workers_per_row > 1) { throw invalid_argument("currently we do not support multiple query buckets"); }
+        if (num_rows % work_streams.size() != 0) {
+            throw invalid_argument("each worker must get the same number of rows");
+        }
 #endif
 
         std::uint32_t i = 0;
@@ -300,7 +360,7 @@ namespace services {
         for (auto &worker: work_streams) {
             worker_name_to_work_responsible_for[worker.first].worker_number = i;
             worker_name_to_work_responsible_for[worker.first].db_rows = get_row_ids_to_work_with(i, num_rows,
-                                                                                                work_streams.size());
+                                                                                                 work_streams.size());
 #ifdef DISTRIBICOM_DEBUG
             if (work_streams.size() == 1) {
                 std::vector<std::uint64_t> temp(num_rows);
@@ -351,17 +411,23 @@ namespace services {
     }
 
     void Manager::new_epoch(const ClientDB &db) {
+        auto num_freivalds_groups = thread_unsafe_compute_number_of_groups();
+        auto size_freivalds_group = db.client_counter / num_freivalds_groups;
+
         EpochData ed{
-            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+            .worker_to_responsibilities = map_workers_to_responsibilities2(db.client_counter),
             .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
             .queries_dim2 = {},
-            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(db.client_counter),
+            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
             .query_mat_times_randvec = {},
+            .num_freivalds_groups = num_freivalds_groups,
+            .size_freivalds_group = size_freivalds_group,
         };
 
         auto expand_size = app_configs.configs().db_cols();
         auto expand_size_dim2 = app_configs.configs().db_rows();
 
+        // promises for expanded queries
         std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
         std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> qs2(
             db.id_to_info.size());
@@ -398,30 +464,42 @@ namespace services {
         randomise_scalar_vec(*ed.random_scalar_vector);
 
         auto rows = expand_size;
-        auto query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, db.client_counter);
+        std::vector<std::unique_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> promises;
 
-        for (std::uint64_t column = 0; column < qs.size(); column++) {
-            auto v = qs[column]->get();
-            ed.queries[column] = v;
+        auto current_query_group = 0;
+        while (current_query_group < ed.num_freivalds_groups) {
 
-            for (std::uint64_t i = 0; i < rows; i++) {
-                (*query_mat)(i, column) = (*v)[i];
+            auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows,
+                                                                                            ed.size_freivalds_group);
+
+            auto range_start = current_query_group * ed.size_freivalds_group;
+            auto range_end = range_start + ed.size_freivalds_group;
+            for (std::uint64_t column = range_start; column < range_end; column++) {
+                auto v = qs[column]->get();
+                ed.queries[column] = v;
+
+                for (std::uint64_t i = 0; i < rows; i++) {
+                    (*current_query_mat)(i, column - range_start) = (*v)[i];
+                }
             }
+
+            promises.push_back(matops->async_scalar_dot_product(
+                current_query_mat,
+                ed.random_scalar_vector
+            ));
+
+            current_query_group++;
+        }
+        for (size_t i = 0; i < ed.num_freivalds_groups; i++) {
+            ed.query_mat_times_randvec[i] = promises[i]->get();
+            matops->to_ntt(ed.query_mat_times_randvec[i]->data);
         }
         qs.clear();
-
-        auto promise = matops->async_scalar_dot_product(
-            query_mat,
-            ed.random_scalar_vector
-        );
 
         for (std::uint64_t column = 0; column < qs2.size(); column++) {
             ed.queries_dim2[column] = qs2[column]->get();
         }
         qs2.clear();
-
-        ed.query_mat_times_randvec = promise->get();
-        matops->to_ntt(ed.query_mat_times_randvec->data);
 
         mtx.lock();
         epoch_data = std::move(ed);
@@ -446,7 +524,7 @@ namespace services {
             this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
             for (size_t i = 0; i < ptx_embedding.size(); i++) {
                 (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
-                        ptx_embedding[i]);
+                    ptx_embedding[i]);
             }
             all_clients.id_to_info[partial_answer.col]->answer_count += 1;
         }
@@ -459,6 +537,69 @@ namespace services {
             matops->mat_mult(current_query, (*client.second->partial_answer), (*client.second->final_answer));
             matops->from_ntt(client.second->final_answer->data);
         }
+    }
+
+    bool
+    Manager::verify_row(shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query, std::uint64_t row_id,
+                        std::uint64_t group_id) {
+        try {
+            auto challenge_vec = epoch_data.random_scalar_vector;
+
+            auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query, challenge_vec);
+            auto expected_result = epoch_data.ledger->db_x_queries_x_randvec[group_id].data[row_id];
+
+            matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
+            return db_row_x_query_x_challenge_vec->data[0].is_transparent();
+        } catch (std::exception &e) {
+            std::cout << e.what() << std::endl;
+            return false;
+        }
+    }
+
+    void
+    Manager::async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds) {
+        pool->submit(
+            {
+                .f=[&, parts_ptr, worker_creds]() {
+                    auto &parts = *parts_ptr;
+
+                    auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
+                    auto rows = work_responsibility.db_rows;
+                    auto query_row_len =
+                        work_responsibility.query_range_end - work_responsibility.query_range_start;
+
+#ifdef DISTRIBICOM_DEBUG
+                    if (query_row_len != epoch_data.size_freivalds_group) {
+                        throw std::runtime_error(
+                            "unimplemented case: query_row_len != epoch_data.size_freivalds_group");
+                    }
+#endif
+                    for (size_t i = 0; i < rows.size(); i++) {
+                        std::vector<seal::Ciphertext> temp;
+                        temp.reserve(query_row_len);
+                        for (size_t j = 0; j < query_row_len; j++) {
+                            temp.push_back(parts[j + i * query_row_len].ctx);
+                        }
+
+                        auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                            query_row_len, 1,
+                            temp);
+                        auto is_valid = verify_row(workers_db_row_x_query, rows[i],
+                                                   work_responsibility.group_number);
+                        if (!is_valid) {
+                            epoch_data.ledger->worker_verification_results[worker_creds]->set(
+                                std::make_unique<bool>(false)
+                            );
+                            return;
+                        }
+                    }
+
+                    epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
+                },
+                .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch()
+            }
+        );
+
     }
 
 

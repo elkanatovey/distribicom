@@ -31,6 +31,7 @@ namespace services {
 
     struct WorkerInfo {
         std::uint64_t worker_number;
+        std::uint64_t group_number;
         std::uint64_t query_range_start;
         std::uint64_t query_range_end;
         std::vector<std::uint64_t> db_rows;
@@ -52,7 +53,7 @@ namespace services {
         math_utils::matrix<seal::Ciphertext> result_mat;
 
         // stored in ntt form.
-        math_utils::matrix<seal::Ciphertext> db_x_queries_x_randvec;
+        std::map<std::uint64_t, math_utils::matrix<seal::Ciphertext>> db_x_queries_x_randvec;
 
         std::map<std::string, std::unique_ptr<concurrency::promise<bool>>> worker_verification_results;
         // open completion will be closed to indicate to anyone waiting.
@@ -71,13 +72,20 @@ namespace services {
         // the following vector will be used to be multiplied against incoming work.
         std::shared_ptr<std::vector<std::uint64_t>> random_scalar_vector;
 
+        // key is group
         // contains promised computation for expanded_queries X random_scalar_vector [NTT FORM]
-        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> query_mat_times_randvec;
+        std::map<std::uint64_t, std::shared_ptr<math_utils::matrix<seal::Ciphertext>>> query_mat_times_randvec;
+
+        std::uint64_t num_freivalds_groups{};
+
+        std::uint64_t size_freivalds_group{};
     };
 
 
     class Manager : distribicom::Manager::WithCallbackMethod_RegisterAsWorker<distribicom::Manager::Service> {
     private:
+        std::uint64_t thread_unsafe_compute_number_of_groups() const;
+
         distribicom::AppConfigs app_configs;
 
         std::shared_mutex mtx;
@@ -88,8 +96,14 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> marshal;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
+
+        // TODO: use friendship, instead of ifdef!
+        #ifdef DISTRIBICOM_DEBUG
+    public: // making the data here public: for debugging/testing purposes.
+        #endif
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;
+
 
     public:
         ClientDB client_query_manager;
@@ -126,61 +140,10 @@ namespace services {
 
 
         bool verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query,
-                        std::uint64_t row_id) {
-            try {
-                auto challenge_vec = epoch_data.random_scalar_vector;
-
-                auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query, challenge_vec);
-                auto expected_result = epoch_data.ledger->db_x_queries_x_randvec.data[row_id];
-
-                matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
-                return db_row_x_query_x_challenge_vec->data[0].is_transparent();
-            } catch (std::exception &e) {
-                std::cout << e.what() << std::endl;
-                return false;
-            }
-        }
+                        std::uint64_t row_id, std::uint64_t group_id);
 
         void
-        async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds) {
-            pool->submit(
-                {
-                    .f=[&, parts_ptr, worker_creds]() {
-                        auto &parts = *parts_ptr;
-
-                        auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
-                        auto rows = work_responsibility.db_rows;
-                        auto query_row_len =
-                            work_responsibility.query_range_end - work_responsibility.query_range_start;
-
-                        if (query_row_len != epoch_data.queries.size()) { throw std::runtime_error("unimplemented case: query_row_len != epoch_data.queries.size()"); }
-
-                        for (size_t i = 0; i < rows.size(); i++) {
-                            std::vector<seal::Ciphertext> temp;
-                            temp.reserve(query_row_len);
-                            for (size_t j = 0; j < query_row_len; j++) {
-                                temp.push_back(parts[j + i * query_row_len].ctx);
-                            }
-
-                            auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                                query_row_len, 1,
-                                temp);
-                            auto is_valid = verify_row(workers_db_row_x_query, rows[i]);
-                            if (!is_valid) {
-                                epoch_data.ledger->worker_verification_results[worker_creds]->set(
-                                    std::make_unique<bool>(false)
-                                );
-                                return;
-                            }
-                        }
-
-                        epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
-                    },
-                    .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch()
-                }
-            );
-
-        };
+        async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds);;
 
         void put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients);;
 
@@ -211,6 +174,8 @@ namespace services {
          *  assumes num workers map well to db and queries
          */
         map<string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
+
+        map<string, WorkerInfo> map_workers_to_responsibilities2(uint64_t num_queries);
 
         void send_galois_keys(const ClientDB &all_clients);
 
