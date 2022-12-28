@@ -187,31 +187,40 @@ namespace services {
     Manager::send_queries(const ClientDB &all_clients) {
 
         std::shared_lock lock(mtx);
-        for (auto &worker: work_streams) {
 
-            auto current_worker_info = epoch_data.worker_to_responsibilities[worker.first];
-            auto range_start = current_worker_info.query_range_start;
-            auto range_end = current_worker_info.query_range_end;
+        auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
+        for (auto &[name, stream]: work_streams) {
+            pool->submit(
+                {
+                    .f=[&, name, stream]() {
+                        auto current_worker_info = epoch_data.worker_to_responsibilities[name];
+                        auto range_start = current_worker_info.query_range_start;
+                        auto range_end = current_worker_info.query_range_end;
 
-            for (std::uint64_t i = range_start;
-                 i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
+                        for (std::uint64_t i = range_start;
+                             i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
 //                auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data();
 
-                auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                part->mutable_matrixpart()->set_row(0);
-                part->mutable_matrixpart()->set_col(i);
-                part->mutable_matrixpart()->mutable_ctx()->set_data(
-                    all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
+                            auto part = std::make_unique<distribicom::WorkerTaskPart>();
+                            part->mutable_matrixpart()->set_row(0);
+                            part->mutable_matrixpart()->set_col(i);
+                            part->mutable_matrixpart()->mutable_ctx()->set_data(
+                                all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
 
-                worker.second->add_task_to_write(std::move(part));
-            }
+                            stream->add_task_to_write(std::move(part));
+                        }
 
-            auto part = std::make_unique<distribicom::WorkerTaskPart>();
-            part->set_task_complete(true);
-            worker.second->add_task_to_write(std::move(part));
+                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
+                        part->set_task_complete(true);
+                        stream->add_task_to_write(std::move(part));
 
-            worker.second->write_next();
+                        stream->write_next();
+                    },
+                    .wg = latch
+                }
+            );
         }
+        latch->wait();
     }
 
 
