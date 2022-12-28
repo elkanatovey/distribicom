@@ -13,7 +13,7 @@ namespace services {
         gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
                        configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
                        configs.use_batching(), configs.use_recursive_mod_switching());
-        client = make_unique<PIRClient>(PIRClient(enc_params, pir_params));
+        client = std::make_unique<PIRClient>(PIRClient(enc_params, pir_params));
 
         mrshl = marshal::Marshaller::Create(enc_params);
 

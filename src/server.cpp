@@ -6,7 +6,7 @@
 
 std::string get_listening_address(const distribicom::AppConfigs &cnfgs);
 
-shared_ptr<services::FullServer>
+std::shared_ptr<services::FullServer>
 full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
                      PirParams &pir_params, std::vector<PIRClient> &clients);
 
@@ -15,9 +15,9 @@ create_clients(std::uint64_t size, const distribicom::AppConfigs &app_configs,
                const seal::EncryptionParameters &enc_params,
                PirParams &pir_params);
 
-std::thread run_server(const latch &, shared_ptr<services::FullServer>, distribicom::AppConfigs &);
+std::thread run_server(const std::latch &, std::shared_ptr<services::FullServer>, distribicom::AppConfigs &);
 
-void verify_results(shared_ptr<services::FullServer> &sharedPtr, vector<PIRClient> &vector1);
+void verify_results(std::shared_ptr<services::FullServer> &sharedPtr, std::vector<PIRClient> &vector1);
 
 
 bool is_valid_command_line_args(int argc, char *argv[]) {
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     std::cout << "done." << std::endl;
 }
 
-void verify_results(shared_ptr<services::FullServer> &server, vector<PIRClient> &clients) {
+void verify_results(std::shared_ptr<services::FullServer> &server, std::vector<PIRClient> &clients) {
     const auto &db = server->get_client_db();
     for (auto &[id, info]: db.id_to_info) {
         auto ptx = clients[id].decode_reply(info->final_answer->data);
@@ -119,7 +119,7 @@ void verify_results(shared_ptr<services::FullServer> &server, vector<PIRClient> 
 }
 
 std::thread
-run_server(const latch &main_thread_done, shared_ptr<services::FullServer> server_ptr,
+run_server(const std::latch &main_thread_done, std::shared_ptr<services::FullServer> server_ptr,
            distribicom::AppConfigs &configs) {
 
     auto t = std::thread([&] {
@@ -196,7 +196,7 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
 }
 
 
-shared_ptr<services::FullServer>
+std::shared_ptr<services::FullServer>
 full_server_instance(const distribicom::AppConfigs &configs, const seal::EncryptionParameters &enc_params,
                      PirParams &pir_params, std::vector<PIRClient> &clients) {
     auto cols = configs.configs().db_cols();

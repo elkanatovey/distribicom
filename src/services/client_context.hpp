@@ -26,7 +26,7 @@ namespace services {
 
     void
     set_client(std::uint32_t expansion_ratio, std::uint32_t db_rows, int client_id,
-               const seal::GaloisKeys &gkey, string &gkey_serialised, vector<std::vector<seal::Ciphertext>> &query,
+               const seal::GaloisKeys &gkey, std::string &gkey_serialised, std::vector<std::vector<seal::Ciphertext>> &query,
                const distribicom::ClientQueryRequest &query_marshaled,
                std::unique_ptr<services::ClientInfo> &client_info);
 
