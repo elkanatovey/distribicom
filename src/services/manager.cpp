@@ -228,20 +228,28 @@ namespace services {
 
         std::shared_lock lock(mtx);
 
-        for (auto &worker: work_streams) {
+        auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
+        for (auto &[name, stream]: work_streams) {
+            pool->submit(
+                {
+                    .f = [&, name, stream]() {
+                        auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
+                        auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
-            auto range_start = epoch_data.worker_to_responsibilities[worker.first].query_range_start;
-            auto range_end = epoch_data.worker_to_responsibilities[worker.first].query_range_end;
+                        for (std::uint64_t i = range_start; i < range_end; ++i) {
+                            auto prt = std::make_unique<distribicom::WorkerTaskPart>();
+                            prt->mutable_gkey()->CopyFrom(all_clients.id_to_info.at(i)->galois_keys_marshaled);
+                            stream->add_task_to_write(std::move(prt));
 
-            for (std::uint64_t i = range_start; i < range_end; ++i) {
-                auto prt = std::make_unique<distribicom::WorkerTaskPart>();
-                prt->mutable_gkey()->CopyFrom(all_clients.id_to_info.at(i)->galois_keys_marshaled);
-                worker.second->add_task_to_write(std::move(prt));
-
-            }
-            worker.second->write_next();
+                        }
+                        stream->write_next();
+                    },
+                    .wg = latch
+                }
+            );
         }
 
+        latch->wait();
     }
 
     std::vector<std::uint64_t> get_row_ids_to_work_with(std::uint64_t id, std::uint64_t num_rows, size_t num_workers) {
@@ -557,7 +565,8 @@ namespace services {
     }
 
     void
-    Manager::async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds) {
+    Manager::async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr,
+                                 const std::string worker_creds) {
         pool->submit(
             {
                 .f=[&, parts_ptr, worker_creds]() {
