@@ -31,7 +31,7 @@ bool is_valid_command_line_args(int argc, char *argv[]) {
         return false;
     }
 
-    if (std::stoi(argv[2])<1) {
+    if (std::stoi(argv[2]) < 1) {
         std::cout << "num queries " << argv[2] << " is invalid" << std::endl;
         return false;
     }
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     std::cout << cnfgs.DebugString() << std::endl;
 
     std::uint64_t num_clients = std::stoi(argv[2]);
-    std::cout << "server set up with "<< num_clients << " queries" << std::endl;
+    std::cout << "server set up with " << num_clients << " queries" << std::endl;
 
     auto enc_params = services::utils::setup_enc_params(cnfgs);
     PirParams pir_params;
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 
             auto time_round_e = std::chrono::high_resolution_clock::now();
             auto time_round_us = duration_cast<std::chrono::microseconds>(time_round_e - time_round_s).count();
-            std::cout << "Main_Server: round "<< j <<" running time: " << time_round_us / 1000 << " ms" << std::endl;
+            std::cout << "Main_Server: round " << j << " running time: " << time_round_us / 1000 << " ms" << std::endl;
         }
     }
 
@@ -159,10 +159,28 @@ std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::App
     gen_pir_params(configs.number_of_elements(), configs.size_per_element(),
                    configs.dimensions(), enc_params, pir_params, configs.use_symmetric(),
                    configs.use_batching(), configs.use_recursive_mod_switching());
+
     std::vector<PIRClient> clients;
+    clients.reserve(size);
+
+    concurrency::threadpool pool;
+    auto latch = std::make_shared<concurrency::safelatch>(size);
+    std::mutex mtx;
     for (size_t i = 0; i < size; i++) {
-        clients.emplace_back(enc_params, pir_params);
+        pool.submit(
+            {
+                .f = [&, i]() {
+                    auto tmp = PIRClient(enc_params, pir_params);
+                    mtx.lock();
+                    clients[i] = std::move(tmp);
+                    mtx.unlock();
+                },
+                .wg = latch
+            }
+        );
     }
+    latch->wait();
+
     return clients;
 }
 
@@ -178,20 +196,35 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
 
     std::map<uint32_t, std::unique_ptr<services::ClientInfo>> cdb;
     auto m = marshal::Marshaller::Create(enc_params);
+
+    concurrency::threadpool pool;
+    auto latch = std::make_shared<concurrency::safelatch>(clients.size());
+    std::mutex mtx;
     for (size_t i = 0; i < clients.size(); i++) {
-        seal::GaloisKeys gkey = clients[i].generate_galois_keys();
-        auto gkey_serialised = m->marshal_seal_object(gkey);
-        PirQuery query = clients[i].generate_query(i % (configs.db_rows() * configs.db_cols()));
-        distribicom::ClientQueryRequest query_marshaled;
-        m->marshal_query_vector(query, query_marshaled);
-        auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
+        pool.submit(
+            {
+                .f = [&, i]() {
+                    seal::GaloisKeys gkey = clients[i].generate_galois_keys();
+                    auto gkey_serialised = m->marshal_seal_object(gkey);
+                    PirQuery query = clients[i].generate_query(i % (configs.db_rows() * configs.db_cols()));
+                    distribicom::ClientQueryRequest query_marshaled;
+                    m->marshal_query_vector(query, query_marshaled);
+                    auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms()) * 2,
-                             app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
-                             client_info);
+                    services::set_client(
+                        math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms()) * 2,
+                        app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
+                        client_info);
 
-        cdb.insert({i, std::move(client_info)});
+                    mtx.lock();
+                    cdb.insert({i, std::move(client_info)});
+                    mtx.unlock();
+                },
+                .wg = latch,
+            }
+        );
     }
+    latch->wait();
     return cdb;
 }
 
