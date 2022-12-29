@@ -18,7 +18,7 @@ namespace concurrency {
 
     class threadpool {
     public:
-        explicit threadpool() : threadpool(num_cpus) {};
+        explicit threadpool();;
 
         explicit threadpool(uint64_t n_threads);
 
