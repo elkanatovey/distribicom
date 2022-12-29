@@ -1,7 +1,3 @@
-//
-// Created by Jonathan Weiss on 12/10/22.
-//
-
 #include "threadpool.hpp"
 
 concurrency::threadpool::threadpool(uint64_t n_threads) : chan() {
