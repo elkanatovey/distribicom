@@ -26,6 +26,12 @@ int main(int argc, char *argv[]) {
     distribicom::AppConfigs cnfgs;
     cnfgs.ParseFromString(load_from_file(argv[1]));
 
+    if (cnfgs.worker_num_cpus() > 0) {
+        concurrency::num_cpus = cnfgs.worker_num_cpus();
+        std::cout << "set global num cpus to:" << concurrency::num_cpus << std::endl;
+    }
+
+
     services::Worker w(std::move(cnfgs));
     std::cout << "waiting for stream termination" << std::endl;
     auto status = w.wait_for_stream_termination();
