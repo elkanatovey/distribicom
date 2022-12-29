@@ -88,7 +88,7 @@ namespace services {
     Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
         auto ledger = std::make_shared<WorkDistributionLedger>();
 
-        ledger->worker_list = vector<string>();
+        ledger->worker_list = std::vector<std::string>();
         ledger->worker_list.reserve(work_streams.size());
         ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
 
@@ -98,7 +98,7 @@ namespace services {
             matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
         }
 
-        shared_lock lock(mtx);
+        std::shared_lock lock(mtx);
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
             ledger->worker_verification_results.insert(
@@ -312,7 +312,7 @@ namespace services {
         return num_queries_per_worker;
     }
 
-    std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities2(std::uint64_t num_queries) {
+    std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities2(std::uint64_t num_queries) {
         // Assuming more workers than rows.
         std::uint64_t num_groups = thread_unsafe_compute_number_of_groups();
 
@@ -326,7 +326,7 @@ namespace services {
             num_rows_per_worker = 1;
         }
 
-        std::map<string, WorkerInfo> worker_to_responsibilities;
+        std::map<std::string, WorkerInfo> worker_to_responsibilities;
         std::uint64_t i = 0;
         std::uint64_t group_id = -1;
         for (auto const &[worker_name, stream]: work_streams) {
@@ -365,17 +365,17 @@ namespace services {
     }
 
     std::uint64_t Manager::thread_unsafe_compute_number_of_groups() const {
-        return std::uint64_t(max(size_t(1), work_streams.size() / app_configs.configs().db_rows()));
+        return std::uint64_t(std::max(size_t(1), work_streams.size() / app_configs.configs().db_rows()));
     }
 
-    std::map<string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
+    std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         std::uint64_t num_rows = app_configs.configs().db_rows();
 #ifdef DISTRIBICOM_DEBUG
         auto num_workers_per_row = work_streams.size() / num_rows;
         //multiple query bucket support dependant on freivalds
-        if (num_workers_per_row > 1) { throw invalid_argument("currently we do not support multiple query buckets"); }
+        if (num_workers_per_row > 1) { throw std::invalid_argument("currently we do not support multiple query buckets"); }
         if (num_rows % work_streams.size() != 0) {
-            throw invalid_argument("each worker must get the same number of rows");
+            throw std::invalid_argument("each worker must get the same number of rows");
         }
 #endif
 
@@ -429,9 +429,9 @@ namespace services {
     void randomise_scalar_vec(std::vector<std::uint64_t> &vec) {
         seal::Blake2xbPRNGFactory factory;
         auto prng = factory.create({(std::random_device()) ()});
-        uniform_int_distribution<unsigned long long> dist(
-            numeric_limits<uint64_t>::min(),
-            numeric_limits<uint64_t>::max()
+        std::uniform_int_distribution<unsigned long long> dist(
+                std::numeric_limits<uint64_t>::min(),
+                std::numeric_limits<uint64_t>::max()
         );
 
         for (auto &i: vec) { i = prng->generate(); }
@@ -567,7 +567,7 @@ namespace services {
     }
 
     bool
-    Manager::verify_row(shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query, std::uint64_t row_id,
+    Manager::verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query, std::uint64_t row_id,
                         std::uint64_t group_id) {
         try {
             auto challenge_vec = epoch_data.random_scalar_vector;
@@ -584,6 +584,7 @@ namespace services {
     }
 
     void
+
     Manager::async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr,
                                  const std::string worker_creds) {
         pool->submit(

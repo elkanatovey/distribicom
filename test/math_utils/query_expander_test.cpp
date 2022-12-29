@@ -91,7 +91,7 @@ void correct_expansion_test(TestUtils::SetupConfigs cnfgs) {
 }
 
 // helper func
-std::shared_ptr<Database> gen_db(const shared_ptr<TestUtils::CryptoObjects> &all);
+std::shared_ptr<Database> gen_db(const std::shared_ptr<TestUtils::CryptoObjects> &all);
 
 // this test creates two (encrypted) e_0 vectors from the basic base. and multiply them with the matrix and except to
 // find the element mat[0][0] in the result.
@@ -158,11 +158,11 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
     throw std::runtime_error("could not find match");
 }
 
-std::shared_ptr<Database> gen_db(const shared_ptr<TestUtils::CryptoObjects> &all) {
+std::shared_ptr<Database> gen_db(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
     auto size_per_item = all->pir_params.ele_size;
     auto number_of_items = all->pir_params.ele_num;
 
-    auto db(make_unique<uint8_t[]>(number_of_items * size_per_item));
+    auto db(std::make_unique<uint8_t[]>(number_of_items * size_per_item));
 // fill db:
     seal::Blake2xbPRNGFactory factory;
     auto gen = factory.create();

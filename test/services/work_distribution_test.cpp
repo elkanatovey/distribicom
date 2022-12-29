@@ -9,21 +9,21 @@
 std::map<uint32_t, std::unique_ptr<services::ClientInfo>>
 create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &app_configs);
 
-void verify_partitions_hold_the_same_amount_of_work(map<string, services::WorkerInfo> &partition);
+void verify_partitions_hold_the_same_amount_of_work(std::map<std::string, services::WorkerInfo> &partition);
 
 std::vector<services::WorkerInfo>
-split_partitions_by_group(map<string, services::WorkerInfo> &partitions, uint64_t grp_id);
+split_partitions_by_group(std::map<std::string, services::WorkerInfo> &partitions, uint64_t grp_id);
 
-std::set<std::uint64_t> get_group_ids(map<string, services::WorkerInfo> &partitions);
+std::set<std::uint64_t> get_group_ids(std::map<std::string, services::WorkerInfo> &partitions);
 
-void verify_workers_in_group_contain_the_full_db(map<string, services::WorkerInfo> &partitions,
+void verify_workers_in_group_contain_the_full_db(std::map<std::string, services::WorkerInfo> &partitions,
                                                  distribicom::AppConfigs &app_cfgs);
 
-void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions);
+void verify_disjoint_groups(std::map<std::string, services::WorkerInfo> &partitions);
 
-void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &partitions);
+void verify_each_group_has_different_queries(std::map<std::string, services::WorkerInfo> &partitions);
 
-void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions, std::uint64_t num_queries);
+void verify_all_queries_are_covered(std::map<std::string, services::WorkerInfo> &partitions, std::uint64_t num_queries);
 
 int work_distribution_test(int, char *[]) {
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
@@ -61,7 +61,7 @@ int work_distribution_test(int, char *[]) {
     return 0;
 }
 
-void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partitions, std::uint64_t num_queries) {
+void verify_all_queries_are_covered(std::map<std::string, services::WorkerInfo> &partitions, std::uint64_t num_queries) {
     std::set<std::uint64_t> queries;
     for (auto grp_id: get_group_ids(partitions)) {
         auto workers = split_partitions_by_group(partitions, grp_id);
@@ -73,7 +73,7 @@ void verify_all_queries_are_covered(map<string, services::WorkerInfo> &partition
     assert(queries.size() == num_queries);
 }
 
-void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &partitions) {
+void verify_each_group_has_different_queries(std::map<std::string, services::WorkerInfo> &partitions) {
     auto grps = get_group_ids(partitions);
     std::map<std::uint64_t, std::pair<std::uint64_t, std::uint64_t>> id_to_query_start_end;
     for (auto grp_id: grps) {
@@ -98,7 +98,7 @@ void verify_each_group_has_different_queries(map<string, services::WorkerInfo> &
 }
 
 // assumes each worker has a different number.
-void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions) {
+void verify_disjoint_groups(std::map<std::string, services::WorkerInfo> &partitions) {
     std::set<std::uint64_t> workers;
 
     for (auto &group_id: get_group_ids(partitions)) {
@@ -113,7 +113,7 @@ void verify_disjoint_groups(map<string, services::WorkerInfo> &partitions) {
 }
 
 void
-verify_workers_in_group_contain_the_full_db(map<string, services::WorkerInfo> &partitions,
+verify_workers_in_group_contain_the_full_db(std::map<std::string, services::WorkerInfo> &partitions,
                                             distribicom::AppConfigs &app_cfgs) {
     for (const auto &grp_id: get_group_ids(partitions)) {
         auto splits = split_partitions_by_group(partitions, grp_id);
@@ -134,7 +134,7 @@ verify_workers_in_group_contain_the_full_db(map<string, services::WorkerInfo> &p
     }
 }
 
-std::set<std::uint64_t> get_group_ids(map<string, services::WorkerInfo> &partitions) {
+std::set<std::uint64_t> get_group_ids(std::map<std::string, services::WorkerInfo> &partitions) {
     std::set<std::uint64_t> group_ids;
     for (const auto &[nm, info]: partitions) {
         (void) nm;
@@ -144,7 +144,7 @@ std::set<std::uint64_t> get_group_ids(map<string, services::WorkerInfo> &partiti
 }
 
 std::vector<services::WorkerInfo>
-split_partitions_by_group(map<string, services::WorkerInfo> &partitions, uint64_t grp_id) {
+split_partitions_by_group(std::map<std::string, services::WorkerInfo> &partitions, uint64_t grp_id) {
     std::vector<services::WorkerInfo> splits;
     for (const auto &[nm, info]: partitions) {
         (void) nm;
@@ -158,7 +158,7 @@ split_partitions_by_group(map<string, services::WorkerInfo> &partitions, uint64_
     return splits;
 }
 
-void verify_partitions_hold_the_same_amount_of_work(map<string, services::WorkerInfo> &partition) {
+void verify_partitions_hold_the_same_amount_of_work(std::map<std::string, services::WorkerInfo> &partition) {
     for (const auto &grp_id: get_group_ids(partition)) {
         auto splits = split_partitions_by_group(partition, grp_id);
         assert(!splits.empty());

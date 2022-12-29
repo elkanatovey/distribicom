@@ -143,7 +143,7 @@ namespace services {
                         std::uint64_t row_id, std::uint64_t group_id);
 
         void
-        async_verify_worker(const std::shared_ptr<vector<ResultMatPart>> parts_ptr, const std::string worker_creds);;
+        async_verify_worker(const std::shared_ptr<std::vector<ResultMatPart>> parts_ptr, const std::string worker_creds);;
 
         void put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients);;
 
@@ -173,9 +173,9 @@ namespace services {
         /**
          *  assumes num workers map well to db and queries
          */
-        map<string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
+        std::map<std::string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
 
-        map<string, WorkerInfo> map_workers_to_responsibilities2(uint64_t num_queries);
+        std::map<std::string, WorkerInfo> map_workers_to_responsibilities2(uint64_t num_queries);
 
         void send_galois_keys(const ClientDB &all_clients);
 
@@ -200,7 +200,7 @@ namespace services {
          */
         void new_epoch(const ClientDB &db);
 
-        shared_ptr<WorkDistributionLedger>
+        std::shared_ptr<WorkDistributionLedger>
         new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
 
         /**
