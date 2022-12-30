@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
             auto ledger = server->distribute_work();
 
-            ledger->done.read_for(std::chrono::milliseconds(5000)); // todo: how much time should we wait?
+            ledger->done.read(); // todo: how much time should we wait?
 
             // server should now inspect missing items and run the calculations for them.
             // server should also be notified by ledger about the rouge workers.
