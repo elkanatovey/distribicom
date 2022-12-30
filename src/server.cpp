@@ -172,7 +172,7 @@ std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::App
                 .f = [&, i]() {
                     auto tmp = PIRClient(enc_params, pir_params);
                     mtx.lock();
-                    clients[i] = std::move(tmp);
+                    clients.push_back(std::move(tmp));
                     mtx.unlock();
                 },
                 .wg = latch
