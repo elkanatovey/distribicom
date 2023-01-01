@@ -71,7 +71,7 @@ namespace services {
         create_res_matrix(db, all_clients, expansion_key);
         #endif
 
-        if (rnd == 1) {
+        if (rnd == 0) {
             grpc::ClientContext context;
             utils::add_metadata_size(context, services::constants::round_md, rnd);
             utils::add_metadata_size(context, services::constants::epoch_md, epoch);

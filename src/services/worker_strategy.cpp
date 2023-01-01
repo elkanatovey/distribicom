@@ -39,6 +39,7 @@ namespace services::work_strategy {
             return;
         }
 
+        std::cout<<"doing expansions for:"<< task.ctx_cols.size()<<std::endl;
         auto promises = async_expand_promises(task);
 
         mu.lock();

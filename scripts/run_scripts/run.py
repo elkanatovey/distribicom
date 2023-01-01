@@ -5,7 +5,7 @@ import os
 import subprocess
 import tempfile
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 import math
 
 import google.protobuf.text_format as tx
@@ -47,6 +47,7 @@ def create_app_configs(configs: Dict[str, Any], server_hostname) -> Configs:
     app_cnfgs.number_of_workers = configs["number_of_workers"]
     app_cnfgs.main_server_hostname = f'{server_hostname}:{54341}'
     app_cnfgs.query_wait_time = 10  # seconds
+    app_cnfgs.worker_num_cpus = configs["worker_num_cpus"]
     app_cnfgs.configs.CopyFrom(cnfgs)
 
     return app_cnfgs
@@ -71,15 +72,22 @@ class Settings:
         self.hostname_suffix = ".hostname"
 
         self.all = load_test_settings("test_setting.json")
-        self.configs = self.all["configs"]
-        self.num_clients = self.all["num_clients"]
-        self.test_dir = self.all["test_setup"]["shared_folder"]
-        self.binaries = self.all["binaries"]
 
+        test_setup = self.all["test_setup"]
+        self.num_cpus = test_setup["number_of_cpus_on_server"]  # os.cpu_count() on cluster isn't accurate
+        self.num_workers = test_setup["number_of_workers_per_server"]
+        self.workers_print = test_setup["workers_print"]
+        self.test_dir = test_setup["shared_folder"]
+
+        self.binaries = self.all["binaries"]
         self.worker_bin = self.binaries["worker"]
         self.server_bin = self.binaries["main_server"]
 
+        self.num_clients = self.all["num_clients"]
+
         self.app_configs_filename = os.path.join(self.test_dir, "app_configs.txt")
+        self.configs = self.all["configs"]
+        self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers
 
 
 def command_line_args():
@@ -92,6 +100,36 @@ def command_line_args():
         default="test_setting.json"
     )
     return parser.parse_args()
+
+
+def setup_server(settings, hostname) -> List[subprocess.Popen]:
+    print("main server creating configs file")
+    app_configs = create_app_configs(settings.configs, hostname)
+    with open(settings.app_configs_filename, 'wb') as f:
+        f.write(app_configs.SerializeToString())
+        print(f"configs written to {settings.app_configs_filename}")
+    return [
+        subprocess.Popen([settings.server_bin, settings.app_configs_filename, settings.num_clients],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         )
+    ]
+
+
+def setup_workers(settings) -> List[subprocess.Popen]:
+    print("waiting for main server")
+    time.sleep(settings.sleep_time)
+    out = []
+    print(f"creating {settings.num_workers} workers")
+    for i in range(settings.num_workers):
+        out.append(
+            subprocess.Popen(
+                [settings.worker_bin, settings.app_configs_filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+        )
+    return out
 
 
 if __name__ == '__main__':
@@ -111,25 +149,24 @@ if __name__ == '__main__':
     all_hostnames = sorted(get_all_hostnames(settings.test_dir, settings.hostname_suffix))
     is_main_server = hostname == all_hostnames[0]
 
-    to_run = [settings.worker_bin, settings.app_configs_filename]
+    subprocesses = setup_server(settings, hostname) if is_main_server else setup_workers(settings)
 
-    if is_main_server:
-        print("main server creating configs file")
-        app_configs = create_app_configs(settings.configs, hostname)
-        with open(settings.app_configs_filename, 'wb') as f:
-            f.write(app_configs.SerializeToString())
-            print(f"configs written to {settings.app_configs_filename}")
+    # running on all processes, collecting their current prints, and waiting for everyone to finish
+    while True:
+        try:
+            for (i, sub) in enumerate(subprocesses):
+                for stdout in sub.stdout:
+                    if not is_main_server and not settings.workers_print:
+                        continue
 
-        to_run = [settings.server_bin, settings.app_configs_filename, settings.num_clients]
-    else:
-        print("waiting for main server")
-        time.sleep(settings.sleep_time)
+                    name = "main_server" if is_main_server else f"worker::{hostname}::{i}"
+                    print(f"{name}: {stdout.decode('utf-8').strip()}")
 
-    out = subprocess.run(to_run, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            if all(map(lambda x: x.poll() is not None, subprocesses)):
+                print("all subprocesses exited, closing script...")
+                exit()
 
-    out_reg = out.stdout.decode("utf-8").strip()
-    out_err = out.stderr.decode("utf-8").strip()
-
-    printer = "main_server" if is_main_server else f"worker-{hostname}"
-    print(f"{printer}: {out_reg}")
-    print(f"{printer}: {out_err}")
+        except KeyboardInterrupt:
+            print("received KeyboardInterrupt, killing subprocess...")
+            for sub in subprocesses:
+                sub.kill()

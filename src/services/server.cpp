@@ -83,7 +83,7 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
     return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
+std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work(std::uint64_t round) {
     std::shared_ptr<services::WorkDistributionLedger> ledger;
 
     // block is to destroy the db handle.
@@ -92,7 +92,7 @@ std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribu
 
         std::shared_lock client_db_lock(*(manager.client_query_manager.mutex));
 
-        ledger = manager.distribute_work(db_handle.mat, manager.client_query_manager, 1, 1
+        ledger = manager.distribute_work(db_handle.mat, manager.client_query_manager, round, 1
 #ifdef DISTRIBICOM_DEBUG
             , manager.client_query_manager.id_to_info.begin()->second->galois_keys
 #endif

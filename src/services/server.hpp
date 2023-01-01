@@ -50,7 +50,7 @@ namespace services {
 
         // The server gives the manager the current state of the DB and the queries.
         // The manager then distributes the work to the workers and returns the results.
-        std::shared_ptr<WorkDistributionLedger> distribute_work();
+        std::shared_ptr<services::WorkDistributionLedger> distribute_work(std::uint64_t round = 0);
 
         void wait_for_workers(int i);
 

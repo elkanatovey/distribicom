@@ -10,10 +10,13 @@
   },
   "num_clients": "30",
   "binaries": {
-    "main_server": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/main_server",
-    "worker": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/worker"
+    "main_server": "/tmp/tmp.MJQfR5J0VS/bin/main_server",
+    "worker": "/tmp/tmp.MJQfR5J0VS/bin/worker"
   },
   "test_setup": {
-    "shared_folder": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/temp_configs"
+    "workers_print": false,
+    "shared_folder": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/temp_configs",
+    "number_of_workers_per_server": 2,
+    "number_of_cpus_on_server": 16
   }
 }

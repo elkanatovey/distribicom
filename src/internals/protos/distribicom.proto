@@ -220,4 +220,7 @@ message AppConfigs {
 
   // used for testing.
   uint64 number_of_clients = 6;
+
+  // the worker's threadpool size.
+  uint32 worker_num_cpus = 7;
 };

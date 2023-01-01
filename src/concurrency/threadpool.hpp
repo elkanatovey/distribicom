@@ -7,6 +7,7 @@
 #include <memory>
 #include "channel.hpp"
 #include "safelatch.h"
+#include "globals.h"
 
 namespace concurrency {
     struct Task {
@@ -17,7 +18,7 @@ namespace concurrency {
 
     class threadpool {
     public:
-        explicit threadpool() : threadpool(std::thread::hardware_concurrency()) {};
+        explicit threadpool();;
 
         explicit threadpool(uint64_t n_threads);
 
