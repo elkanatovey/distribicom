@@ -171,8 +171,6 @@ namespace services {
          */
         std::map<std::string, WorkerInfo> map_workers_to_responsibilities(uint64_t num_queries);
 
-        std::map<std::string, WorkerInfo> map_workers_to_responsibilities2(uint64_t num_queries);
-
         void send_galois_keys(const ClientDB &all_clients);
 
         void send_db(const math_utils::matrix<seal::Plaintext> &db, int rnd, int epoch);

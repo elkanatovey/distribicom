@@ -309,7 +309,7 @@ namespace services {
         return num_queries_per_worker;
     }
 
-    std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities2(std::uint64_t num_queries) {
+    std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         // Assuming more workers than rows.
         std::uint64_t num_groups = thread_unsafe_compute_number_of_groups();
 
@@ -365,50 +365,6 @@ namespace services {
         return std::uint64_t(std::max(size_t(1), work_streams.size() / app_configs.configs().db_rows()));
     }
 
-    std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
-        std::uint64_t num_rows = app_configs.configs().db_rows();
-#ifdef DISTRIBICOM_DEBUG
-        auto num_workers_per_row = work_streams.size() / num_rows;
-        //multiple query bucket support dependant on freivalds
-        if (num_workers_per_row > 1) {
-            throw std::invalid_argument("currently we do not support multiple query buckets");
-        }
-        if (num_rows % work_streams.size() != 0) {
-            throw std::invalid_argument("each worker must get the same number of rows");
-        }
-#endif
-
-        std::uint32_t i = 0;
-        std::shared_lock lock(mtx);
-
-        auto num_queries_per_worker = query_count_per_worker(work_streams.size(), num_rows, num_queries);
-        std::map<std::string, WorkerInfo> worker_name_to_work_responsible_for;
-        for (auto &worker: work_streams) {
-            worker_name_to_work_responsible_for[worker.first].worker_number = i;
-            worker_name_to_work_responsible_for[worker.first].db_rows = get_row_ids_to_work_with(i, num_rows,
-                                                                                                 work_streams.size());
-#ifdef DISTRIBICOM_DEBUG
-            if (work_streams.size() == 1) {
-                std::vector<std::uint64_t> temp(num_rows);
-                for (std::uint32_t j = 0; j < num_rows; j++) {
-                    temp[j] = j;
-                }
-                worker_name_to_work_responsible_for[worker.first].db_rows = std::move(temp);
-                worker_name_to_work_responsible_for[worker.first].query_range_start = 0;
-                worker_name_to_work_responsible_for[worker.first].query_range_end = num_queries;
-                return worker_name_to_work_responsible_for;
-            }
-#endif
-            auto query_range = get_query_range_to_work_with(i, num_queries, num_queries_per_worker);
-
-            worker_name_to_work_responsible_for[worker.first].query_range_start = query_range.first;
-            worker_name_to_work_responsible_for[worker.first].query_range_end = query_range.second;
-
-            i += 1;
-        }
-        return worker_name_to_work_responsible_for;
-    }
-
     ::grpc::ServerWriteReactor<::distribicom::WorkerTaskPart> *
     Manager::RegisterAsWorker(::grpc::CallbackServerContext *ctx, const ::distribicom::WorkerRegistryRequest *rqst) {
         UNUSED(rqst);
@@ -441,7 +397,7 @@ namespace services {
         auto size_freivalds_group = db.client_counter / num_freivalds_groups;
 
         EpochData ed{
-            .worker_to_responsibilities = map_workers_to_responsibilities2(db.client_counter),
+            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
             .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
             .queries_dim2 = {},
             .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
