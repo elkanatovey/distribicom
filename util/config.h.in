@@ -2,4 +2,4 @@
 
 // debug mode or not
 #cmakedefine DISTRIBICOM_DEBUG
-
+#cmakedefine FREIVALDS
