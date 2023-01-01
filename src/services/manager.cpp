@@ -39,7 +39,10 @@ namespace services {
             );
         }
 
+        #ifdef FREIVALDS
         async_verify_worker(parts, worker_creds);
+        #endif
+
         put_in_result_matrix(parts_vec, this->client_query_manager);
 
         auto ledger = epoch_data.ledger;
@@ -61,15 +64,8 @@ namespace services {
     Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
                              const ClientDB &all_clients,
                              int rnd, int epoch
-        #ifdef DISTRIBICOM_DEBUG
-        , const seal::GaloisKeys &expansion_key
-        #endif
     ) {
         epoch_data.ledger = new_ledger(db, all_clients);
-
-        #ifdef DISTRIBICOM_DEBUG
-        create_res_matrix(db, all_clients, expansion_key);
-        #endif
 
         if (rnd == 0) {
             grpc::ClientContext context;
@@ -88,17 +84,18 @@ namespace services {
     Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
         auto ledger = std::make_shared<WorkDistributionLedger>();
 
-        ledger->worker_list = std::vector<std::string>();
-        ledger->worker_list.reserve(work_streams.size());
-        ledger->result_mat = math_utils::matrix<seal::Ciphertext>(db.cols, all_clients.client_counter);
-
+        #ifdef FREIVALDS
         for (size_t i = 0; i < epoch_data.num_freivalds_groups; i++) {
             // need to compute DB X epoch_data.query_matrix.
             matops->multiply(db, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
             matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
         }
+        #endif
+
+        ledger->worker_list = std::vector<std::string>();
 
         std::shared_lock lock(mtx);
+        ledger->worker_list.reserve(work_streams.size());
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
             ledger->worker_verification_results.insert(
@@ -373,7 +370,9 @@ namespace services {
 #ifdef DISTRIBICOM_DEBUG
         auto num_workers_per_row = work_streams.size() / num_rows;
         //multiple query bucket support dependant on freivalds
-        if (num_workers_per_row > 1) { throw std::invalid_argument("currently we do not support multiple query buckets"); }
+        if (num_workers_per_row > 1) {
+            throw std::invalid_argument("currently we do not support multiple query buckets");
+        }
         if (num_rows % work_streams.size() != 0) {
             throw std::invalid_argument("each worker must get the same number of rows");
         }
@@ -430,8 +429,8 @@ namespace services {
         seal::Blake2xbPRNGFactory factory;
         auto prng = factory.create({(std::random_device()) ()});
         std::uniform_int_distribution<unsigned long long> dist(
-                std::numeric_limits<uint64_t>::min(),
-                std::numeric_limits<uint64_t>::max()
+            std::numeric_limits<uint64_t>::min(),
+            std::numeric_limits<uint64_t>::max()
         );
 
         for (auto &i: vec) { i = prng->generate(); }
@@ -455,29 +454,35 @@ namespace services {
         auto expand_size_dim2 = app_configs.configs().db_rows();
 
         // promises for expanded queries
+        #ifdef FREIVALDS
         std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
-        std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> qs2(
+        #endif
+
+        std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>> >> qs2(
             db.id_to_info.size());
 
         for (const auto &info: db.id_to_info) {
+            #ifdef FREIVALDS
             qs[info.first] = expander->async_expand(
                 info.second->query[0],
                 expand_size,
                 info.second->galois_keys
             );
+            #endif
 
             // setting dim2 in matrix<seal::ciphertext> and ntt form.
             auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
             pool->submit(
                 {
                     .f = [&, p]() {
-                        auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                            1, expand_size_dim2, // row vec.
-                            expander->expand_query(
-                                info.second->query[1],
-                                expand_size_dim2,
-                                info.second->galois_keys
-                            ));
+                        auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>
+                            (
+                                1, expand_size_dim2, // row vec.
+                                expander->expand_query(
+                                    info.second->query[1],
+                                    expand_size_dim2,
+                                    info.second->galois_keys
+                                ));
                         matops->to_ntt(mat->data);
                         p->set(mat);
                     },
@@ -488,12 +493,13 @@ namespace services {
 
         }
 
+        #ifdef FREIVALDS // Freivalds-preprocessing
         randomise_scalar_vec(*ed.random_scalar_vector);
 
         auto rows = expand_size;
         std::vector<std::unique_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> promises;
 
-        auto current_query_group = 0;
+        std::uint64_t current_query_group = 0;
         while (current_query_group < ed.num_freivalds_groups) {
 
             auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows,
@@ -522,6 +528,7 @@ namespace services {
             matops->to_ntt(ed.query_mat_times_randvec[i]->data);
         }
         qs.clear();
+        #endif
 
         for (std::uint64_t column = 0; column < qs2.size(); column++) {
             ed.queries_dim2[column] = qs2[column]->get();
@@ -567,7 +574,8 @@ namespace services {
     }
 
     bool
-    Manager::verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query, std::uint64_t row_id,
+    Manager::verify_row(std::shared_ptr<math_utils::matrix<seal::Ciphertext>> &workers_db_row_x_query,
+                        std::uint64_t row_id,
                         std::uint64_t group_id) {
         try {
             auto challenge_vec = epoch_data.random_scalar_vector;

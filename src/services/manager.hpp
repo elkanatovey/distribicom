@@ -157,10 +157,6 @@ namespace services {
             const ClientDB &all_clients,
             int rnd,
             int epoch
-#ifdef DISTRIBICOM_DEBUG
-            , const seal::GaloisKeys &expansion_key
-
-#endif
         );
 
         void wait_for_workers(int i);
