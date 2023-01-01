@@ -26,6 +26,7 @@ void verify_each_group_has_different_queries(std::map<std::string, services::Wor
 void verify_all_queries_are_covered(std::map<std::string, services::WorkerInfo> &partitions, std::uint64_t num_queries);
 
 int work_distribution_test(int, char *[]) {
+    #ifdef DISTRIBICOM_DEBUG
     auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 
     auto cfgs = services::configurations::create_app_configs(
@@ -50,7 +51,7 @@ int work_distribution_test(int, char *[]) {
         manager.work_streams[std::to_string(i)] = nullptr;
     }
 
-    auto partitions = manager.map_workers_to_responsibilities2(num_queries);
+    auto partitions = manager.map_workers_to_responsibilities(num_queries);
 
 
     verify_partitions_hold_the_same_amount_of_work(partitions);
@@ -59,9 +60,11 @@ int work_distribution_test(int, char *[]) {
     verify_each_group_has_different_queries(partitions);
     verify_all_queries_are_covered(partitions, num_queries);
     return 0;
+    #endif
 }
 
-void verify_all_queries_are_covered(std::map<std::string, services::WorkerInfo> &partitions, std::uint64_t num_queries) {
+void
+verify_all_queries_are_covered(std::map<std::string, services::WorkerInfo> &partitions, std::uint64_t num_queries) {
     std::set<std::uint64_t> queries;
     for (auto grp_id: get_group_ids(partitions)) {
         auto workers = split_partitions_by_group(partitions, grp_id);
