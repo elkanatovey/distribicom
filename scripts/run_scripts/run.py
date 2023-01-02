@@ -48,6 +48,7 @@ def create_app_configs(configs: Dict[str, Any], server_hostname) -> Configs:
     app_cnfgs.main_server_hostname = f'{server_hostname}:{54341}'
     app_cnfgs.query_wait_time = 10  # seconds
     app_cnfgs.worker_num_cpus = configs["worker_num_cpus"]
+    app_cnfgs.server_cpus = configs["server_cpus"]
     app_cnfgs.configs.CopyFrom(cnfgs)
 
     return app_cnfgs
@@ -87,6 +88,7 @@ class Settings:
 
         self.app_configs_filename = os.path.join(self.test_dir, "app_configs.txt")
         self.configs = self.all["configs"]
+        self.configs["server_cpus"] = self.num_cpus
         self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers
 
 

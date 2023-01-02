@@ -50,6 +50,11 @@ int main(int argc, char *argv[]) {
     std::cout << "server set up with the following configs:" << std::endl;
     std::cout << cnfgs.DebugString() << std::endl;
 
+    if (cnfgs.server_cpus() > 0) {
+        concurrency::num_cpus = cnfgs.server_cpus();
+        std::cout << "set global num cpus to:" << concurrency::num_cpus << std::endl;
+    }
+
     std::uint64_t num_clients = std::stoi(argv[2]);
     std::cout << "server set up with " << num_clients << " queries" << std::endl;
 

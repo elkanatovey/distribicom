@@ -223,4 +223,5 @@ message AppConfigs {
 
   // the worker's threadpool size.
   uint32 worker_num_cpus = 7;
+  uint32 server_cpus = 8;
 };
