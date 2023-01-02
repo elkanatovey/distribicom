@@ -45,7 +45,17 @@ int worker_test(int, char *[]) {
 
     fs.wait_for_workers(1);
     fs.start_epoch();
-    fs.learn_about_rouge_workers(fs.distribute_work());
+    for (int i = 0; i < 10; ++i) {
+        auto time_round_s = std::chrono::high_resolution_clock::now();
+
+        auto ledger = fs.distribute_work(i);
+        ledger->done.read();
+        fs.run_step_2(ledger);
+
+        auto time_round_e = std::chrono::high_resolution_clock::now();
+        auto time_round_us = duration_cast<std::chrono::microseconds>(time_round_e - time_round_s).count();
+        std::cout << "Main_Server: round " << i << " running time: " << time_round_us / 1000 << " ms" << std::endl;
+    }
 
     sleep(5);
     std::cout << "\nshutting down.\n" << std::endl;
