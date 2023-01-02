@@ -188,7 +188,7 @@ namespace services {
                             part->mutable_matrixpart()->set_row(0);
                             part->mutable_matrixpart()->set_col(i);
                             part->mutable_matrixpart()->mutable_ctx()->set_data(
-                                all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data());
+                                    *all_clients.id_to_info.at(i)->query_info_marshaled.mutable_query_dim1(0)->mutable_data());
 
                             stream->add_task_to_write(std::move(part));
                         }
@@ -231,7 +231,8 @@ namespace services {
 
                         for (std::uint64_t i = range_start; i < range_end; ++i) {
                             auto prt = std::make_unique<distribicom::WorkerTaskPart>();
-                            prt->mutable_gkey()->CopyFrom(all_clients.id_to_info.at(i)->galois_keys_marshaled);
+                            prt->mutable_gkey()->set_keys(*all_clients.id_to_info.at(i)->galois_keys_marshaled.mutable_keys());
+                            prt->mutable_gkey()->set_key_pos(all_clients.id_to_info.at(i)->galois_keys_marshaled.key_pos());
                             stream->add_task_to_write(std::move(prt));
 
                         }
