@@ -51,6 +51,7 @@ namespace services {
                         std::cout << "worker main thread: stopping execution" << std::endl;
                         break;
                     }
+                    std::cout << "worker main thread: processing task." << std::endl;
                     strategy->process_task(std::move(task_.answer));
                 }
             });
@@ -131,9 +132,8 @@ namespace services {
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
-                    std::cout << "task complete" << std::endl;
+                    std::cout << "done receiving" << std::endl;
                     if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
-                        std::cout << "sending task to be processed" << std::endl;
                         chan.write(std::move(task));
 
                         // TODO: does this leak memory?
@@ -151,7 +151,7 @@ namespace services {
             read_val.clear_matrixpart();
 
         } catch (std::exception &e) {
-            std::cout << "Worker::OnReadDone: failure: " << e.what() << std::endl;
+            std::cerr << "Worker::OnReadDone: failure: " << e.what() << std::endl;
         }
 
         StartRead(&read_val);// queue the next read request.

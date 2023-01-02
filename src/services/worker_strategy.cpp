@@ -39,7 +39,7 @@ namespace services::work_strategy {
             return;
         }
 
-        std::cout<<"doing expansions for:"<< task.ctx_cols.size()<<std::endl;
+        std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
         auto promises = async_expand_promises(task);
 
         mu.lock();
@@ -147,7 +147,7 @@ namespace services::work_strategy {
         stream->WritesDone();
         auto status = stream->Finish();
         if (!status.ok()) {
-            std::cout << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
+            std::cerr << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
                       << std::endl;
         }
     }

@@ -96,12 +96,15 @@ namespace services::work_strategy {
                 if (task.ptx_rows.empty()) {
                     return;
                 }
+
+                std::cout << "RowMultiplicationStrategy::process_task: multiplying..." << std::endl;
                 auto answer = multiply_rows(task);
 
+                std::cout << "RowMultiplicationStrategy::process_task: sending response..." << std::endl;
                 send_response(task, answer);
 
             } catch (std::exception &e) {
-                std::cout << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
+                std::cerr << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }
         }
 
