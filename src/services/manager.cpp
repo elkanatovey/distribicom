@@ -463,7 +463,7 @@ namespace services {
             all_clients.mutex->unlock_shared();
 
         } catch (const std::exception &e) {
-            std::cout << "Manager::put_in_result_matrix::exception: " << e.what() << std::endl;
+            std::cerr << "Manager::put_in_result_matrix::exception: " << e.what() << std::endl;
         }
     }
 
@@ -478,7 +478,7 @@ namespace services {
 
         }
         catch (const std::exception &e) {
-            std::cout << "Manager::calculate_final_answer::exception: " << e.what() << std::endl;
+            std::cerr << "Manager::calculate_final_answer::exception: " << e.what() << std::endl;
         }
     }
 
