@@ -91,7 +91,6 @@ int main(int argc, char *argv[]) {
             // server should also be notified by ledger about the rouge workers.
             server->learn_about_rouge_workers(ledger);
 
-            std::cout << "done receiving" << std::endl;
             // perform step 2.
             server->run_step_2(ledger);
 
