@@ -13,6 +13,7 @@ namespace concurrency {
     struct Task {
         std::function<void()> f;
         std::shared_ptr<safelatch> wg;
+        std::string name;
     };
 
 

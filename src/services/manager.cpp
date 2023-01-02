@@ -182,6 +182,7 @@ namespace services {
                         stream->write_next();
                     },
                     .wg = latch,
+                    .name = "send_db"
                 }
             );
         }
@@ -223,7 +224,8 @@ namespace services {
 
                         stream->write_next();
                     },
-                    .wg = latch
+                    .wg = latch,
+                    .name = "send_queries"
                 }
             );
         }
@@ -260,7 +262,8 @@ namespace services {
                         }
                         stream->write_next();
                     },
-                    .wg = latch
+                    .wg = latch,
+                    .name = "send_galois_keys"
                 }
             );
         }
@@ -374,6 +377,7 @@ namespace services {
 
         mtx.lock();
         work_streams[creds] = stream;
+        std::cout << "num workers registered" << work_streams.size() << std::endl;
         mtx.unlock();
 
         worker_counter.add(1);
@@ -443,6 +447,7 @@ namespace services {
                         p->set(mat);
                     },
                     .wg  = p->get_latch(),
+                    .name = "expand_query_dim2"
                 }
             );
             qs2[info.first] = p;
@@ -589,7 +594,8 @@ namespace services {
 
                     epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
                 },
-                .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch()
+                .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch(),
+                .name = "async_verify_worker_lambda"
             }
         );
 

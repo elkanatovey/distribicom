@@ -113,13 +113,12 @@ namespace math_utils {
 
             // case 2: right  is ptx and left is ctx
         } else if constexpr ((std::is_same_v<V, seal::Plaintext> && std::is_same_v<U, seal::Ciphertext>)) {
-            // TODO: something was wrong with this evaluation. todo: verify this.
-//            if (right.data[0].is_ntt_form()) {
-//                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
-//            }
-//            if (!left.data[0].is_ntt_form()) {
-//                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
-//            }
+            if (right.data[0].is_ntt_form()) {
+                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
+            }
+            if (!left.data[0].is_ntt_form()) {
+                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
+            }
         }
         #endif
     }
@@ -189,6 +188,7 @@ namespace math_utils {
                         (*result_vec)(0, k) = rslt;
                     },
                     .wg = latch,
+                    .name = "scalar_dot_product::vec@M"
                 }
             );
 
@@ -220,6 +220,7 @@ namespace math_utils {
                         (*result_vec)(k, 0) = rslt;
                     },
                     .wg = latch,
+                    .name = "scalar_dot_product::M@vec"
                 }
             );
 

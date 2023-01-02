@@ -34,9 +34,9 @@ namespace math_utils {
 //            std::cout << "-- expanding one query_i ctxt into " << total << " ctxts " << std::endl;
             std::vector<seal::Ciphertext> expanded_query_part = __expand_query(query_i[j], total, galkey);
             expanded_query.insert(
-                    expanded_query.end(),
-                    std::make_move_iterator(expanded_query_part.begin()),
-                    std::make_move_iterator(expanded_query_part.end()));
+                expanded_query.end(),
+                std::make_move_iterator(expanded_query_part.begin()),
+                std::make_move_iterator(expanded_query_part.end()));
             expanded_query_part.clear();
         }
 //        std::cout << "Server: expansion done " << std::endl;
@@ -172,15 +172,15 @@ namespace math_utils {
     }
 
     QueryExpander::QueryExpander(const seal::EncryptionParameters enc_params) :
-            QueryExpander(
-                    enc_params,
-                    std::make_shared<concurrency::threadpool>()
-            ) {}
+        QueryExpander(
+            enc_params,
+            std::make_shared<concurrency::threadpool>()
+        ) {}
 
     QueryExpander::QueryExpander(const seal::EncryptionParameters enc_params,
                                  std::shared_ptr<concurrency::threadpool> pool) :
-            enc_params_(enc_params), pool(std::make_shared<concurrency::threadpool>()),
-            evaluator_(std::make_unique<seal::Evaluator>(seal::SEALContext(enc_params, true))) {
+        enc_params_(enc_params), pool(std::make_shared<concurrency::threadpool>()),
+        evaluator_(std::make_unique<seal::Evaluator>(seal::SEALContext(enc_params, true))) {
 
     }
 
@@ -204,40 +204,42 @@ namespace math_utils {
         auto promise = std::make_shared<concurrency::promise<std::vector<seal::Ciphertext>>>(1, nullptr);
 
         pool->submit(
-                {
-                        .f =
-                        [&, promise, query_i_cpy, galkey_cpy, n_i]() {
-                            promise->set(
-                                    std::make_shared<std::vector<seal::Ciphertext>>(
-                                            expand_query(*query_i_cpy, n_i, *galkey_cpy))
-                            );
-                        },
-                        .wg = promise->get_latch(),
-
-                }
+            {
+                .f =
+                [&, promise, query_i_cpy, galkey_cpy, n_i]() {
+                    promise->set(
+                        std::make_shared<std::vector<seal::Ciphertext>>(
+                            expand_query(*query_i_cpy, n_i, *galkey_cpy))
+                    );
+                },
+                .wg = promise->get_latch(),
+                .name = "QueryExpander::async_expand"
+            }
         );
         return promise;
     }
 
 
     std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>
-    QueryExpander::async_expand_to_matrix(std::vector<seal::Ciphertext> query_i, uint64_t n_i, seal::GaloisKeys &galkey) {
+    QueryExpander::async_expand_to_matrix(std::vector<seal::Ciphertext> query_i, uint64_t n_i,
+                                          seal::GaloisKeys &galkey) {
         auto query_i_cpy = std::make_shared<std::vector<seal::Ciphertext>>(query_i);
         auto galkey_cpy = std::make_shared<seal::GaloisKeys>(galkey);
         math_utils::matrix<seal::Ciphertext> s;
         auto promise = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
 
         pool->submit(
-                {
-                        .f =
-                        [&, promise, query_i_cpy, galkey_cpy, n_i]() {
-                            promise->set(
-                                    std::make_shared<math_utils::matrix<seal::Ciphertext>>(1,n_i,expand_query(*query_i_cpy, n_i, *galkey_cpy))
-                            );
-                        },
-                        .wg = promise->get_latch(),
+            {
+                .f =
+                [&, promise, query_i_cpy, galkey_cpy, n_i]() {
+                    promise->set(
+                        std::make_shared<math_utils::matrix<seal::Ciphertext>>(1, n_i, expand_query(*query_i_cpy, n_i,
+                                                                                                    *galkey_cpy))
+                    );
+                },
+                .wg = promise->get_latch(),
 
-                }
+            }
         );
         return promise;
     }

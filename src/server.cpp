@@ -180,7 +180,8 @@ std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::App
                     clients.push_back(std::move(tmp));
                     mtx.unlock();
                 },
-                .wg = latch
+                .wg = latch,
+                .name="create_clients"
             }
         );
     }
@@ -226,6 +227,7 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
                     mtx.unlock();
                 },
                 .wg = latch,
+                .name = "create_client_db"
             }
         );
     }
