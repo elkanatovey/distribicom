@@ -161,11 +161,6 @@ namespace services {
 
         void wait_for_workers(int i);
 
-        void create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
-                               const ClientDB &all_clients,
-                               const seal::GaloisKeys &expansion_key
-        ) const;
-
         /**
          *  assumes num workers map well to db and queries
          */

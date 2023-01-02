@@ -10,53 +10,60 @@ namespace services {
                                             ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
                                             ::distribicom::Ack *resp) {
         UNUSED(resp);
-        std::string worker_creds = utils::extract_string_from_metadata(
-            context->client_metadata(),
-            constants::credentials_md
-        );
-
-        mtx.lock_shared();
-        auto exists = work_streams.find(worker_creds) != work_streams.end();
-        mtx.unlock_shared();
-
-        if (!exists) {
-            return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
-        }
-
-        distribicom::MatrixPart tmp;
-        auto parts = std::make_shared<std::vector<ResultMatPart>>();
-
-        auto &parts_vec = *parts;
-        while (reader->Read(&tmp)) {
-            // TODO: should verify the incoming data - corresponding to the expected {ctx, row, col} from each worker.
-            auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
-            parts_vec.push_back(
-                {
-                    std::move(current_ctx),
-                    tmp.row(),
-                    tmp.col()
-                }
+        try {
+            std::string worker_creds = utils::extract_string_from_metadata(
+                context->client_metadata(),
+                constants::credentials_md
             );
+
+            mtx.lock_shared();
+            auto exists = work_streams.find(worker_creds) != work_streams.end();
+            mtx.unlock_shared();
+
+            if (!exists) {
+                return {grpc::StatusCode::INVALID_ARGUMENT, "worker not registered"};
+            }
+
+            std::cout << "Manager::ReturnLocalWork::receiving work." << std::endl;
+            distribicom::MatrixPart tmp;
+            auto parts = std::make_shared<std::vector<ResultMatPart>>();
+
+            auto &parts_vec = *parts;
+            while (reader->Read(&tmp)) {
+
+                auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+                parts_vec.push_back(
+                    {
+                        std::move(current_ctx),
+                        tmp.row(),
+                        tmp.col()
+                    }
+                );
+
+            }
+
+            #ifdef FREIVALDS
+            async_verify_worker(parts, worker_creds);
+            #endif
+
+            put_in_result_matrix(parts_vec, this->client_query_manager);
+
+            auto ledger = epoch_data.ledger;
+
+            ledger->mtx.lock();
+            ledger->contributed.insert(worker_creds);
+            auto n_contributions = ledger->contributed.size();
+            ledger->mtx.unlock();
+
+            // signal done:
+            if (n_contributions == ledger->worker_list.size()) {
+                std::cout << "Manager::ReturnLocalWork: all workers have contributed." << std::endl;
+                ledger->done.close();
+            }
+        } catch (const std::exception &e) {
+            std::cerr << "Manager::ReturnLocalWork: " << e.what() << std::endl;
+            return {grpc::StatusCode::INTERNAL, e.what()};
         }
-
-        #ifdef FREIVALDS
-        async_verify_worker(parts, worker_creds);
-        #endif
-
-        put_in_result_matrix(parts_vec, this->client_query_manager);
-
-        auto ledger = epoch_data.ledger;
-
-        ledger->mtx.lock();
-        ledger->contributed.insert(worker_creds);
-        auto n_contributions = ledger->contributed.size();
-        ledger->mtx.unlock();
-
-        // signal done:
-        if (n_contributions == ledger->worker_list.size()) {
-            ledger->done.close();
-        }
-
         return {};
     }
 
@@ -68,13 +75,11 @@ namespace services {
         epoch_data.ledger = new_ledger(db, all_clients);
 
         if (rnd == 0) {
-            grpc::ClientContext context;
-            utils::add_metadata_size(context, services::constants::round_md, rnd);
-            utils::add_metadata_size(context, services::constants::epoch_md, epoch);
-
+            std::cout << "Manager::distribute_work: sending queries" << std::endl;
             send_queries(all_clients);
         }
 
+        std::cout << "Manager::distribute_work: sending db" << std::endl;
         send_db(db, rnd, epoch);
 
         return epoch_data.ledger;
@@ -109,36 +114,6 @@ namespace services {
         return ledger;
     }
 
-
-    void Manager::create_res_matrix(const math_utils::matrix<seal::Plaintext> &db,
-                                    const ClientDB &all_clients,
-                                    const seal::GaloisKeys &expansion_key) const {
-#ifdef DISTRIBICOM_DEBUG
-        auto ledger = epoch_data.ledger;
-        auto exp = expansion_key;
-        auto expand_sz = db.cols;
-
-        math_utils::matrix<seal::Ciphertext> query_mat(expand_sz, all_clients.client_counter);
-        auto col = -1;
-        for (const auto &client: all_clients.id_to_info) {
-            auto c_query = client.second->query[0][0];
-            col++;
-            std::vector<seal::Ciphertext> quer(1);
-            quer[0] = c_query;
-            auto expanded = expander->expand_query(quer, expand_sz, exp);
-
-            for (uint64_t i = 0; i < expanded.size(); ++i) {
-                query_mat(i, col) = expanded[i];
-            }
-        }
-
-        matops->to_ntt(query_mat.data);
-
-        math_utils::matrix<seal::Ciphertext> res;
-        matops->multiply(db, query_mat, res);
-        ledger->result_mat = res;
-#endif
-    }
 
     void
     Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
@@ -271,47 +246,6 @@ namespace services {
         latch->wait();
     }
 
-    std::vector<std::uint64_t> get_row_ids_to_work_with(std::uint64_t id, std::uint64_t num_rows, size_t num_workers) {
-        auto row_id = id % num_rows;
-        if (num_workers >= num_rows) {
-            return {row_id};
-        } else {
-            auto num_rows_per_worker = num_rows / num_workers;
-            auto row_differential = num_rows / num_rows_per_worker;
-            std::vector<std::uint64_t> rows_responsible_for;
-            auto curr = row_id;
-            while (curr < num_rows) {
-                rows_responsible_for.push_back(curr);
-                curr += row_differential;
-            }
-            return rows_responsible_for;
-        }
-    }
-
-    std::pair<std::uint64_t, std::uint64_t>
-    get_query_range_to_work_with(std::uint64_t worker_id, std::uint64_t num_queries,
-                                 std::uint64_t num_queries_per_worker) {
-        auto range_id = worker_id / num_queries;
-        auto range_start = num_queries_per_worker * range_id;
-        auto range_end = range_start + num_queries_per_worker;
-        return {range_start, range_end};
-    }
-
-    std::uint64_t query_count_per_worker(std::uint64_t num_workers, std::uint64_t num_rows, std::uint64_t num_queries) {
-#ifdef DISTRIBICOM_DEBUG
-        if (num_workers == 1) {
-            std::cout << "Manager: using only 1 worker" << std::endl;
-            return num_queries;
-        }
-#endif
-
-        auto num_workers_per_row = num_workers / num_rows;
-        if (num_workers_per_row ==
-            0) { num_workers_per_row = 1; } // @todo find nicer way to handle fewer workers than rows
-        auto num_queries_per_worker = num_queries / num_workers_per_row;
-        return num_queries_per_worker;
-    }
-
     std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
         // Assuming more workers than rows.
         std::uint64_t num_groups = thread_unsafe_compute_number_of_groups();
@@ -377,7 +311,7 @@ namespace services {
 
         mtx.lock();
         work_streams[creds] = stream;
-        std::cout << "num workers registered" << work_streams.size() << std::endl;
+        std::cout << "Manager::RegisterAsWorker: num workers registered: " << work_streams.size() << std::endl;
         mtx.unlock();
 
         worker_counter.add(1);
@@ -511,26 +445,38 @@ namespace services {
     }
 
     void Manager::put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients) {
+        try {
 
-        all_clients.mutex->lock_shared();
-        for (const auto &partial_answer: parts) {
-            math_utils::EmbeddedCiphertext ptx_embedding;
-            this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
-            this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
-            for (size_t i = 0; i < ptx_embedding.size(); i++) {
-                (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
-                    ptx_embedding[i]);
+            all_clients.mutex->lock_shared();
+            for (const auto &partial_answer: parts) {
+                math_utils::EmbeddedCiphertext ptx_embedding;
+                this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
+                this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
+                for (size_t i = 0; i < ptx_embedding.size(); i++) {
+                    (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
+                        ptx_embedding[i]);
+                }
+                all_clients.id_to_info[partial_answer.col]->answer_count += 1;
             }
-            all_clients.id_to_info[partial_answer.col]->answer_count += 1;
+            all_clients.mutex->unlock_shared();
+
+        } catch (const std::exception &e) {
+            std::cout << "Manager::put_in_result_matrix::exception: " << e.what() << std::endl;
         }
-        all_clients.mutex->unlock_shared();
     }
 
     void Manager::calculate_final_answer() {
-        for (const auto &client: client_query_manager.id_to_info) {
-            auto current_query = &epoch_data.queries_dim2[client.first];
-            matops->mat_mult(**current_query, (*client.second->partial_answer), (*client.second->final_answer));
-            matops->from_ntt(client.second->final_answer->data);
+        try {
+
+            for (const auto &client: client_query_manager.id_to_info) {
+                auto current_query = &epoch_data.queries_dim2[client.first];
+                matops->mat_mult(**current_query, (*client.second->partial_answer), (*client.second->final_answer));
+                matops->from_ntt(client.second->final_answer->data);
+            }
+
+        }
+        catch (const std::exception &e) {
+            std::cout << "Manager::calculate_final_answer::exception: " << e.what() << std::endl;
         }
     }
 
@@ -547,7 +493,7 @@ namespace services {
             matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
             return db_row_x_query_x_challenge_vec->data[0].is_transparent();
         } catch (std::exception &e) {
-            std::cout << e.what() << std::endl;
+            std::cerr << "Manager::verify_row::exception: " << e.what() << std::endl;
             return false;
         }
     }
