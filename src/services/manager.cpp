@@ -295,6 +295,14 @@ namespace services {
             };
         }
 
+        std::cout << "Manager::map_workers_to_responsibilities output:" << std::endl;
+        std::cout << "{" << std::endl;
+        std::cout << "  num_groups: " << num_groups << ", " << std::endl;
+        std::cout << "  num_workers_in_group: " << num_workers_in_group << ", " << std::endl;
+        std::cout << "  num_queries_per_group: " << num_queries_per_group << ", " << std::endl;
+        std::cout << "  num_rows_per_worker: " << num_rows_per_worker << ", " << std::endl;
+        std::cout << "}" << std::endl;
+
         return worker_to_responsibilities;
     }
 
