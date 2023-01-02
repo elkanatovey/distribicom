@@ -110,12 +110,7 @@ def setup_server(settings, hostname) -> List[subprocess.Popen]:
     with open(settings.app_configs_filename, 'wb') as f:
         f.write(app_configs.SerializeToString())
         print(f"configs written to {settings.app_configs_filename}")
-    return [
-        subprocess.Popen([settings.server_bin, settings.app_configs_filename, settings.num_clients],
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         )
-    ]
+    return [subprocess.Popen([settings.server_bin, settings.app_configs_filename, settings.num_clients])]
 
 
 def setup_workers(settings) -> List[subprocess.Popen]:
@@ -124,13 +119,7 @@ def setup_workers(settings) -> List[subprocess.Popen]:
     out = []
     print(f"creating {settings.num_workers} workers")
     for i in range(settings.num_workers):
-        out.append(
-            subprocess.Popen(
-                [settings.worker_bin, settings.app_configs_filename],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-        )
+        out.append(subprocess.Popen([settings.worker_bin, settings.app_configs_filename]))
     return out
 
 
@@ -152,23 +141,11 @@ if __name__ == '__main__':
     is_main_server = hostname == all_hostnames[0]
 
     subprocesses = setup_server(settings, hostname) if is_main_server else setup_workers(settings)
+    try:
+        for (i, sub) in enumerate(subprocesses):
+            sub.wait()
 
-    # running on all processes, collecting their current prints, and waiting for everyone to finish
-    while True:
-        try:
-            for (i, sub) in enumerate(subprocesses):
-                for stdout in sub.stdout:
-                    if not is_main_server and not settings.workers_print:
-                        continue
-
-                    name = "main_server" if is_main_server else f"worker::{hostname}::{i}"
-                    print(f"{name}: {stdout.decode('utf-8').strip()}")
-
-            if all(map(lambda x: x.poll() is not None, subprocesses)):
-                print("all subprocesses exited, closing script...")
-                exit()
-
-        except KeyboardInterrupt:
-            print("received KeyboardInterrupt, killing subprocess...")
-            for sub in subprocesses:
-                sub.kill()
+    except KeyboardInterrupt:
+        print("received KeyboardInterrupt, killing subprocess...")
+        for sub in subprocesses:
+            sub.kill()
