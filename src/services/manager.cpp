@@ -436,6 +436,8 @@ namespace services {
     }
 
     void Manager::wait_on_verification() {
+        std::shared_lock lock(epoch_data.ledger->mtx);
+
         for (const auto &v: epoch_data.ledger->worker_verification_results) {
             auto is_valid = *(v.second->get());
             if (!is_valid) {
