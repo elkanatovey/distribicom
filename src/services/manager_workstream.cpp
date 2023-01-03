@@ -1,9 +1,9 @@
 
 #include "manager_workstream.hpp"
 
-void services::WorkStream::add_task_to_write(std::unique_ptr<distribicom::WorkerTaskPart> &&tsk) {
+void services::WorkStream::add_task_to_write(distribicom::WorkerTaskPart* tsk) {
     mtx.lock();
-    to_write.emplace(std::move(tsk));
+    to_write.emplace(tsk);
     mtx.unlock();
 }
 
@@ -11,7 +11,7 @@ void services::WorkStream::write_next() {
     mtx.lock();
     if (!mid_write && !to_write.empty()) {
         mid_write = true;
-        StartWrite(to_write.front().get());
+        StartWrite(to_write.front());
     }
     mtx.unlock();
 }

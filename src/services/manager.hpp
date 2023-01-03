@@ -96,6 +96,9 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> marshal;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
+        std::unique_ptr<distribicom::WorkerTaskPart> completion_message;
+
+        math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> marshall_db;
 
         // TODO: use friendship, instead of ifdef!
         #ifdef DISTRIBICOM_DEBUG
@@ -109,7 +112,10 @@ namespace services {
         ClientDB client_query_manager;
         services::DB<seal::Plaintext> db;
 
-        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {};
+        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {
+            completion_message = std::make_unique<distribicom::WorkerTaskPart>();
+            completion_message->set_task_complete(true);
+        };
 
         explicit Manager(const distribicom::AppConfigs &app_configs, std::map<uint32_t,
             std::unique_ptr<services::ClientInfo>> &client_db, math_utils::matrix<seal::Plaintext> &db) :
@@ -130,6 +136,8 @@ namespace services {
             db(db) {
             this->client_query_manager.client_counter = client_db.size();
             this->client_query_manager.id_to_info = std::move(client_db);
+            completion_message = std::make_unique<distribicom::WorkerTaskPart>();
+            completion_message->set_task_complete(true);
         };
 
 

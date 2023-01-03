@@ -7,7 +7,7 @@
 namespace services {
     class WorkStream : public grpc::ServerWriteReactor<distribicom::WorkerTaskPart> {
         std::mutex mtx;
-        std::queue<std::unique_ptr<distribicom::WorkerTaskPart>> to_write;
+        std::queue<distribicom::WorkerTaskPart*> to_write;
         bool mid_write = false; // ensures that sequential calls to write would not write the same item twice.
 
         void OnDone() override {
@@ -21,7 +21,7 @@ namespace services {
 
         void close() { Finish(grpc::Status::OK); }
 
-        void add_task_to_write(std::unique_ptr<distribicom::WorkerTaskPart> &&tsk);
+        void add_task_to_write(distribicom::WorkerTaskPart* tsk);
 
         void write_next();
 

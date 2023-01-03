@@ -119,8 +119,9 @@ namespace services {
     Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
                      int rnd, int epoch) {
 
-        auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
-        auto marshalled_db = math_utils::matrix<std::string>(db.rows, db.cols, std::move(marshaled_db_vec));
+        auto marshaled_db_vec = marshal->marshal_seal_ptxs(db.data);
+        auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
+        marshalled_db.data = std::move(marshaled_db_vec);
 
         distribicom::Ack response;
         std::shared_lock lock(mtx);
@@ -184,18 +185,18 @@ namespace services {
                              i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
 //                auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data();
 
-                            auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                            part->mutable_matrixpart()->set_row(0);
-                            part->mutable_matrixpart()->set_col(i);
-                            part->mutable_matrixpart()->mutable_ctx()->set_data(
-                                    *all_clients.id_to_info.at(i)->query_info_marshaled.mutable_query_dim1(0)->mutable_data());
+//                            auto part = std::make_unique<distribicom::WorkerTaskPart>();
+//                            part->mutable_matrixpart()->set_row(0);
+//                            part->mutable_matrixpart()->set_col(i);
+//                            part->mutable_matrixpart()->mutable_ctx()->set_data(
+//                                    *all_clients.id_to_info.at(i)->query_info_marshaled.mutable_query_dim1(0)->mutable_data());
 
-                            stream->add_task_to_write(std::move(part));
+                            stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
                         }
 
-                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->set_task_complete(true);
-                        stream->add_task_to_write(std::move(part));
+//                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
+//                        part->set_task_complete(true);
+                        stream->add_task_to_write(completion_message.get());
 
                         stream->write_next();
                     },
@@ -223,28 +224,22 @@ namespace services {
 
         auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
         for (auto &[name, stream]: work_streams) {
-            pool->submit(
-                {
-                    .f = [&, name, stream]() {
-                        auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
-                        auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
+            {
+                auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
+                auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
-                        for (std::uint64_t i = range_start; i < range_end; ++i) {
-                            auto prt = std::make_unique<distribicom::WorkerTaskPart>();
-                            prt->mutable_gkey()->set_keys(*all_clients.id_to_info.at(i)->galois_keys_marshaled.mutable_keys());
-                            prt->mutable_gkey()->set_key_pos(all_clients.id_to_info.at(i)->galois_keys_marshaled.key_pos());
-                            stream->add_task_to_write(std::move(prt));
+                for (std::uint64_t i = range_start; i < range_end; ++i) {
+//                    auto prt = std::make_unique<distribicom::WorkerTaskPart>();
+//                    prt->mutable_gkey()->set_keys(all_clients.id_to_info.at(i)->gg);
+//                    prt->mutable_gkey()->set_key_pos(all_clients.id_to_info.at(i)->galois_keys_marshaled.key_pos());
+                    stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
 
-                        }
-                        stream->write_next();
-                    },
-                    .wg = latch,
-                    .name = "send_galois_keys"
                 }
-            );
+                stream->write_next();
+            }
         }
 
-        latch->wait();
+//        latch->wait();
     }
 
     std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {

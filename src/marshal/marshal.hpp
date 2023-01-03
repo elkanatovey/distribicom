@@ -2,6 +2,7 @@
 
 #include "seal/seal.h"
 #include "distribicom.grpc.pb.h"
+#include <execution>
 
 namespace marshal {
     typedef std::vector<seal::seal_byte> marshaled_seal_object;
@@ -42,6 +43,17 @@ namespace marshal {
             std::vector<std::string> marshaled_vec(in.size());
             for (std::uint64_t i = 0; i < in.size(); ++i) {
                 marshaled_vec[i] = marshal_seal_object(in[i]);
+            }
+            return marshaled_vec;
+        }
+//@todo make parallel
+        std::vector<std::unique_ptr<distribicom::WorkerTaskPart>> marshal_seal_ptxs(const std::vector<seal::Plaintext> &in) const {
+
+            std::vector<std::unique_ptr<distribicom::WorkerTaskPart>> marshaled_vec(in.size());
+
+            for (std::uint64_t i = 0; i < in.size(); ++i) {
+                marshaled_vec[i] = std::make_unique<distribicom::WorkerTaskPart>();
+                marshaled_vec[i]->mutable_matrixpart()->mutable_ptx()->set_data(marshal_seal_object(in[i]));
             }
             return marshaled_vec;
         }
