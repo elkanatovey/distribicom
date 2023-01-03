@@ -17,6 +17,7 @@
     "workers_print": true,
     "shared_folder": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/temp_configs",
     "number_of_workers_per_server": 4,
-    "number_of_cpus_on_server": 16
+    "number_of_cpus_on_server": 16,
+    "number_of_servers": 1
   }
 }

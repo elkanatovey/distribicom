@@ -61,8 +61,7 @@ def load_test_settings(test_settings_file: str):
 
 
 def get_all_hostnames(dir_path, hostname_suffix):
-    hostname_files = filter(lambda x: hostname_suffix in x, os.listdir(dir_path))
-    for hostname_file in hostname_files:
+    for hostname_file in get_all_hostname_files(hostname_suffix, dir_path):
         with open(os.path.join(dir_path, hostname_file), 'r') as f:
             yield f.read().strip()
 
@@ -77,6 +76,7 @@ class Settings:
         test_setup = self.all["test_setup"]
         self.num_cpus = test_setup["number_of_cpus_on_server"]  # os.cpu_count() on cluster isn't accurate
         self.num_workers = test_setup["number_of_workers_per_server"]
+        self.num_servers = test_setup["number_of_servers"]
         self.workers_print = test_setup["workers_print"]
         self.test_dir = test_setup["shared_folder"]
 
@@ -123,6 +123,10 @@ def setup_workers(settings) -> List[subprocess.Popen]:
     return out
 
 
+def get_all_hostname_files(hostname_suffix, test_dir):
+    return set(filter(lambda x: hostname_suffix in x, os.listdir(test_dir)))
+
+
 if __name__ == '__main__':
     args = command_line_args()
 
@@ -134,8 +138,10 @@ if __name__ == '__main__':
     os.close(fd)
 
     print(f"written hostname to {filename}")
-    print(f"waiting {settings.sleep_time} seconds for all other running processes to write.")
-    time.sleep(settings.sleep_time)
+    print(f"waiting for all other running processes to write.")
+    while len(get_all_hostname_files(settings.hostname_suffix, settings.test_dir)) < settings.num_servers:
+        print("hostname files found:", len(get_all_hostname_files(settings.hostname_suffix, settings.test_dir)))
+        time.sleep(1)
 
     all_hostnames = sorted(get_all_hostnames(settings.test_dir, settings.hostname_suffix))
     is_main_server = hostname == all_hostnames[0]
