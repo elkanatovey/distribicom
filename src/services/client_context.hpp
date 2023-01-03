@@ -12,8 +12,6 @@ namespace services {
 * ClientInfo stores objects related to an individual client
 */
     struct ClientInfo {
-//        distribicom::ClientQueryRequest query_info_marshaled;
-//        distribicom::GaloisKeys galois_keys_marshaled;
         std::unique_ptr<distribicom::WorkerTaskPart> query_to_send;
         std::unique_ptr<distribicom::WorkerTaskPart> galois_keys_marshaled;
 

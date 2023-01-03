@@ -144,18 +144,15 @@ namespace services {
                         for (const auto &db_row: db_rows) {
                             // first send db
                             for (std::uint32_t j = 0; j < db.cols; ++j) {
-//                                part = std::make_unique<distribicom::WorkerTaskPart>();
 
                                 marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
                                 marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
-//                                part->mutable_matrixpart()->mutable_ptx()->set_data(marshall_db(db_row, j));
 
                                 stream->add_task_to_write(marshall_db(db_row, j).get());
                             }
                         }
 
-//                        part = std::make_unique<distribicom::WorkerTaskPart>();
-//                        part->set_task_complete(true);
+
                         stream->add_task_to_write(completion_message.get());
 
                         stream->write_next();
@@ -232,9 +229,6 @@ namespace services {
                 auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
                 for (std::uint64_t i = range_start; i < range_end; ++i) {
-//                    auto prt = std::make_unique<distribicom::WorkerTaskPart>();
-//                    prt->mutable_gkey()->set_keys(all_clients.id_to_info.at(i)->gg);
-//                    prt->mutable_gkey()->set_key_pos(all_clients.id_to_info.at(i)->galois_keys_marshaled.key_pos());
                     stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
 
                 }
