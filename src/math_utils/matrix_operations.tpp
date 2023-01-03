@@ -113,12 +113,12 @@ namespace math_utils {
 
             // case 2: right  is ptx and left is ctx
         } else if constexpr ((std::is_same_v<V, seal::Plaintext> && std::is_same_v<U, seal::Ciphertext>)) {
-            if (right.data[0].is_ntt_form()) {
-                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
-            }
-            if (!left.data[0].is_ntt_form()) {
-                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
-            }
+//            if (right.data[0].is_ntt_form()) {
+//                throw std::invalid_argument("MatrixOperations::multiply: left matrix should not be in NTT form");
+//            }
+//            if (!left.data[0].is_ntt_form()) {
+//                throw std::invalid_argument("MatrixOperations::multiply: right matrix should be in NTT form");
+//            }
         }
         #endif
     }
