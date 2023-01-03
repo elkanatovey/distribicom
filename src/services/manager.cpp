@@ -122,9 +122,12 @@ namespace services {
         auto marshaled_db_vec = marshal->marshal_seal_ptxs(db.data);
         auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
         marshalled_db.data = std::move(marshaled_db_vec);
+        marshall_db = std::move(marshalled_db);
 
         distribicom::Ack response;
         std::shared_lock lock(mtx);
+        rnd_msg->mutable_md()->set_round(rnd);
+        rnd_msg->mutable_md()->set_epoch(epoch);
 
         auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
         for (auto &[name, stream]: work_streams) {
@@ -132,28 +135,28 @@ namespace services {
             pool->submit(
                 {
                     .f = [&, name, stream]() {
-                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->mutable_md()->set_round(rnd);
-                        part->mutable_md()->set_epoch(epoch);
-                        stream->add_task_to_write(std::move(part));
+//                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
+//                        part->mutable_md()->set_round(rnd);
+//                        part->mutable_md()->set_epoch(epoch);
+                        stream->add_task_to_write(rnd_msg.get());
 
                         auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
                         for (const auto &db_row: db_rows) {
                             // first send db
                             for (std::uint32_t j = 0; j < db.cols; ++j) {
-                                part = std::make_unique<distribicom::WorkerTaskPart>();
+//                                part = std::make_unique<distribicom::WorkerTaskPart>();
 
-                                part->mutable_matrixpart()->set_row(db_row);
-                                part->mutable_matrixpart()->set_col(j);
-                                part->mutable_matrixpart()->mutable_ptx()->set_data(marshalled_db(db_row, j));
+                                marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
+                                marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
+//                                part->mutable_matrixpart()->mutable_ptx()->set_data(marshall_db(db_row, j));
 
-                                stream->add_task_to_write(std::move(part));
+                                stream->add_task_to_write(marshall_db(db_row, j).get());
                             }
                         }
 
-                        part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->set_task_complete(true);
-                        stream->add_task_to_write(std::move(part));
+//                        part = std::make_unique<distribicom::WorkerTaskPart>();
+//                        part->set_task_complete(true);
+                        stream->add_task_to_write(completion_message.get());
 
                         stream->write_next();
                     },

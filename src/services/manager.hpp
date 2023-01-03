@@ -97,6 +97,7 @@ namespace services {
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
         std::unique_ptr<distribicom::WorkerTaskPart> completion_message;
+        std::unique_ptr<distribicom::WorkerTaskPart> rnd_msg;
 
         math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> marshall_db;
 
@@ -115,6 +116,8 @@ namespace services {
         explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {
             completion_message = std::make_unique<distribicom::WorkerTaskPart>();
             completion_message->set_task_complete(true);
+            rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
+
         };
 
         explicit Manager(const distribicom::AppConfigs &app_configs, std::map<uint32_t,
@@ -138,6 +141,7 @@ namespace services {
             this->client_query_manager.id_to_info = std::move(client_db);
             completion_message = std::make_unique<distribicom::WorkerTaskPart>();
             completion_message->set_task_complete(true);
+            rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
         };
 
 
