@@ -69,7 +69,7 @@ namespace services {
 
     std::shared_ptr<WorkDistributionLedger>
     Manager::distribute_work(const ClientDB &all_clients, int rnd, int epoch) {
-        epoch_data.ledger = new_ledger(<#initializer#>);
+        epoch_data.ledger = new_ledger(all_clients);
 
         if (rnd == 0) {
             std::cout << "Manager::distribute_work: sending queries" << std::endl;
@@ -116,11 +116,12 @@ namespace services {
     void
     Manager::send_db(int rnd, int epoch) {
         auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
+        marshal->marshal_seal_ptxs(ptx_db.mat.data, marshall_db.data);
 
-        auto marshaled_db_vec = marshal->marshal_seal_ptxs(ptx_db.mat.data);
-        auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(ptx_db.mat.rows, ptx_db.mat.cols);
-        marshalled_db.data = std::move(marshaled_db_vec);
-        marshall_db = std::move(marshalled_db);
+//        auto marshaled_db_vec = marshal->marshal_seal_ptxs(ptx_db.mat.data);
+//        auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(ptx_db.mat.rows, ptx_db.mat.cols);
+//        marshalled_db.data = std::move(marshaled_db_vec);
+//        marshall_db = std::move(marshalled_db);
 
         distribicom::Ack response;
         std::shared_lock lock(mtx);
