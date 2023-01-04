@@ -112,7 +112,7 @@ namespace services {
 
             switch (read_val.part_case()) {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
-                    std::cout << "received galois keys" << std::endl;
+//                    std::cout << "received galois keys" << std::endl;
                     strategy->store_galois_key(
                         mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
                         int(read_val.gkey().key_pos())
@@ -121,7 +121,7 @@ namespace services {
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
-                    std::cout << "received matrix part" << std::endl;
+//                    std::cout << "received matrix part" << std::endl;
                     update_current_task();
                     break;
 

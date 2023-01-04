@@ -21,6 +21,7 @@ namespace services::work_strategy {
 
     // responsible for caching the queries inside a matrix.
     void RowMultiplicationStrategy::queries_to_mat(const WorkerServiceTask &task) {
+        // TODO: location that doubles memory allocs. queries + query_mat is too big.
         query_mat.resize(task.row_size, queries.size());
         auto col = -1;
         for (auto &pair: queries) {
@@ -30,6 +31,8 @@ namespace services::work_strategy {
             for (std::uint64_t row = 0; row < full_query_column.rows; ++row) {
                 query_mat(row, col) = std::move(full_query_column(row, 0));
             }
+
+            full_query_column.resize(0, 0);
         }
         matops->to_ntt(query_mat.data);
     }
@@ -38,7 +41,8 @@ namespace services::work_strategy {
         if (task.ctx_cols.empty()) {
             return;
         }
-
+        // TODO:  insert queries directly to the matrix, rather than queris map...
+        //      this should tackle a mem usage bottleneck.
         std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
         auto promises = async_expand_promises(task);
 
@@ -60,7 +64,7 @@ namespace services::work_strategy {
         for (auto &key_val: queries) {
             col_to_query_index[++col] = key_val.first;
         }
-
+        queries.clear();
     }
 
     std::vector<std::pair<int, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>>>
@@ -138,6 +142,8 @@ namespace services::work_strategy {
         for (std::uint64_t i = 0; i < computed.rows; ++i) {
             for (std::uint64_t j = 0; j < computed.cols; ++j) {
                 tmp.mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+                computed(i, j).release();
+
                 tmp.set_row(row_to_index[int(i)]);
                 tmp.set_col(col_to_query_index[int(j)]);
                 stream->Write(tmp);
