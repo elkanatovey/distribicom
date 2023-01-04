@@ -144,7 +144,7 @@ namespace services {
             rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
             marshall_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
             for (std::uint64_t i = 0; i < marshall_db.rows; ++i) {
-                for (std::uint64_t j = 0; j < marshall_db.rows; ++j) {
+                for (std::uint64_t j = 0; j < marshall_db.cols; ++j) {
                     marshall_db.data[marshall_db.pos(i, j)] = std::make_unique<distribicom::WorkerTaskPart>();
                     marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_row(i);
                     marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_col(j);
