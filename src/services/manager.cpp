@@ -68,11 +68,8 @@ namespace services {
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
-                             const ClientDB &all_clients,
-                             int rnd, int epoch
-    ) {
-        epoch_data.ledger = new_ledger(db, all_clients);
+    Manager::distribute_work(const ClientDB &all_clients, int rnd, int epoch) {
+        epoch_data.ledger = new_ledger(all_clients);
 
         if (rnd == 0) {
             std::cout << "Manager::distribute_work: sending queries" << std::endl;
@@ -80,19 +77,20 @@ namespace services {
         }
 
         std::cout << "Manager::distribute_work: sending db" << std::endl;
-        send_db(db, rnd, epoch);
+        send_db(epoch, 0);
 
         return epoch_data.ledger;
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
+    Manager::new_ledger(const ClientDB &all_clients) {
+        auto ptx_db = db.many_reads();
         auto ledger = std::make_shared<WorkDistributionLedger>();
 
         #ifdef FREIVALDS
         for (size_t i = 0; i < epoch_data.num_freivalds_groups; i++) {
             // need to compute DB X epoch_data.query_matrix.
-            matops->multiply(db, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
+            matops->multiply(ptx_db.mat, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
             matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
         }
         #endif
@@ -116,14 +114,15 @@ namespace services {
 
 
     void
-    Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
-                     int rnd, int epoch) {
+    Manager::send_db(int rnd, int epoch) {
+        auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
+        marshal->marshal_seal_ptxs(ptx_db.mat.data, marshall_db.data);
 
-        auto marshaled_db_vec = marshal->marshal_seal_vector(db.data);
-        auto marshalled_db = math_utils::matrix<std::string>(db.rows, db.cols, std::move(marshaled_db_vec));
 
         distribicom::Ack response;
         std::shared_lock lock(mtx);
+        rnd_msg->mutable_md()->set_round(rnd);
+        rnd_msg->mutable_md()->set_epoch(epoch);
 
         auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
         for (auto &[name, stream]: work_streams) {
@@ -131,28 +130,22 @@ namespace services {
             pool->submit(
                 {
                     .f = [&, name, stream]() {
-                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->mutable_md()->set_round(rnd);
-                        part->mutable_md()->set_epoch(epoch);
-                        stream->add_task_to_write(std::move(part));
+                        stream->add_task_to_write(rnd_msg.get());
 
                         auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
                         for (const auto &db_row: db_rows) {
                             // first send db
-                            for (std::uint32_t j = 0; j < db.cols; ++j) {
-                                part = std::make_unique<distribicom::WorkerTaskPart>();
+                            for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
 
-                                part->mutable_matrixpart()->set_row(db_row);
-                                part->mutable_matrixpart()->set_col(j);
-                                part->mutable_matrixpart()->mutable_ptx()->set_data(marshalled_db(db_row, j));
+                                marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
+                                marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
 
-                                stream->add_task_to_write(std::move(part));
+                                stream->add_task_to_write(marshall_db(db_row, j).get());
                             }
                         }
 
-                        part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->set_task_complete(true);
-                        stream->add_task_to_write(std::move(part));
+
+                        stream->add_task_to_write(completion_message.get());
 
                         stream->write_next();
                     },
@@ -182,20 +175,11 @@ namespace services {
 
                         for (std::uint64_t i = range_start;
                              i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
-//                auto payload = all_clients.id_to_info.at(i)->query_info_marshaled.query_dim1(0).data();
 
-                            auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                            part->mutable_matrixpart()->set_row(0);
-                            part->mutable_matrixpart()->set_col(i);
-                            part->mutable_matrixpart()->mutable_ctx()->set_data(
-                                    *all_clients.id_to_info.at(i)->query_info_marshaled.mutable_query_dim1(0)->mutable_data());
-
-                            stream->add_task_to_write(std::move(part));
+                            stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
                         }
 
-                        auto part = std::make_unique<distribicom::WorkerTaskPart>();
-                        part->set_task_complete(true);
-                        stream->add_task_to_write(std::move(part));
+                        stream->add_task_to_write(completion_message.get());
 
                         stream->write_next();
                     },
@@ -224,24 +208,21 @@ namespace services {
         auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
         for (auto &[name, stream]: work_streams) {
             pool->submit(
-                {
-                    .f = [&, name, stream]() {
-                        auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
-                        auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
+                            {
+                                    .f=[&, name, stream](){
+                                        auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
+                                        auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
-                        for (std::uint64_t i = range_start; i < range_end; ++i) {
-                            auto prt = std::make_unique<distribicom::WorkerTaskPart>();
-                            prt->mutable_gkey()->set_keys(*all_clients.id_to_info.at(i)->galois_keys_marshaled.mutable_keys());
-                            prt->mutable_gkey()->set_key_pos(all_clients.id_to_info.at(i)->galois_keys_marshaled.key_pos());
-                            stream->add_task_to_write(std::move(prt));
+                                        for (std::uint64_t i = range_start; i < range_end; ++i) {
+                                            stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
 
-                        }
-                        stream->write_next();
-                    },
-                    .wg = latch,
-                    .name = "send_galois_keys"
-                }
-            );
+                                        }
+                                        stream->write_next();
+                                    },
+                                    .wg = latch,
+                                    .name = "send_galois_keys_lambda"
+                            }
+                    );
         }
 
         latch->wait();

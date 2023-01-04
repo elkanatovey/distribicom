@@ -96,20 +96,29 @@ namespace services {
         std::shared_ptr<marshal::Marshaller> marshal;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::shared_ptr<math_utils::QueryExpander> expander;
+        std::unique_ptr<distribicom::WorkerTaskPart> completion_message;
+        std::unique_ptr<distribicom::WorkerTaskPart> rnd_msg;
+
+        math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> marshall_db;
 
         // TODO: use friendship, instead of ifdef!
         #ifdef DISTRIBICOM_DEBUG
     public: // making the data here public: for debugging/testing purposes.
         #endif
         std::map<std::string, WorkStream *> work_streams;
-        EpochData epoch_data;
+        EpochData epoch_data;//@todo refactor into pointer and use atomics
 
 
     public:
         ClientDB client_query_manager;
         services::DB<seal::Plaintext> db;
 
-        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {};
+        explicit Manager() : pool(std::make_shared<concurrency::threadpool>()), db(1, 1) {
+            completion_message = std::make_unique<distribicom::WorkerTaskPart>();
+            completion_message->set_task_complete(true);
+            rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
+
+        };
 
         explicit Manager(const distribicom::AppConfigs &app_configs, std::map<uint32_t,
             std::unique_ptr<services::ClientInfo>> &client_db, math_utils::matrix<seal::Plaintext> &db) :
@@ -130,6 +139,17 @@ namespace services {
             db(db) {
             this->client_query_manager.client_counter = client_db.size();
             this->client_query_manager.id_to_info = std::move(client_db);
+            completion_message = std::make_unique<distribicom::WorkerTaskPart>();
+            completion_message->set_task_complete(true);
+            rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
+            marshall_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
+            for (std::uint64_t i = 0; i < marshall_db.rows; ++i) {
+                for (std::uint64_t j = 0; j < marshall_db.rows; ++j) {
+                    marshall_db.data[marshall_db.pos(i, j)] = std::make_unique<distribicom::WorkerTaskPart>();
+                    marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_row(i);
+                    marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_col(j);
+                }
+            }
         };
 
 
@@ -152,12 +172,7 @@ namespace services {
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
-        std::shared_ptr<WorkDistributionLedger> distribute_work(
-            const math_utils::matrix<seal::Plaintext> &db,
-            const ClientDB &all_clients,
-            int rnd,
-            int epoch
-        );
+        std::shared_ptr<WorkDistributionLedger> distribute_work(const ClientDB &all_clients, int rnd, int epoch);
 
         void wait_for_workers(int i);
 
@@ -168,7 +183,7 @@ namespace services {
 
         void send_galois_keys(const ClientDB &all_clients);
 
-        void send_db(const math_utils::matrix<seal::Plaintext> &db, int rnd, int epoch);
+        void send_db(int rnd, int epoch);
 
         void send_queries(const ClientDB &all_clients);
 
@@ -190,7 +205,7 @@ namespace services {
         void new_epoch(const ClientDB &db);
 
         std::shared_ptr<WorkDistributionLedger>
-        new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
+        new_ledger(const ClientDB &all_clients);
 
         /**
          * Waits on freivalds verify, returns (if any) parts that need to be re-evaluated.

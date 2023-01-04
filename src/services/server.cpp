@@ -53,17 +53,18 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
 grpc::Status
 services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
                                  distribicom::Ack *response) {
+    throw std::runtime_error("StoreQuery unimplemented");
 
-    auto id = request->mailbox_id();
-
-    std::unique_lock lock(*manager.client_query_manager.mutex);
-    if (manager.client_query_manager.id_to_info.find(id) == manager.client_query_manager.id_to_info.end()) {
-        return {grpc::StatusCode::NOT_FOUND, "Client not found"};
-    }
-
-    manager.client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
-    response->set_success(true);
-    return grpc::Status::OK;
+//    auto id = request->mailbox_id();
+//
+//    std::unique_lock lock(*manager.client_query_manager.mutex);
+//    if (manager.client_query_manager.id_to_info.find(id) == manager.client_query_manager.id_to_info.end()) {
+//        return {grpc::StatusCode::NOT_FOUND, "Client not found"};
+//    }
+//
+//    manager.client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
+//    response->set_success(true);
+//    return grpc::Status::OK;
 }
 
 //@todo fix this to translate bytes to coeffs properly when writing
@@ -84,10 +85,8 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
 }
 
 std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work(std::uint64_t round) {
-    auto db_handle = manager.db.many_reads();
-
     std::shared_lock client_db_lock(*(manager.client_query_manager.mutex));
-    return manager.distribute_work(db_handle.mat, manager.client_query_manager, round, 1);
+    return manager.distribute_work(manager.client_query_manager, round, 1);
 }
 
 void services::FullServer::start_epoch() {
