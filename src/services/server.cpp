@@ -85,10 +85,8 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
 }
 
 std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work(std::uint64_t round) {
-    auto db_handle = manager.db.many_reads();
-
     std::shared_lock client_db_lock(*(manager.client_query_manager.mutex));
-    return manager.distribute_work(db_handle.mat, manager.client_query_manager, round, 1);
+    return manager.distribute_work(manager.client_query_manager, round, 1);
 }
 
 void services::FullServer::start_epoch() {

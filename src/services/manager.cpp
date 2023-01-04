@@ -68,11 +68,8 @@ namespace services {
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::distribute_work(const math_utils::matrix<seal::Plaintext> &db,
-                             const ClientDB &all_clients,
-                             int rnd, int epoch
-    ) {
-        epoch_data.ledger = new_ledger(db, all_clients);
+    Manager::distribute_work(const ClientDB &all_clients, int rnd, int epoch) {
+        epoch_data.ledger = new_ledger(<#initializer#>);
 
         if (rnd == 0) {
             std::cout << "Manager::distribute_work: sending queries" << std::endl;
@@ -80,19 +77,20 @@ namespace services {
         }
 
         std::cout << "Manager::distribute_work: sending db" << std::endl;
-        send_db(db, rnd, epoch);
+        send_db(epoch, 0);
 
         return epoch_data.ledger;
     }
 
     std::shared_ptr<WorkDistributionLedger>
-    Manager::new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients) {
+    Manager::new_ledger(const ClientDB &all_clients) {
+        auto ptx_db = db.many_reads();
         auto ledger = std::make_shared<WorkDistributionLedger>();
 
         #ifdef FREIVALDS
         for (size_t i = 0; i < epoch_data.num_freivalds_groups; i++) {
             // need to compute DB X epoch_data.query_matrix.
-            matops->multiply(db, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
+            matops->multiply(ptx_db.mat, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
             matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
         }
         #endif
@@ -116,11 +114,11 @@ namespace services {
 
 
     void
-    Manager::send_db(const math_utils::matrix<seal::Plaintext> &db,
-                     int rnd, int epoch) {
+    Manager::send_db(int rnd, int epoch) {
+        auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
 
-        auto marshaled_db_vec = marshal->marshal_seal_ptxs(db.data);
-        auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
+        auto marshaled_db_vec = marshal->marshal_seal_ptxs(ptx_db.mat.data);
+        auto marshalled_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(ptx_db.mat.rows, ptx_db.mat.cols);
         marshalled_db.data = std::move(marshaled_db_vec);
         marshall_db = std::move(marshalled_db);
 
@@ -143,7 +141,7 @@ namespace services {
                         auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
                         for (const auto &db_row: db_rows) {
                             // first send db
-                            for (std::uint32_t j = 0; j < db.cols; ++j) {
+                            for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
 
                                 marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
                                 marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);

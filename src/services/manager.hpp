@@ -106,7 +106,7 @@ namespace services {
     public: // making the data here public: for debugging/testing purposes.
         #endif
         std::map<std::string, WorkStream *> work_streams;
-        EpochData epoch_data;
+        EpochData epoch_data;//@todo refactor into pointer and use atomics
 
 
     public:
@@ -164,12 +164,7 @@ namespace services {
 
         // todo: break up query distribution, create unified structure for id lookups, modify ledger accoringly
 
-        std::shared_ptr<WorkDistributionLedger> distribute_work(
-            const math_utils::matrix<seal::Plaintext> &db,
-            const ClientDB &all_clients,
-            int rnd,
-            int epoch
-        );
+        std::shared_ptr<WorkDistributionLedger> distribute_work(const ClientDB &all_clients, int rnd, int epoch);
 
         void wait_for_workers(int i);
 
@@ -180,7 +175,7 @@ namespace services {
 
         void send_galois_keys(const ClientDB &all_clients);
 
-        void send_db(const math_utils::matrix<seal::Plaintext> &db, int rnd, int epoch);
+        void send_db(int rnd, int epoch);
 
         void send_queries(const ClientDB &all_clients);
 
@@ -202,7 +197,7 @@ namespace services {
         void new_epoch(const ClientDB &db);
 
         std::shared_ptr<WorkDistributionLedger>
-        new_ledger(const math_utils::matrix<seal::Plaintext> &db, const ClientDB &all_clients);
+        new_ledger(const ClientDB &all_clients);
 
         /**
          * Waits on freivalds verify, returns (if any) parts that need to be re-evaluated.
