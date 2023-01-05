@@ -133,11 +133,11 @@ if __name__ == '__main__':
     settings = Settings(args.config_file)
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
 
-    fd, filename = tempfile.mkstemp(dir=settings.test_dir, suffix=settings.hostname_suffix, prefix="distribicom_")
+    fd, hostname_file = tempfile.mkstemp(dir=settings.test_dir, suffix=settings.hostname_suffix, prefix="distribicom_")
     os.write(fd, hostname.encode("utf-8"))
     os.close(fd)
 
-    print(f"written hostname to {filename}")
+    print(f"written hostname to {hostname_file}")
     print(f"waiting for all other running processes to write.")
     while len(get_all_hostname_files(settings.hostname_suffix, settings.test_dir)) < settings.num_servers:
         print("hostname files found:", len(get_all_hostname_files(settings.hostname_suffix, settings.test_dir)))
@@ -155,3 +155,4 @@ if __name__ == '__main__':
         print("received KeyboardInterrupt, killing subprocess...")
         for sub in subprocesses:
             sub.kill()
+    os.remove(hostname_file)

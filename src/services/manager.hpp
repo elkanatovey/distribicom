@@ -63,8 +63,6 @@ namespace services {
     struct EpochData {
         std::shared_ptr<WorkDistributionLedger> ledger;
         std::map<std::string, WorkerInfo> worker_to_responsibilities;
-        // following the same key as the client's db.
-        std::map<std::uint64_t, std::shared_ptr<std::vector<seal::Ciphertext>>> queries;
 
         // following the same key as the client's db. [NTT FORM]
         std::map<std::uint64_t, std::shared_ptr<math_utils::matrix<seal::Ciphertext>>> queries_dim2;
@@ -211,5 +209,7 @@ namespace services {
          * Waits on freivalds verify, returns (if any) parts that need to be re-evaluated.
          */
         void wait_on_verification();
+
+        void freivald_preprocess(EpochData &ed, const ClientDB &db);
     };
 }

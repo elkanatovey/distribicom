@@ -42,9 +42,9 @@ namespace services {
 
             }
 
-            #ifdef FREIVALDS
+#ifdef FREIVALDS
             async_verify_worker(parts, worker_creds);
-            #endif
+#endif
 
             put_in_result_matrix(parts_vec, this->client_query_manager);
 
@@ -87,13 +87,13 @@ namespace services {
         auto ptx_db = db.many_reads();
         auto ledger = std::make_shared<WorkDistributionLedger>();
 
-        #ifdef FREIVALDS
+#ifdef FREIVALDS
         for (size_t i = 0; i < epoch_data.num_freivalds_groups; i++) {
             // need to compute DB X epoch_data.query_matrix.
             matops->multiply(ptx_db.mat, *epoch_data.query_mat_times_randvec[i], ledger->db_x_queries_x_randvec[i]);
             matops->from_ntt(ledger->db_x_queries_x_randvec[i].data);
         }
-        #endif
+#endif
 
         ledger->worker_list = std::vector<std::string>();
 
@@ -115,80 +115,86 @@ namespace services {
 
     void
     Manager::send_db(int rnd, int epoch) {
-        auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
-        marshal->marshal_seal_ptxs(ptx_db.mat.data, marshall_db.data);
+        auto time = utils::time_it([&]() {
+            auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
+            marshal->marshal_seal_ptxs(ptx_db.mat.data, marshall_db.data);
 
 
-        distribicom::Ack response;
-        std::shared_lock lock(mtx);
-        rnd_msg->mutable_md()->set_round(rnd);
-        rnd_msg->mutable_md()->set_epoch(epoch);
+            distribicom::Ack response;
+            std::shared_lock lock(mtx);
+            rnd_msg->mutable_md()->set_round(rnd);
+            rnd_msg->mutable_md()->set_epoch(epoch);
 
-        auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
-        for (auto &[name, stream]: work_streams) {
+            auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
+            for (auto &[name, stream]: work_streams) {
 
-            pool->submit(
-                {
-                    .f = [&, name, stream]() {
-                        stream->add_task_to_write(rnd_msg.get());
+                pool->submit(
+                    {
+                        .f = [&, name, stream]() {
+                            stream->add_task_to_write(rnd_msg.get());
 
-                        auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
-                        for (const auto &db_row: db_rows) {
-                            // first send db
-                            for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
+                            auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
+                            for (const auto &db_row: db_rows) {
+                                // first send db
+                                for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
 
-                                marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
-                                marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
+                                    marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
+                                    marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
 
-                                stream->add_task_to_write(marshall_db(db_row, j).get());
+                                    stream->add_task_to_write(marshall_db(db_row, j).get());
+                                }
                             }
-                        }
 
 
-                        stream->add_task_to_write(completion_message.get());
+                            stream->add_task_to_write(completion_message.get());
 
-                        stream->write_next();
-                    },
-                    .wg = latch,
-                    .name = "send_db"
-                }
-            );
-        }
+                            stream->write_next();
+                        },
+                        .wg = latch,
+                        .name = "send_db"
+                    }
+                );
 
-        latch->wait();
+            }
+            latch->wait();
+        });
+        std::cout << "Manager::send_db: " << time << "ms" << std::endl;
     }
 
 
     void
     Manager::send_queries(const ClientDB &all_clients) {
+        auto time = utils::time_it([&]() {
+            std::shared_lock lock(mtx);
 
-        std::shared_lock lock(mtx);
+            auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
+            for (auto &[name, stream]: work_streams) {
+                pool->submit(
+                    {
+                        .f = [&, name, stream]() {
+                            auto current_worker_info = epoch_data.worker_to_responsibilities[name];
+                            auto range_start = current_worker_info.query_range_start;
+                            auto range_end = current_worker_info.query_range_end;
 
-        auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
-        for (auto &[name, stream]: work_streams) {
-            pool->submit(
-                {
-                    .f=[&, name, stream]() {
-                        auto current_worker_info = epoch_data.worker_to_responsibilities[name];
-                        auto range_start = current_worker_info.query_range_start;
-                        auto range_end = current_worker_info.query_range_end;
+                            for (std::uint64_t i = range_start;
+                                 i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
 
-                        for (std::uint64_t i = range_start;
-                             i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
+                                stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
+                            }
 
-                            stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
-                        }
+                            stream->add_task_to_write(completion_message.get());
 
-                        stream->add_task_to_write(completion_message.get());
+                            stream->write_next();
+                        },
+                        .wg = latch,
+                        .name = "send_queries"
+                    }
+                );
+            }
+            latch->wait();
+        });
 
-                        stream->write_next();
-                    },
-                    .wg = latch,
-                    .name = "send_queries"
-                }
-            );
-        }
-        latch->wait();
+        std::cout << "Manager::send_queries: " << time << "ms" << std::endl;
     }
 
 
@@ -197,35 +203,33 @@ namespace services {
     }
 
     void Manager::send_galois_keys(const ClientDB &all_clients) {
-        grpc::ClientContext context;
+        auto time = utils::time_it([&]() {
+            std::shared_lock lock(mtx);
 
+            auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
+            for (auto &[name, stream]: work_streams) {
 
-        utils::add_metadata_size(context, services::constants::round_md, 1);
-        utils::add_metadata_size(context, services::constants::epoch_md, 1);
+                pool->submit(
+                    {
+                        .f=[&, name, stream]() {
+                            auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
+                            auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
-        std::shared_lock lock(mtx);
+                            for (std::uint64_t i = range_start; i < range_end; ++i) {
+                                stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
 
-        auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
-        for (auto &[name, stream]: work_streams) {
-            pool->submit(
-                            {
-                                    .f=[&, name, stream](){
-                                        auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
-                                        auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
-
-                                        for (std::uint64_t i = range_start; i < range_end; ++i) {
-                                            stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
-
-                                        }
-                                        stream->write_next();
-                                    },
-                                    .wg = latch,
-                                    .name = "send_galois_keys_lambda"
                             }
-                    );
-        }
+                            stream->write_next();
+                        },
+                        .wg = latch,
+                        .name = "send_galois_keys_lambda"
+                    }
+                );
 
-        latch->wait();
+            }
+            latch->wait();
+        });
+        std::cout << "Manager::send_galois_keys: " << time << "ms" << std::endl;
     }
 
     std::map<std::string, WorkerInfo> Manager::map_workers_to_responsibilities(std::uint64_t num_queries) {
@@ -321,82 +325,96 @@ namespace services {
     }
 
     void Manager::new_epoch(const ClientDB &db) {
-        auto num_freivalds_groups = thread_unsafe_compute_number_of_groups();
-        auto size_freivalds_group = db.client_counter / num_freivalds_groups;
+        auto time = utils::time_it([&]() {
+            auto num_freivalds_groups = thread_unsafe_compute_number_of_groups();
+            auto size_freivalds_group = db.client_counter / num_freivalds_groups;
 
-        EpochData ed{
-            .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
-            .queries = {}, // todo: consider removing this (not sure we need to store the queries after this func.
-            .queries_dim2 = {},
-            .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
-            .query_mat_times_randvec = {},
-            .num_freivalds_groups = num_freivalds_groups,
-            .size_freivalds_group = size_freivalds_group,
-        };
+            EpochData ed{
+                .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+                .queries_dim2 = {},
+                .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
+                .query_mat_times_randvec = {},
+                .num_freivalds_groups = num_freivalds_groups,
+                .size_freivalds_group = size_freivalds_group,
+            };
 
+            auto expand_size_dim2 = app_configs.configs().db_rows();
+            std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>> >> qs2(
+                db.id_to_info.size());
+
+            for (const auto &info: db.id_to_info) {
+
+                // setting dim2 in matrix<seal::ciphertext> and ntt form.
+                auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
+                pool->submit(
+                    {
+                        .f = [&, p]() {
+                            auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>
+                                (
+                                    1, expand_size_dim2, // row vec.
+                                    expander->expand_query(
+                                        info.second->query[1],
+                                        expand_size_dim2,
+                                        info.second->galois_keys
+                                    ));
+                            matops->to_ntt(mat->data);
+                            p->set(mat);
+                        },
+                        .wg  = p->get_latch(),
+                        .name = "expand_query_dim2"
+                    }
+                );
+                qs2[info.first] = p;
+
+            }
+
+            freivald_preprocess(ed, db);
+
+            for (std::uint64_t column = 0; column < qs2.size(); column++) {
+                ed.queries_dim2[column] = qs2[column]->get();
+            }
+            qs2.clear();
+
+            mtx.lock();
+            epoch_data = std::move(ed);
+            mtx.unlock();
+        });
+        std::cout << "Manager::new_epoch: " << time << " ms" << std::endl;
+    }
+
+    void Manager::freivald_preprocess(EpochData &ed, const ClientDB &cdb) {
+#ifdef FREIVALDS // Freivalds-preprocessing
         auto expand_size = app_configs.configs().db_cols();
-        auto expand_size_dim2 = app_configs.configs().db_rows();
+        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(cdb.id_to_info.size());
 
-        // promises for expanded queries
-        #ifdef FREIVALDS
-        std::vector<std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>> qs(db.id_to_info.size());
-        #endif
+        for (const auto &info: cdb.id_to_info) {
+            // promises for expanded queries
 
-        std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>> >> qs2(
-            db.id_to_info.size());
-
-        for (const auto &info: db.id_to_info) {
-            #ifdef FREIVALDS
             qs[info.first] = expander->async_expand(
                 info.second->query[0],
                 expand_size,
                 info.second->galois_keys
             );
-            #endif
-
-            // setting dim2 in matrix<seal::ciphertext> and ntt form.
-            auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
-            pool->submit(
-                {
-                    .f = [&, p]() {
-                        auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>
-                            (
-                                1, expand_size_dim2, // row vec.
-                                expander->expand_query(
-                                    info.second->query[1],
-                                    expand_size_dim2,
-                                    info.second->galois_keys
-                                ));
-                        matops->to_ntt(mat->data);
-                        p->set(mat);
-                    },
-                    .wg  = p->get_latch(),
-                    .name = "expand_query_dim2"
-                }
-            );
-            qs2[info.first] = p;
 
         }
 
-        #ifdef FREIVALDS // Freivalds-preprocessing
         randomise_scalar_vec(*ed.random_scalar_vector);
 
         auto rows = expand_size;
         std::vector<std::unique_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> promises;
 
-        std::uint64_t current_query_group = 0;
+        uint64_t current_query_group = 0;
         while (current_query_group < ed.num_freivalds_groups) {
 
-            auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows,
-                                                                                            ed.size_freivalds_group);
+            auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                rows, ed.size_freivalds_group);
 
             auto range_start = current_query_group * ed.size_freivalds_group;
             auto range_end = range_start + ed.size_freivalds_group;
-            for (std::uint64_t column = range_start; column < range_end; column++) {
+            for (uint64_t column = range_start; column < range_end; column++) {
                 auto v = qs[column]->get();
-                ed.queries[column] = v;
 
-                for (std::uint64_t i = 0; i < rows; i++) {
+                for (uint64_t i = 0; i < rows; i++) {
                     (*current_query_mat)(i, column - range_start) = (*v)[i];
                 }
             }
@@ -413,16 +431,7 @@ namespace services {
             matops->to_ntt(ed.query_mat_times_randvec[i]->data);
         }
         qs.clear();
-        #endif
-
-        for (std::uint64_t column = 0; column < qs2.size(); column++) {
-            ed.queries_dim2[column] = qs2[column]->get();
-        }
-        qs2.clear();
-
-        mtx.lock();
-        epoch_data = std::move(ed);
-        mtx.unlock();
+#endif
     }
 
     void Manager::wait_on_verification() {
@@ -477,23 +486,29 @@ namespace services {
                         std::uint64_t row_id,
                         std::uint64_t group_id) {
         try {
-            auto challenge_vec = epoch_data.random_scalar_vector;
+            auto start = std::chrono::high_resolution_clock::now();
 
-            auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query, challenge_vec);
+            auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query,
+                                                                             epoch_data.random_scalar_vector);
             auto expected_result = epoch_data.ledger->db_x_queries_x_randvec[group_id].data[row_id];
-
             matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
-            return db_row_x_query_x_challenge_vec->data[0].is_transparent();
+            bool is_row_valid = db_row_x_query_x_challenge_vec->data[0].is_transparent();
+
+            auto end = std::chrono::high_resolution_clock::now();
+            if (row_id == 0 && group_id == 0) {
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                std::cout << "Manager::verify_row::sample verification time: " << duration << " ms" << std::endl;
+            }
+
+            return is_row_valid;
         } catch (std::exception &e) {
             std::cerr << "Manager::verify_row::exception: " << e.what() << std::endl;
             return false;
         }
     }
 
-    void
-
-    Manager::async_verify_worker(const std::shared_ptr<std::vector<ResultMatPart>> parts_ptr,
-                                 const std::string worker_creds) {
+    void Manager::async_verify_worker(const std::shared_ptr<std::vector<ResultMatPart>> parts_ptr,
+                                      const std::string worker_creds) {
         pool->submit(
             {
                 .f=[&, parts_ptr, worker_creds]() {

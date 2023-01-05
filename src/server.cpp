@@ -71,6 +71,13 @@ int main(int argc, char *argv[]) {
 
     server->wait_for_workers(int(cnfgs.number_of_workers()));
     // 1 epoch
+
+    auto server_out_file_name = "server.log";
+    std::filesystem::remove(server_out_file_name);
+    std::ofstream ofs(server_out_file_name);
+    ofs << cnfgs.DebugString() << std::endl;
+    ofs << "results: \n [" << std::endl;
+
     for (int i = 0; i < 1; ++i) {
         std::cout << "setting up epoch" << std::endl;
 
@@ -101,10 +108,14 @@ int main(int argc, char *argv[]) {
 //            server->publish_answers();
 
             auto time_round_e = std::chrono::high_resolution_clock::now();
-            auto time_round_us = duration_cast<std::chrono::microseconds>(time_round_e - time_round_s).count();
-            std::cout << "Main_Server: round " << j << " running time: " << time_round_us / 1000 << " ms" << std::endl;
+            auto time_round = duration_cast<std::chrono::milliseconds>(time_round_e - time_round_s).count();
+            std::cout << "Main_Server: round " << j << " running time: " << time_round << " ms" << std::endl;
+            ofs << time_round << "ms, " << std::endl;
         }
     }
+
+    ofs << "]" << std::endl;
+    ofs.close();
 
     server->send_stop_signal();
     wg.count_down();
