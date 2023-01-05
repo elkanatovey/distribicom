@@ -58,6 +58,8 @@ namespace services::work_strategy {
         }
         mu.unlock();
 
+        gkeys.clear();
+
         queries_to_mat(task);
 
         auto col = -1;
