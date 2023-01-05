@@ -125,27 +125,49 @@ namespace services::work_strategy {
                 row_to_index[++row] = p.first;
             }
 
+            // before sending the response - ensure we send it in reg-form to compress the data a bit more.
+            matops->from_ntt(computed.data);
+
+            // Note that we pass this by reference to the threads. so moving this about is dangerous.
+            std::vector<std::shared_ptr<concurrency::promise<distribicom::MatrixPart>>> to_send_promises;
+            to_send_promises.reserve(computed.rows * computed.cols);
+
+            auto promise_index = -1;
+            for (uint64_t i = 0; i < computed.rows; ++i) {
+                for (uint64_t j = 0; j < computed.cols; ++j) {
+
+                    to_send_promises.emplace_back(
+                        std::make_shared<concurrency::promise<distribicom::MatrixPart>>(1, nullptr));
+
+                    promise_index++;
+                    pool->submit(
+                        {
+                            .f=[&, promise_index, i, j]() {
+                                auto part = std::make_unique<distribicom::MatrixPart>();
+                                part->set_row(row_to_index.at(int(i)));
+                                part->set_col(col_to_query_index.at(int(j)));
+                                part->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+
+                                to_send_promises[promise_index]->set(std::move(part));
+                            },
+                            .wg = to_send_promises[promise_index]->get_latch(),
+                            .name = "worker::send_response",
+                        }
+                    );
+
+                }
+            }
+
             grpc::ClientContext context;
             utils::add_metadata_string(context, constants::credentials_md, sym_key);
             utils::add_metadata_size(context, constants::round_md, task.round);
             utils::add_metadata_size(context, constants::epoch_md, task.epoch);
 
-            // before sending the response - ensure we send it in reg-form to compress the data a bit more.
-            matops->from_ntt(computed.data);
-
             distribicom::Ack resp;
             auto stream = manager_conn->ReturnLocalWork(&context, &resp);
 
-            distribicom::MatrixPart tmp;
-            for (std::uint64_t i = 0; i < computed.rows; ++i) {
-                for (std::uint64_t j = 0; j < computed.cols; ++j) {
-                    tmp.mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
-                    tmp.set_row(row_to_index[int(i)]);
-                    tmp.set_col(col_to_query_index[int(j)]);
-
-                    // todo: consider streaming in parallel.
-                    stream->Write(tmp);
-                }
+            for (auto &p: to_send_promises) {
+                stream->Write(*p->get());
             }
 
             stream->WritesDone();

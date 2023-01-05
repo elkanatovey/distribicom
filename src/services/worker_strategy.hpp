@@ -1,6 +1,7 @@
 #pragma once
 
 #include <future>
+#include <map>
 #include "distribicom.grpc.pb.h"
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
@@ -105,5 +106,8 @@ namespace services::work_strategy {
                 std::cerr << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }
         }
+
+        std::vector<std::shared_ptr<concurrency::promise<distribicom::MatrixPart>>>
+        async_marshal_computed(const math_utils::matrix<seal::Ciphertext> &computed, const std::map<int, int> &row_to_index);
     };
 }
