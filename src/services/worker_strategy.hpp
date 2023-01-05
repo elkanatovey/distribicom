@@ -65,13 +65,15 @@ namespace services::work_strategy {
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
-        std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
         math_utils::matrix<seal::Ciphertext> query_mat;
         std::map<int, int> col_to_query_index;
+
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::string sym_key;
 
         void expand_queries(WorkerServiceTask &task);
+
+        void parallel_expansions_into_query_mat(WorkerServiceTask &task);
 
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
@@ -83,8 +85,7 @@ namespace services::work_strategy {
 
         math_utils::matrix<seal::Ciphertext> multiply_rows(WorkerServiceTask &task);
 
-        void send_response(const WorkerServiceTask &task,
-                           math_utils::matrix<seal::Ciphertext> &computed);
+        void send_response(const WorkerServiceTask &task, math_utils::matrix<seal::Ciphertext> &computed);
 
 // assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
@@ -107,10 +108,5 @@ namespace services::work_strategy {
                 std::cerr << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }
         }
-
-        void queries_to_mat(const WorkerServiceTask &task);
-
-        std::vector<std::pair<int, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>>>
-        async_expand_promises(WorkerServiceTask &task);
     };
 }

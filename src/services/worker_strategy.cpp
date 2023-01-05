@@ -19,81 +19,64 @@ namespace services::work_strategy {
         );
     }
 
-    // responsible for caching the queries inside a matrix.
-    void RowMultiplicationStrategy::queries_to_mat(const WorkerServiceTask &task) {
-        // TODO: location that doubles memory allocs. queries + query_mat is too big.
-        query_mat.resize(task.row_size, queries.size());
-        auto col = -1;
-        for (auto &pair: queries) {
-            col += 1;
-            auto full_query_column = pair.second;
-
-            for (std::uint64_t row = 0; row < full_query_column.rows; ++row) {
-                query_mat(row, col) = std::move(full_query_column(row, 0));
-            }
-
-            full_query_column.resize(0, 0);
-        }
-        matops->to_ntt(query_mat.data);
-    }
-
     void RowMultiplicationStrategy::expand_queries(WorkerServiceTask &task) {
         if (task.ctx_cols.empty()) {
             return;
         }
-        // TODO:  insert queries directly to the matrix, rather than queris map...
-        //      this should tackle a mem usage bottleneck.
-        std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
-        auto promises = async_expand_promises(task);
 
-        mu.lock();
-        for (auto &pair: promises) {
-            auto expanded = *(pair.second->get());
-            queries.insert(
-                {
-                    pair.first,
-                    math_utils::matrix<seal::Ciphertext>(expanded.size(), 1, expanded)
-                }
-            );
-        }
-        mu.unlock();
-
-        gkeys.clear();
-
-        queries_to_mat(task);
-
+        // define the map back from col to query index.
         auto col = -1;
-        for (auto &key_val: queries) {
+        for (auto &key_val: task.ctx_cols) {
             col_to_query_index[++col] = key_val.first;
         }
-        queries.clear();
+
+        std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
+        parallel_expansions_into_query_mat(task);
+
+        gkeys.clear();
     }
 
-    std::vector<std::pair<int, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>>>
-    RowMultiplicationStrategy::async_expand_promises(WorkerServiceTask &task) {
-        std::vector<std::pair<int, std::shared_ptr<concurrency::promise<std::vector<seal::Ciphertext>>>>> promises;
-        promises.reserve(task.ctx_cols.size());
+    void
+    RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task) {
+        // prepare the query matrix.
+        query_mat.resize(task.row_size, task.ctx_cols.size());
 
-        std::shared_lock lock(mu);
-        for (auto &pair: task.ctx_cols) {
-            auto query_pos = pair.first;
-            auto expanded_size = task.row_size;
+        auto latch = std::make_shared<concurrency::safelatch>(task.ctx_cols.size());
+        auto expanded_size = task.row_size;
 
-            if (gkeys.find(query_pos) == gkeys.end()) {
-                throw std::runtime_error("galois keys not found for query position " + std::to_string(query_pos));
+        std::lock_guard lock(mu);
+        for (auto &&pair: task.ctx_cols) {
+            auto q_pos = pair.first;
+
+            if (gkeys.find(q_pos) == gkeys.end()) {
+                throw std::runtime_error("galois keys not found for query position " + std::to_string(q_pos));
             }
 
-            promises.emplace_back(
-                query_pos,
-                query_expander->async_expand(
-                    std::move(pair.second),
-                    expanded_size,
-                    gkeys.find(query_pos)->second
-                )
-            );
-        }
+            pool->submit(
+                {
+                    .f = [&, q_pos, pair]() {
+                        auto expanded = query_expander->expand_query(
+                            pair.second,
+                            expanded_size,
+                            gkeys[q_pos]
+                        );
 
-        return promises;
+                        for (std::uint64_t row = 0; row < expanded_size; ++row) {
+                            query_mat(row, q_pos) = std::move(expanded[row]);
+                        }
+
+                        expanded.clear();
+                    },
+                    .wg = latch,
+                    .name = "worker::expand_query",
+                }
+            );
+
+        }
+        latch->wait();
+        task.ctx_cols.clear();
+
+        matops->to_ntt(query_mat.data);
     }
 
     math_utils::matrix<seal::Ciphertext> RowMultiplicationStrategy::multiply_rows(WorkerServiceTask &task) {
@@ -144,10 +127,9 @@ namespace services::work_strategy {
         for (std::uint64_t i = 0; i < computed.rows; ++i) {
             for (std::uint64_t j = 0; j < computed.cols; ++j) {
                 tmp.mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
-                computed(i, j).release();
-
                 tmp.set_row(row_to_index[int(i)]);
                 tmp.set_col(col_to_query_index[int(j)]);
+
                 stream->Write(tmp);
             }
         }
