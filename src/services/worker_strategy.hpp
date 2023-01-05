@@ -5,6 +5,7 @@
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
 #include "marshal/marshal.hpp"
+#include "utils.hpp"
 
 namespace services {
 
@@ -87,23 +88,19 @@ namespace services::work_strategy {
 
         void send_response(const WorkerServiceTask &task, math_utils::matrix<seal::Ciphertext> &computed);
 
+
 // assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
+            constexpr auto fname = "RowMultiplicationStrategy::process_task: ";
             try {
-
-                // expand all queries.
                 expand_queries(task);
 
-                if (task.ptx_rows.empty()) {
-                    return;
-                }
+                if (task.ptx_rows.empty()) { return; }
 
-                std::cout << "RowMultiplicationStrategy::process_task: multiplying..." << std::endl;
+                std::cout << fname << "multiplying..." << std::endl;
                 auto answer = multiply_rows(task);
 
-                std::cout << "RowMultiplicationStrategy::process_task: sending response..." << std::endl;
                 send_response(task, answer);
-
             } catch (std::exception &e) {
                 std::cerr << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }

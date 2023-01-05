@@ -23,17 +23,22 @@ namespace services::work_strategy {
         if (task.ctx_cols.empty()) {
             return;
         }
+        auto exp_time = utils::time_it([&]() {
 
-        // define the map back from col to query index.
-        auto col = -1;
-        for (auto &key_val: task.ctx_cols) {
-            col_to_query_index[++col] = key_val.first;
-        }
+            // define the map back from col to query index.
+            auto col = -1;
+            for (auto &key_val: task.ctx_cols) {
+                col_to_query_index[++col] = key_val.first;
+            }
 
-        std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
-        parallel_expansions_into_query_mat(task);
+            std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
+            parallel_expansions_into_query_mat(task);
 
-        gkeys.clear();
+            gkeys.clear();
+
+        });
+        std::cout << "worker::expansion time: " << exp_time << " ms" << std::endl;
+
     }
 
     void
@@ -80,6 +85,8 @@ namespace services::work_strategy {
     }
 
     math_utils::matrix<seal::Ciphertext> RowMultiplicationStrategy::multiply_rows(WorkerServiceTask &task) {
+        auto start = std::chrono::high_resolution_clock::now();
+
         // i have queries, which are columns to multiply with the rows.
         // i set the task's ptxs in a matrix of the correct size.
         auto mat_size = int(task.ptx_rows.size());
@@ -98,6 +105,10 @@ namespace services::work_strategy {
         math_utils::matrix<seal::Ciphertext> result;
         matops->multiply(ptxs, query_mat, result);
 
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "worker::multiplication time: " << duration.count() << "ms" << std::endl;
+
         return result;
     }
 
@@ -106,39 +117,45 @@ namespace services::work_strategy {
         const WorkerServiceTask &task,
         math_utils::matrix<seal::Ciphertext> &computed
     ) {
-        std::map<int, int> row_to_index;
-        auto row = -1;
-        for (auto &p: task.ptx_rows) {
-            row_to_index[++row] = p.first;
-        }
+        auto sending_time = utils::time_it([&]() {
 
-        grpc::ClientContext context;
-        utils::add_metadata_string(context, constants::credentials_md, sym_key);
-        utils::add_metadata_size(context, constants::round_md, task.round);
-        utils::add_metadata_size(context, constants::epoch_md, task.epoch);
-
-        // before sending the response - ensure we send it in reg-form to compress the data a bit more.
-        matops->from_ntt(computed.data);
-
-        distribicom::Ack resp;
-        auto stream = manager_conn->ReturnLocalWork(&context, &resp);
-
-        distribicom::MatrixPart tmp;
-        for (std::uint64_t i = 0; i < computed.rows; ++i) {
-            for (std::uint64_t j = 0; j < computed.cols; ++j) {
-                tmp.mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
-                tmp.set_row(row_to_index[int(i)]);
-                tmp.set_col(col_to_query_index[int(j)]);
-
-                stream->Write(tmp);
+            std::map<int, int> row_to_index;
+            auto row = -1;
+            for (auto &p: task.ptx_rows) {
+                row_to_index[++row] = p.first;
             }
-        }
 
-        stream->WritesDone();
-        auto status = stream->Finish();
-        if (!status.ok()) {
-            std::cerr << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
-                      << std::endl;
-        }
+            grpc::ClientContext context;
+            utils::add_metadata_string(context, constants::credentials_md, sym_key);
+            utils::add_metadata_size(context, constants::round_md, task.round);
+            utils::add_metadata_size(context, constants::epoch_md, task.epoch);
+
+            // before sending the response - ensure we send it in reg-form to compress the data a bit more.
+            matops->from_ntt(computed.data);
+
+            distribicom::Ack resp;
+            auto stream = manager_conn->ReturnLocalWork(&context, &resp);
+
+            distribicom::MatrixPart tmp;
+            for (std::uint64_t i = 0; i < computed.rows; ++i) {
+                for (std::uint64_t j = 0; j < computed.cols; ++j) {
+                    tmp.mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+                    tmp.set_row(row_to_index[int(i)]);
+                    tmp.set_col(col_to_query_index[int(j)]);
+
+                    // todo: consider streaming in parallel.
+                    stream->Write(tmp);
+                }
+            }
+
+            stream->WritesDone();
+            auto status = stream->Finish();
+            if (!status.ok()) {
+                std::cerr
+                    << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
+                    << std::endl;
+            }
+        });
+        std::cout << "worker::sending time: " << sending_time << "ms" << std::endl;
     }
 }
