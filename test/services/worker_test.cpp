@@ -5,6 +5,7 @@
 #include <grpc++/grpc++.h>
 #include <latch>
 
+#define NUM_CLIENTS 64
 constexpr std::string_view server_port = "5051";
 constexpr std::string_view worker_port = "52100";
 
@@ -43,6 +44,7 @@ int worker_test(int, char *[]) {
     moveable_appcnfgs.CopyFrom(cfgs);
     threads.emplace_back(setupWorker(wg, moveable_appcnfgs));
 
+    std::vector<std::chrono::microseconds> results;
     fs.wait_for_workers(1);
     fs.start_epoch();
     for (int i = 0; i < 10; ++i) {
@@ -53,9 +55,16 @@ int worker_test(int, char *[]) {
         fs.run_step_2(ledger);
 
         auto time_round_e = std::chrono::high_resolution_clock::now();
-        auto time_round_us = duration_cast<std::chrono::microseconds>(time_round_e - time_round_s).count();
-        std::cout << "Main_Server: round " << i << " running time: " << time_round_us / 1000 << " ms" << std::endl;
+        auto time_round_ms = duration_cast<std::chrono::milliseconds>(time_round_e - time_round_s).count();
+        std::cout << "Main_Server: round " << i << " running time: " << time_round_ms << " ms" << std::endl;
+        results.emplace_back(time_round_ms);
     }
+
+    std::cout << "results: [ ";
+    for (std::uint64_t i = 0; i < results.size()-1; ++i) {
+        std::cout << results[i].count() << "ms, ";
+    }
+    std::cout << results.back().count() << "ms ]" << std::endl;
 
     sleep(5);
     std::cout << "\nshutting down.\n" << std::endl;
@@ -93,7 +102,7 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
 
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
-    auto num_clients = configs.configs().db_rows() * 2;
+    auto num_clients = NUM_CLIENTS;
     math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_rows());
 
     for (auto &p: db.data) {
