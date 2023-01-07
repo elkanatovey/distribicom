@@ -29,19 +29,29 @@ namespace services {
             auto parts = std::make_shared<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>>();
             auto &parts_vec = *parts;
             while (reader->Read(&tmp)) {
+
                 auto moved_ptr = std::make_shared<distribicom::MatrixPart>(std::move(tmp));
-                parts_vec.emplace_back(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr));
+                parts_vec.emplace_back(std::move(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr)));
                 auto latest = parts_vec.size() - 1;
                 pool->submit(
                     {
                         .f = [&, moved_ptr, latest]() {
-                            auto v = std::make_unique<ResultMatPart>();
-                            v->ctx = std::move(
-                                marshal->unmarshal_seal_object<seal::Ciphertext>(moved_ptr->ctx().data())
+
+                            parts_vec[latest]->set(
+                                std::make_unique<ResultMatPart>(
+                                    std::move(
+                                        ResultMatPart{
+                                            std::move(
+                                                marshal->unmarshal_seal_object<seal::Ciphertext>(
+                                                    moved_ptr->ctx().data())
+                                            ),
+                                            moved_ptr->row(),
+                                            moved_ptr->col()
+                                        }
+                                    )
+                                )
                             );
-                            v->row = moved_ptr->row();
-                            v->col = moved_ptr->col();
-                            parts_vec[latest]->set(std::move(v));
+
                         },
                         .wg = parts_vec[latest]->get_latch(),
                         .name = "Manager::ReturnLocalWork::unmarshal",
