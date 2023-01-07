@@ -25,10 +25,13 @@ int worker_test(int, char *[]) {
         "localhost:" + std::string(server_port),
         int(all->encryption_params.poly_modulus_degree()),
         20,
-        6,
-        6,
+        42,
+        41,
         256
     );
+
+    std::cout << cfgs.DebugString() << std::endl;
+
     services::FullServer fs = full_server_instance(all, cfgs);
 
     std::latch wg(1);
@@ -61,7 +64,7 @@ int worker_test(int, char *[]) {
     }
 
     std::cout << "results: [ ";
-    for (std::uint64_t i = 0; i < results.size()-1; ++i) {
+    for (std::uint64_t i = 0; i < results.size() - 1; ++i) {
         std::cout << results[i].count() << "ms, ";
     }
     std::cout << results.back().count() << "ms ]" << std::endl;
@@ -103,7 +106,7 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
     auto num_clients = NUM_CLIENTS;
-    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_rows());
+    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_cols());
 
     for (auto &p: db.data) {
         p = all->random_plaintext();
