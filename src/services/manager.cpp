@@ -30,7 +30,7 @@ namespace services {
 
             auto &parts_vec = *parts;
             while (reader->Read(&tmp)) {
-
+                // TODO : avoid unmarshal sequencially here.
                 auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
                 parts_vec.push_back(
                     {
@@ -46,6 +46,7 @@ namespace services {
             async_verify_worker(parts, worker_creds);
 #endif
 
+            // TODO: put_in_result_matrix should somehow utilise the threadpool.
             put_in_result_matrix(parts_vec, this->client_query_manager);
 
             auto ledger = epoch_data.ledger;
