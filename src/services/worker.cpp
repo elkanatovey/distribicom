@@ -112,7 +112,7 @@ namespace services {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
 //                    std::cout << "received galois keys" << std::endl;
                     strategy->store_galois_key(
-                        mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
+                        std::move(mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys())),
                         int(read_val.gkey().key_pos())
                     );
 
