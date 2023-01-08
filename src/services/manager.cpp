@@ -466,16 +466,22 @@ namespace services {
     void Manager::put_in_result_matrix(const std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>> &parts) {
         try {
 
+            // TODO: ask Elkana why bother shared locking, there is no point in time where we are locking it for write.
             client_query_manager.mutex->lock_shared();
             for (const auto &partial_answer: parts) {
                 math_utils::EmbeddedCiphertext ptx_embedding;
+                auto row = partial_answer->get()->row;
+                auto col = partial_answer->get()->col;
+
                 this->matops->w_evaluator->get_ptx_embedding(partial_answer->get()->ctx, ptx_embedding);
                 this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
+
+                auto &mat = *client_query_manager.id_to_info[col]->partial_answer;
+
                 for (size_t i = 0; i < ptx_embedding.size(); i++) {
-                    auto &mat = *client_query_manager.id_to_info[partial_answer->get()->col]->partial_answer;
-                    mat(partial_answer->get()->row, i) = std::move(ptx_embedding[i]);
+                    mat(row, i) = std::move(ptx_embedding[i]);
                 }
-                client_query_manager.id_to_info[partial_answer->get()->col]->answer_count += 1;
+                client_query_manager.id_to_info[col]->answer_count += 1;
             }
             client_query_manager.mutex->unlock_shared();
 
