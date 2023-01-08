@@ -63,7 +63,6 @@ namespace services {
             async_verify_worker(parts, worker_creds);
 #endif
 
-            // TODO: put_in_result_matrix should somehow utilise the threadpool.
             put_in_result_matrix(parts_vec);
 
             auto ledger = epoch_data.ledger;
@@ -466,20 +465,40 @@ namespace services {
     void Manager::put_in_result_matrix(const std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>> &parts) {
         try {
 
+            std::vector<std::unique_ptr<concurrency::promise<math_utils::EmbeddedCiphertext>>> embeddeds(parts.size());
+            for (auto i = 0; i < parts.size(); i++) {
+                parts[i]->get_latch()->wait(); // not putting threadpool task before this promise is ready.
+
+                embeddeds[i] = std::make_unique<concurrency::promise<math_utils::EmbeddedCiphertext>>(1, nullptr);
+                pool->submit(
+                    {
+                        .f = [&, i]() {
+                            auto partial_answer = parts[i]->get();
+                            auto embedded = std::make_unique<math_utils::EmbeddedCiphertext>();
+                            matops->w_evaluator->get_ptx_embedding(partial_answer->ctx, *embedded);
+                            matops->w_evaluator->transform_to_ntt_inplace(*embedded);
+                            embeddeds[i]->set(std::move(embedded));
+                        },
+                        .wg = embeddeds[i]->get_latch(),
+                        .name = "Manager::put_in_result_matrix"
+                    }
+                );
+            }
+
             // TODO: ask Elkana why bother shared locking, there is no point in time where we are locking it for write.
             client_query_manager.mutex->lock_shared();
-            for (const auto &partial_answer: parts) {
-                math_utils::EmbeddedCiphertext ptx_embedding;
-                auto row = partial_answer->get()->row;
-                auto col = partial_answer->get()->col;
+            for (auto i = 0; i < parts.size(); i++) {
+                auto partial_answer = parts[i]->get();
+                auto &ptx_embedding = *embeddeds[i]->get();
 
-                this->matops->w_evaluator->get_ptx_embedding(partial_answer->get()->ctx, ptx_embedding);
-                this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
+                auto row = partial_answer->row;
+                auto col = partial_answer->col;
+
 
                 auto &mat = *client_query_manager.id_to_info[col]->partial_answer;
 
-                for (size_t i = 0; i < ptx_embedding.size(); i++) {
-                    mat(row, i) = std::move(ptx_embedding[i]);
+                for (size_t j = 0; j < ptx_embedding.size(); j++) {
+                    mat(row, j) = std::move(ptx_embedding[j]);
                 }
                 client_query_manager.id_to_info[col]->answer_count += 1;
             }
