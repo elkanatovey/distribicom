@@ -78,16 +78,14 @@ namespace services {
         int row = tmp.row();
         int col = tmp.col();
 
-
         if (tmp.has_ptx()) {
             if (!task.ptx_rows.contains(row)) {
-                task.ptx_rows[row] = std::vector<seal::Plaintext>(task.row_size);
+                task.ptx_rows[row] = std::move(std::vector<seal::Plaintext>(task.row_size));
             }
             if (col >= task.row_size) {
                 throw std::invalid_argument("Invalid column index, too big");
             }
-            task.ptx_rows[row][col]
-                = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
+            task.ptx_rows[row][col] = std::move(mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data()));
             return;
         }
 
@@ -95,9 +93,9 @@ namespace services {
             throw std::invalid_argument("Invalid matrix part, neither ptx nor ctx");
         }
         if (!task.ctx_cols.contains(col)) {
-            task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
+            task.ctx_cols[col] = std::move(std::vector<seal::Ciphertext>(1));
         }
-        task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+        task.ctx_cols[col][0] = std::move(mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
     }
 
 
