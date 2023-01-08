@@ -100,9 +100,9 @@ namespace services {
         math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> marshall_db;
 
         // TODO: use friendship, instead of ifdef!
-        #ifdef DISTRIBICOM_DEBUG
+#ifdef DISTRIBICOM_DEBUG
     public: // making the data here public: for debugging/testing purposes.
-        #endif
+#endif
         std::map<std::string, WorkStream *> work_streams;
         EpochData epoch_data;//@todo refactor into pointer and use atomics
 
@@ -161,9 +161,11 @@ namespace services {
                         std::uint64_t row_id, std::uint64_t group_id);
 
         void
-        async_verify_worker(const std::shared_ptr<std::vector<ResultMatPart>> parts_ptr, const std::string worker_creds);;
+        async_verify_worker(
+            const std::shared_ptr<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>> parts_ptr,
+            const std::string worker_creds);
 
-        void put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients);;
+        void put_in_result_matrix(const std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>> &parts);
 
         void calculate_final_answer();;
 

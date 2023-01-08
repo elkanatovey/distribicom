@@ -26,27 +26,44 @@ namespace services {
 
             std::cout << "Manager::ReturnLocalWork::receiving work." << std::endl;
             distribicom::MatrixPart tmp;
-            auto parts = std::make_shared<std::vector<ResultMatPart>>();
-
+            auto parts = std::make_shared<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>>();
             auto &parts_vec = *parts;
             while (reader->Read(&tmp)) {
 
-                auto current_ctx = marshal->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
-                parts_vec.push_back(
+                auto moved_ptr = std::make_shared<distribicom::MatrixPart>(std::move(tmp));
+                parts_vec.emplace_back(std::move(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr)));
+                auto latest = parts_vec.size() - 1;
+                pool->submit(
                     {
-                        std::move(current_ctx),
-                        tmp.row(),
-                        tmp.col()
+                        .f = [&, moved_ptr, latest]() {
+
+                            parts_vec[latest]->set(
+                                std::make_unique<ResultMatPart>(
+                                    std::move(
+                                        ResultMatPart{
+                                            std::move(
+                                                marshal->unmarshal_seal_object<seal::Ciphertext>(
+                                                    moved_ptr->ctx().data())
+                                            ),
+                                            moved_ptr->row(),
+                                            moved_ptr->col()
+                                        }
+                                    )
+                                )
+                            );
+
+                        },
+                        .wg = parts_vec[latest]->get_latch(),
+                        .name = "Manager::ReturnLocalWork::unmarshal",
                     }
                 );
-
             }
 
 #ifdef FREIVALDS
             async_verify_worker(parts, worker_creds);
 #endif
 
-            put_in_result_matrix(parts_vec, this->client_query_manager);
+            put_in_result_matrix(parts_vec);
 
             auto ledger = epoch_data.ledger;
 
@@ -445,21 +462,44 @@ namespace services {
         }
     }
 
-    void Manager::put_in_result_matrix(const std::vector<ResultMatPart> &parts, ClientDB &all_clients) {
+    void Manager::put_in_result_matrix(const std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>> &parts) {
         try {
 
-            all_clients.mutex->lock_shared();
-            for (const auto &partial_answer: parts) {
-                math_utils::EmbeddedCiphertext ptx_embedding;
-                this->matops->w_evaluator->get_ptx_embedding(partial_answer.ctx, ptx_embedding);
-                this->matops->w_evaluator->transform_to_ntt_inplace(ptx_embedding);
-                for (size_t i = 0; i < ptx_embedding.size(); i++) {
-                    (*all_clients.id_to_info[partial_answer.col]->partial_answer)(partial_answer.row, i) = std::move(
-                        ptx_embedding[i]);
-                }
-                all_clients.id_to_info[partial_answer.col]->answer_count += 1;
+            std::vector<std::unique_ptr<concurrency::promise<math_utils::EmbeddedCiphertext>>> embeddeds(parts.size());
+            for (auto i = 0; i < parts.size(); i++) {
+                embeddeds[i] = std::make_unique<concurrency::promise<math_utils::EmbeddedCiphertext>>(1, nullptr);
+                pool->submit(
+                    {
+                        .f = [&, i]() {
+                            auto partial_answer = parts[i]->get();
+                            auto embedded = std::make_unique<math_utils::EmbeddedCiphertext>();
+                            matops->w_evaluator->get_ptx_embedding(partial_answer->ctx, *embedded);
+                            matops->w_evaluator->transform_to_ntt_inplace(*embedded);
+                            embeddeds[i]->set(std::move(embedded));
+                        },
+                        .wg = embeddeds[i]->get_latch(),
+                        .name = "Manager::put_in_result_matrix"
+                    }
+                );
             }
-            all_clients.mutex->unlock_shared();
+
+            // TODO: ask Elkana why bother shared locking, there is no point in time where we are locking it for write.
+            client_query_manager.mutex->lock_shared();
+            for (auto i = 0; i < parts.size(); i++) {
+                auto partial_answer = parts[i]->get();
+                auto &ptx_embedding = *embeddeds[i]->get();
+
+                auto row = partial_answer->row;
+                auto col = partial_answer->col;
+
+                auto &mat = *client_query_manager.id_to_info[col]->partial_answer;
+
+                for (size_t j = 0; j < ptx_embedding.size(); j++) {
+                    mat(row, j) = std::move(ptx_embedding[j]);
+                }
+                client_query_manager.id_to_info[col]->answer_count += 1;
+            }
+            client_query_manager.mutex->unlock_shared();
 
         } catch (const std::exception &e) {
             std::cerr << "Manager::put_in_result_matrix::exception: " << e.what() << std::endl;
@@ -507,8 +547,9 @@ namespace services {
         }
     }
 
-    void Manager::async_verify_worker(const std::shared_ptr<std::vector<ResultMatPart>> parts_ptr,
-                                      const std::string worker_creds) {
+    void Manager::async_verify_worker(
+        const std::shared_ptr<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>> parts_ptr,
+        const std::string worker_creds) {
         pool->submit(
             {
                 .f=[&, parts_ptr, worker_creds]() {
@@ -529,7 +570,7 @@ namespace services {
                         std::vector<seal::Ciphertext> temp;
                         temp.reserve(query_row_len);
                         for (size_t j = 0; j < query_row_len; j++) {
-                            temp.push_back(parts[j + i * query_row_len].ctx);
+                            temp.push_back(parts[j + i * query_row_len]->get()->ctx);
                         }
 
                         auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(

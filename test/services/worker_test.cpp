@@ -30,8 +30,13 @@ int worker_test(int, char *[]) {
         256
     );
 
+#ifdef FREIVALDS
+    std::cout << "Running with FREIVALDS!!!!" << std::endl;
+#else
+    std::cout << "Running without FREIVALDS!!!!" << std::endl;
+#endif
     std::cout << cfgs.DebugString() << std::endl;
-
+    std::cout << "total queries: " << NUM_CLIENTS << "\n\n" << std::endl;
     services::FullServer fs = full_server_instance(all, cfgs);
 
     std::latch wg(1);
