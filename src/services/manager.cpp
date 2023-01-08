@@ -467,8 +467,6 @@ namespace services {
 
             std::vector<std::unique_ptr<concurrency::promise<math_utils::EmbeddedCiphertext>>> embeddeds(parts.size());
             for (auto i = 0; i < parts.size(); i++) {
-                parts[i]->get_latch()->wait(); // not putting threadpool task before this promise is ready.
-
                 embeddeds[i] = std::make_unique<concurrency::promise<math_utils::EmbeddedCiphertext>>(1, nullptr);
                 pool->submit(
                     {
@@ -493,7 +491,6 @@ namespace services {
 
                 auto row = partial_answer->row;
                 auto col = partial_answer->col;
-
 
                 auto &mat = *client_query_manager.id_to_info[col]->partial_answer;
 
