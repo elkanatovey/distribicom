@@ -29,3 +29,7 @@ add_executable(worker worker.cpp)
 
 target_link_libraries(main_server distribicom_cpp)
 target_link_libraries(worker distribicom_cpp)
+
+
+add_executable(expand expand.cpp)
+target_link_libraries(expand distribicom_cpp)
