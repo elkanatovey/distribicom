@@ -46,7 +46,7 @@ namespace services::work_strategy {
         // prepare the query matrix.
         query_mat.resize(task.row_size, task.ctx_cols.size());
 
-        auto latch = std::make_shared<concurrency::safelatch>(task.ctx_cols.size());
+        concurrency::safelatch latch(int(task.ctx_cols.size()));
         auto expanded_size = task.row_size;
 
         std::lock_guard lock(mu);
@@ -71,14 +71,15 @@ namespace services::work_strategy {
                         }
 
                         expanded.clear();
+                        latch.count_down();
                     },
-                    .wg = latch,
+                    .wg = nullptr,
                     .name = "worker::expand_query",
                 }
             );
 
         }
-        latch->wait();
+        latch.wait();
         task.ctx_cols.clear();
 
         matops->to_ntt(query_mat.data);
