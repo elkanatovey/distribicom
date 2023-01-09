@@ -50,7 +50,7 @@ namespace services::work_strategy {
         auto expanded_size = task.row_size;
 
         std::lock_guard lock(mu);
-        for (auto &&pair: task.ctx_cols) {
+        for (auto &pair: task.ctx_cols) {
             auto q_pos = pair.first;
 
             if (gkeys.find(q_pos) == gkeys.end()) {
@@ -58,10 +58,10 @@ namespace services::work_strategy {
             }
 
             pool->submit(
-                {
-                    .f = [&, q_pos, pair]() {
+                std::move(concurrency::Task{
+                    .f = [&, q_pos]() {
                         auto expanded = query_expander->expand_query(
-                            pair.second,
+                            task.ctx_cols[q_pos],
                             expanded_size,
                             gkeys[q_pos]
                         );
@@ -75,7 +75,7 @@ namespace services::work_strategy {
                     },
                     .wg = nullptr,
                     .name = "worker::expand_query",
-                }
+                })
             );
 
         }
