@@ -4,8 +4,59 @@
 #include "server.hpp"
 #include <grpc++/grpc++.h>
 #include <latch>
+// 128 queries, 1thread vs 7 threads:
+// expansion time : 8462 /3092= 2.7 (BAD) can run with callgrind.
+//multiplication time: 47610/13403 = 3.5 (Not so bad).
 
-#define NUM_CLIENTS 64
+// 7 threads:
+// worker::expansion time: 3092 ms
+//worker main thread: processing task.
+//RowMultiplicationStrategy::process_task: multiplying...
+//worker::multiplication time: 13403ms
+//Manager::ReturnLocalWork::receiving work.
+//Manager::ReturnLocalWork: all workers have contributed.
+//Running step 2
+//worker::sending time: 7282ms
+
+// 1 threads:
+//worker::expansion time: 8462 ms
+//worker main thread: processing task.
+//RowMultiplicationStrategy::process_task: multiplying...
+//worker::multiplication time: 47610ms
+//Manager::ReturnLocalWork::receiving work.
+//Manager::ReturnLocalWork: all workers have contributed.
+//Running step 2
+//worker::sending time: 21478ms
+//Main_Server: round 0 running time: 85188 ms
+//results: [ 85188ms ]
+
+// 32 queries, 1thread vs 7 threads:
+
+
+// 1 thread:
+//worker::expansion time: 1985 ms
+//worker main thread: processing task.
+//RowMultiplicationStrategy::process_task: multiplying...
+//worker::multiplication time: 13939ms
+//Manager::ReturnLocalWork::receiving work.
+//Manager::ReturnLocalWork: all workers have contributed.
+//Running step 2
+//worker::sending time: 6791ms
+//Main_Server: round 0 running time: 24795 ms
+//results: [ 24795ms ]
+
+// 7 threads:
+//worker::expansion time: 831 ms
+//worker main thread: processing task.
+//RowMultiplicationStrategy::process_task: multiplying...
+//worker::multiplication time: 4708ms
+//Manager::ReturnLocalWork::receiving work.
+//Manager::ReturnLocalWork: all workers have contributed.
+//Running step 2
+//worker::sending time: 2550ms
+//Main_Server: round 0 running time: 9260 ms
+//results: [ 9260ms ]
+#define NUM_CLIENTS 32
 constexpr std::string_view server_port = "5051";
 constexpr std::string_view worker_port = "52100";
 
@@ -30,6 +81,7 @@ int worker_test(int, char *[]) {
         256
     );
 
+//    concurrency::num_cpus = 1;
 #ifdef FREIVALDS
     std::cout << "Running with FREIVALDS!!!!" << std::endl;
 #else
@@ -55,7 +107,7 @@ int worker_test(int, char *[]) {
     std::vector<std::chrono::microseconds> results;
     fs.wait_for_workers(1);
     fs.start_epoch();
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 1; ++i) {
         auto time_round_s = std::chrono::high_resolution_clock::now();
 
         auto ledger = fs.distribute_work(i);

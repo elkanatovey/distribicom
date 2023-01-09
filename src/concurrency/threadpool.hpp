@@ -27,6 +27,15 @@ namespace concurrency {
 
         inline void submit(Task &&task) { chan.write(std::move(task)); }
 
+        static seal::MemoryPoolHandle GetSealPoolHandle() {
+            // the map that holds the pools as a start should be thread safe: locked with mutex on every write.
+            // and readsafe using shared_mutex.
+
+            // held by unique_ptr at the global level throughout the whole program
+            std::this_thread::get_id();
+            return seal::MemoryManager::GetPool();
+        }
+
     private:
         std::vector<std::thread> threads;
         Channel<Task> chan;
