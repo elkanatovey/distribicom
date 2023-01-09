@@ -25,7 +25,7 @@ namespace concurrency {
 
         ~threadpool();
 
-        void submit(Task task);
+        inline void submit(Task &&task) { chan.write(std::move(task)); }
 
     private:
         std::vector<std::thread> threads;
