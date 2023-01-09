@@ -12,19 +12,19 @@ void async_scalar_vec_mult(const std::shared_ptr<TestUtils::CryptoObjects> &all)
 int async_mat_mult(int, char *[]) {
     // setup
     auto cnfgs = TestUtils::SetupConfigs{
-            .encryption_params_configs = {
-                    .scheme_type = seal::scheme_type::bgv,
-                    .polynomial_degree = 4096 * 2,
-                    .log_coefficient_modulus = 20,
-            },
-            .pir_params_configs = {
-                    .number_of_items = 2048,
-                    .size_per_item = 288,
-                    .dimensions= 2,
-                    .use_symmetric = false,
-                    .use_batching = true,
-                    .use_recursive_mod_switching = true,
-            },
+        .encryption_params_configs = {
+            .scheme_type = seal::scheme_type::bgv,
+            .polynomial_degree = 4096 * 2,
+            .log_coefficient_modulus = 20,
+        },
+        .pir_params_configs = {
+            .number_of_items = 2048,
+            .size_per_item = 288,
+            .dimensions= 2,
+            .use_symmetric = false,
+            .use_batching = true,
+            .use_recursive_mod_switching = true,
+        },
     };
     auto all = TestUtils::setup(cnfgs);
     // test:
@@ -107,7 +107,7 @@ void async_mult_test(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
     matops->to_ntt(B->data);
     TestUtils::time_func_print("mat-mult", [&matops, &A_as_ptx, &B, &C]() { matops->multiply(*A_as_ptx, *B, *C); });
 
-
+    matops->to_ntt(A_as_ptx->data);
     auto p = matops->async_mat_mult<>(A_as_ptx, B);
     auto async_c = p->get();
 
