@@ -85,11 +85,9 @@ void async_scalar_vec_mult(const std::shared_ptr<TestUtils::CryptoObjects> &all)
 }
 
 void async_mult_test(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
-    uint64_t n = 10;
+    uint64_t n = 25;
     uint64_t rows = n, cols = n;
 
-
-    auto A = std::make_shared<math_utils::matrix<seal::Ciphertext>>();
     auto B = std::make_shared<math_utils::matrix<seal::Ciphertext>>(rows, cols);
     auto C = std::make_shared<math_utils::matrix<seal::Ciphertext>>();
     auto A_as_ptx = std::make_shared<math_utils::matrix<seal::Plaintext>>(rows, cols);
@@ -100,9 +98,6 @@ void async_mult_test(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
     }
 
     auto matops = math_utils::MatrixOperations::Create(all->w_evaluator);
-    TestUtils::time_func_print("A_as_ptx-transform to ctxs",
-                               [&matops, &A_as_ptx, &A]() { matops->transform((*A_as_ptx), (*A)); });
-
 
     matops->to_ntt(B->data);
     TestUtils::time_func_print("mat-mult", [&matops, &A_as_ptx, &B, &C]() { matops->multiply(*A_as_ptx, *B, *C); });

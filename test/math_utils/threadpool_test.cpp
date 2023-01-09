@@ -6,10 +6,10 @@ int threadpool_test(int a, char *b[]) {
     (void) a;
     (void) b;
 
-    constexpr int num_tasks = 1000;
+    constexpr int num_tasks = 10000;
 
     // Number of times to repeat the benchmark
-    constexpr int num_reps = 50;
+    constexpr int num_reps = 20;
 
     // used for sleep in thread:
     // Minimum and maximum execution times for the tasks
