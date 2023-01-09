@@ -46,7 +46,7 @@ RUN apt-get install -y sudo
 
 RUN apt-get install graphviz pip kcachegrind
 RUN pip install gprof2dot # ./gprof2dot -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
-
+RUN apt-get mutrace # to detect mutex contention.
 
 
 CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
