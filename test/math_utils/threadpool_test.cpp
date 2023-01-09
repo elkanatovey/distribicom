@@ -10,12 +10,11 @@ int threadpool_test(int a, char *b[]) {
 
     // Number of times to repeat the benchmark
     constexpr int num_reps = 50;
-    auto num_work_per_thead = 100000;
 
     // used for sleep in thread:
     // Minimum and maximum execution times for the tasks
-    constexpr int min_exec_time = 1;
-    constexpr int max_exec_time = 5;
+    constexpr int min_exec_time = 10;
+    constexpr int max_exec_time = 75;
 
     // Seed the random number generator
     std::random_device rd;
@@ -41,11 +40,8 @@ int threadpool_test(int a, char *b[]) {
             pool.submit(
                 {
                     .f =[&] {
-                        std::uint64_t x = 1;
                         // Sleep for a random amount of time
-                        for (int k = 0; k < num_work_per_thead; ++k) {
-                            x += dis(gen);
-                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
                     },
                     .wg = latch,
                 }
