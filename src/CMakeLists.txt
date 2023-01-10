@@ -33,3 +33,9 @@ target_link_libraries(worker distribicom_cpp)
 
 add_executable(expand expand.cpp)
 target_link_libraries(expand distribicom_cpp)
+
+add_executable(serial just_serial.cpp)
+target_link_libraries(serial distribicom_cpp)
+
+add_executable(pool just_pool.cpp)
+target_link_libraries(pool distribicom_cpp)

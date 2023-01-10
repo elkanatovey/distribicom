@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     uint32_t d = 2;
 
     uint32_t num_threads = 8;
-    uint32_t num_queries = 256;
+    uint32_t num_queries = 128;
 
     EncryptionParameters enc_params(scheme_type::bgv);
     PirParams pir_params;
@@ -80,12 +80,12 @@ int main(int argc, char *argv[]) {
     cout << "Main: query generated" << endl;
 
     // Measure query processing (including expansion)
-    int i=0;
+    int i = 0;
     auto time_server_s = high_resolution_clock::now();
     uint64_t n_i = pir_params.nvec[0];
-    cout << "Main: n_i is................."<< n_i << endl;
+    cout << "Main: n_i is................." << n_i << endl;
     vector<Ciphertext> expanded_query = server.expand_query(query[0][0], n_i, 0);
-    while(i<num_queries) {
+    while (i < num_queries) {
         auto expanded_query1 = server.expand_query(query[0][0], n_i, 0);
         i++;
     }
@@ -115,115 +115,10 @@ int main(int argc, char *argv[]) {
             cout << "Main: expansion time: " << time_server_us / 1000
                  << " ms" << endl;
 
-            cout << "Main: avg expansion time: " << (time_server_us/num_queries) / 1000
+            cout << "Main: avg expansion time: " << (time_server_us / num_queries) / 1000
                  << " ms" << endl;
         }
     }
-
-    math_utils::matrix<seal::Ciphertext> query_mat;
-    query_mat.resize(n_i, num_queries);
-//    MemoryManager::SwitchProfile(make_unique<MMProfThreadLocal>());
-//    auto a = MemoryManager::GetPool(mm_force_thread_local);
-    concurrency::threadpool* pool = new concurrency::threadpool(num_threads);
-
-
-    concurrency::safelatch latch(num_queries);
-
-
-    auto time_pool_s = high_resolution_clock::now();
-    for (int j=0; j<num_queries; j++) {
-
-        pool->submit(
-                std::move(concurrency::Task{
-                        .f = [&, j]() {
-                            auto expanded = server.expand_query(query[0][0], n_i, 0);
-
-                            for (std::uint64_t row = 0; row < n_i; ++row) {
-                                query_mat(row, j) = std::move(expanded[row]);
-                            }
-
-                            expanded.clear();
-                            latch.count_down();
-                        },
-                        .wg = nullptr,
-                        .name = "worker::expand_query",
-                })
-        );
-
-    }
-    latch.wait();
-    auto time_pool_e = high_resolution_clock::now();
-    auto time_pool_us =
-            duration_cast<microseconds>(time_pool_e - time_pool_s).count();
-
-    cout << "Main: pool expansion time: " << time_pool_us / 1000
-         << " ms" << endl;
-
-
-
-    concurrency::safelatch latch1(num_queries);
-
-
-    time_pool_s = high_resolution_clock::now();
-    for (int j=0; j<num_queries; j++) {
-
-        pool->submit(
-                std::move(concurrency::Task{
-                        .f = [&, j]() {
-                            auto expanded = server.expand_query(query[0][0], n_i, 0);
-
-                            for (std::uint64_t row = 0; row < n_i; ++row) {
-                                query_mat(row, j) = std::move(expanded[row]);
-                            }
-
-                            expanded.clear();
-                            latch1.count_down();
-                        },
-                        .wg = nullptr,
-                        .name = "worker::expand_query",
-                })
-        );
-
-    }
-    latch1.wait();
-    time_pool_e = high_resolution_clock::now();
-    time_pool_us =
-            duration_cast<microseconds>(time_pool_e - time_pool_s).count();
-
-    cout << "Main: pool expansion time: " << time_pool_us / 1000
-         << " ms" << endl;
-    delete pool;
-
-    BS::thread_pool pool1(num_threads);
-
-    time_pool_s = high_resolution_clock::now();
-    for (int j=0; j<num_queries; j++) {
-
-        pool1.push_task([&, j]() {
-            auto expanded = server.expand_query(query[0][0], n_i, 0);
-
-//            for (std::uint64_t row = 0; row < n_i; ++row) {
-//                query_mat(row, j) = std::move(expanded[row]);
-//            }
-
-            expanded.clear();
-        }
-        );
-
-    }
-    pool1.wait_for_tasks();
-
-    time_pool_e = high_resolution_clock::now();
-    time_pool_us =
-            duration_cast<microseconds>(time_pool_e - time_pool_s).count();
-
-    cout << "Main: fancy pool expansion time: " << time_pool_us / 1000
-         << " ms" << endl;
-
-
-
-
-
 
     return 0;
 }
