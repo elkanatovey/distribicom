@@ -54,11 +54,11 @@ namespace math_utils {
     QueryExpander::__expand_query(const seal::Ciphertext &encrypted,
                                   uint32_t m,
                                   seal::GaloisKeys &galkey) const {
-
+        auto mempool(concurrency::threadpool::GetSealPoolHandle());
 
         // Assume that m is a power of 2. If not, round it to the next power of 2.
         uint32_t logm = ceil(log2(m));
-        seal::Plaintext two("2", concurrency::threadpool::GetSealPoolHandle());
+        seal::Plaintext two("2", mempool);
 
         std::vector<int> galois_elts;
         auto n = enc_params_.poly_modulus_degree();
@@ -72,10 +72,10 @@ namespace math_utils {
 
         std::vector<seal::Ciphertext> temp;
         temp.push_back(encrypted);
-        seal::Ciphertext tempctxt(concurrency::threadpool::GetSealPoolHandle());
-        seal::Ciphertext tempctxt_rotated(concurrency::threadpool::GetSealPoolHandle());
-        seal::Ciphertext tempctxt_shifted(concurrency::threadpool::GetSealPoolHandle());
-        seal::Ciphertext tempctxt_rotatedshifted(concurrency::threadpool::GetSealPoolHandle());
+        seal::Ciphertext tempctxt(mempool);
+        seal::Ciphertext tempctxt_rotated(mempool);
+        seal::Ciphertext tempctxt_shifted(mempool);
+        seal::Ciphertext tempctxt_rotatedshifted(mempool);
 
         for (uint32_t i = 0; i < logm - 1; i++) {
             std::vector<seal::Ciphertext> newtemp(temp.size() << 1);
@@ -87,7 +87,7 @@ namespace math_utils {
             for (uint32_t a = 0; a < temp.size(); a++) {
 
                 evaluator_->apply_galois(temp[a], galois_elts[i], galkey,
-                                         tempctxt_rotated, concurrency::threadpool::GetSealPoolHandle());
+                                         tempctxt_rotated, mempool);
 
                 // cout << "rotate " <<
                 // client.decryptor_->invariant_noise_budget(tempctxt_rotated) << ", ";
@@ -125,11 +125,11 @@ namespace math_utils {
             if (a >= (m - (1 << (logm - 1)))) { // corner case.
                 evaluator_->multiply_plain(temp[a], two,
                                            newtemp[a],
-                                           concurrency::threadpool::GetSealPoolHandle()); // plain multiplication by 2.
+                                           mempool); // plain multiplication by 2.
                 // cout << client.decryptor_->invariant_noise_budget(newtemp[a]) << ", ";
             } else {
                 evaluator_->apply_galois(temp[a], galois_elts[logm - 1], galkey,
-                                         tempctxt_rotated, concurrency::threadpool::GetSealPoolHandle());
+                                         tempctxt_rotated, mempool);
                 evaluator_->add(temp[a], tempctxt_rotated, newtemp[a]);
                 multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);
                 multiply_power_of_X(tempctxt_rotated, tempctxt_rotatedshifted, index);
