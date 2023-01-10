@@ -80,15 +80,14 @@ int main(int argc, char *argv[]) {
     cout << "Main: query generated" << endl;
 
     // Measure query processing (including expansion)
-    int i = 0;
     uint64_t n_i = pir_params.nvec[0];
 //    vector<Ciphertext> expanded_query = server.expand_query(query[0][0], n_i, 0);
     auto time_server_s = high_resolution_clock::now();
     cout << "Main: n_i is................." << n_i << endl;
 
-    while (i < num_queries) {
-         server.expand_query(query[0][0], n_i, 0);
-        i++;
+
+    for (int i=0;i < num_queries;i++) {
+        server.expand_query(query[0][0], n_i, 0);
     }
     auto time_server_e = high_resolution_clock::now();
     auto time_server_us =

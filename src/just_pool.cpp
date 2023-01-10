@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     uint32_t logt = 20;
     uint32_t d = 2;
 
-    uint32_t num_threads = 8;
+    uint32_t num_threads = 16;
     uint32_t num_queries = 128;
 
     EncryptionParameters enc_params(scheme_type::bgv);
