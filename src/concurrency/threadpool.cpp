@@ -7,12 +7,12 @@ namespace concurrency {
     std::uint64_t num_cpus = std::thread::hardware_concurrency();
 
     std::map<std::thread::id, seal::MemoryPoolHandle> thread_local_pool;
-    std::mutex thread_local_pool_mutex;
+    std::shared_mutex thread_local_pool_mutex;
 
     seal::MemoryPoolHandle threadpool::GetSealPoolHandle() {
         auto id = std::this_thread::get_id();
 
-        std::unique_lock lck(thread_local_pool_mutex);
+        std::shared_lock lck(thread_local_pool_mutex);
 
         if (thread_local_pool.find(id) == thread_local_pool.end()) {
             std::cerr << "memory-pool of thread " << id << " not found" << std::endl;
@@ -20,7 +20,7 @@ namespace concurrency {
         }
 
         // using copy constructor
-        return {thread_local_pool[id]};
+        return {thread_local_pool[id].ThreadLocal()};
     }
 
 
