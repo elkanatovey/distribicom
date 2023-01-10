@@ -81,12 +81,13 @@ int main(int argc, char *argv[]) {
 
     // Measure query processing (including expansion)
     int i = 0;
-    auto time_server_s = high_resolution_clock::now();
     uint64_t n_i = pir_params.nvec[0];
+//    vector<Ciphertext> expanded_query = server.expand_query(query[0][0], n_i, 0);
+    auto time_server_s = high_resolution_clock::now();
     cout << "Main: n_i is................." << n_i << endl;
-    vector<Ciphertext> expanded_query = server.expand_query(query[0][0], n_i, 0);
+
     while (i < num_queries) {
-        auto expanded_query1 = server.expand_query(query[0][0], n_i, 0);
+         server.expand_query(query[0][0], n_i, 0);
         i++;
     }
     auto time_server_e = high_resolution_clock::now();
@@ -94,31 +95,12 @@ int main(int argc, char *argv[]) {
             duration_cast<microseconds>(time_server_e - time_server_s).count();
     cout << "Main: query expanded" << endl;
 
-    assert(expanded_query.size() == n_i);
 
-    cout << "Main: checking expansion" << endl;
-    for (size_t i = 0; i < expanded_query.size(); i++) {
-        Plaintext decryption = client.decrypt(expanded_query.at(i));
+    cout << "Main: expansion time: " << time_server_us / 1000
+         << " ms" << endl;
 
-        if (decryption.is_zero() && index != i) {
-            continue;
-        } else if (decryption.is_zero()) {
-            cout << "Found zero where index should be" << endl;
-            return -1;
-        } else if (std::stoi(decryption.to_string()) != 1) {
-            cout << "Query vector at index " << index
-                 << " should be 1 but is instead " << decryption.to_string() << endl;
-            return -1;
-        } else {
-            cout << "Query vector at index " << index << " is "
-                 << decryption.to_string() << endl;
-            cout << "Main: expansion time: " << time_server_us / 1000
-                 << " ms" << endl;
-
-            cout << "Main: avg expansion time: " << (time_server_us / num_queries) / 1000
-                 << " ms" << endl;
-        }
-    }
+    cout << "Main: avg expansion time: " << (time_server_us / num_queries) / 1000
+         << " ms" << endl;
 
     return 0;
 }

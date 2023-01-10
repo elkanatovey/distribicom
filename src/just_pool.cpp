@@ -89,8 +89,8 @@ int main(int argc, char *argv[]) {
     auto time_server_us =
             duration_cast<microseconds>(time_server_e - time_server_s).count();
 
-    math_utils::matrix<seal::Ciphertext> query_mat;
-    query_mat.resize(n_i, num_queries);
+//    math_utils::matrix<seal::Ciphertext> query_mat;
+//    query_mat.resize(n_i, num_queries);
 //    MemoryManager::SwitchProfile(make_unique<MMProfThreadLocal>());
 //    auto a = MemoryManager::GetPool(mm_force_thread_local);
     concurrency::threadpool* pool = new concurrency::threadpool(num_threads);
@@ -105,13 +105,13 @@ int main(int argc, char *argv[]) {
         pool->submit(
                 std::move(concurrency::Task{
                         .f = [&, j]() {
-                            auto expanded = server.expand_query(query[0][0], n_i, 0);
+                            server.expand_query(query[0][0], n_i, 0);
 
-                            for (std::uint64_t row = 0; row < n_i; ++row) {
-                                query_mat(row, j) = std::move(expanded[row]);
-                            }
-
-                            expanded.clear();
+//                            for (std::uint64_t row = 0; row < n_i; ++row) {
+//                                query_mat(row, j) = std::move(expanded[row]);
+//                            }
+//
+//                            expanded.clear();
                             latch.count_down();
                         },
                         .wg = nullptr,
