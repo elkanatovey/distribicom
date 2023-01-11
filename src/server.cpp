@@ -91,9 +91,9 @@ int main(int argc, char *argv[]) {
             auto time_round_s = std::chrono::high_resolution_clock::now();
 
             auto ledger = server->distribute_work(j);
-
+            std::cout << "SERVER: waiting on ledger." << std::endl;
             ledger->done.read(); // todo: how much time should we wait?
-
+            std::cout << "SERVER: ledger done." << std::endl;
             // server should now inspect missing items and run the calculations for them.
             // server should also be notified by ledger about the rouge workers.
             server->learn_about_rouge_workers(ledger);

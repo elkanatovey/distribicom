@@ -117,7 +117,9 @@ void services::FullServer::send_stop_signal() {
 }
 
 void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>) {
+#ifdef FREIVALDS
     manager.wait_on_verification();
+#endif
 }
 
 void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {
