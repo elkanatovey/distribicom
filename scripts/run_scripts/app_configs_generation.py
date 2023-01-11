@@ -6,7 +6,7 @@ from run import *
 if __name__ == '__main__':
     args = command_line_args()
 
-    settings = Settings(args.config_file)
+    settings = Settings(args.config_file, args.servers, args.cpus)
 
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
 
