@@ -9,11 +9,11 @@
   },
   "num_clients": "30",
   "binaries": {
-    "main_server": "/home/elkanatovey/CLionProjects/distribicom/bin/main_server",
-    "worker": "/home/elkanatovey/CLionProjects/distribicom/bin/worker"
+    "main_server": "main_server",
+    "worker": "worker"
   },
   "test_setup": {
-    "shared_folder": "/home/elkanatovey/CLionProjects/distribicom/scripts/run_scripts/temp_configs",
+    "shared_folder": ".",
     "number_of_cpus_per_worker": 2
   }
 }
