@@ -11,9 +11,9 @@ namespace TestUtils {
     std::shared_ptr<CryptoObjects> setup(TestUtils::SetupConfigs configs) {
         seal::EncryptionParameters enc_params(configs.encryption_params_configs.scheme_type);
         set_enc_params(
-                configs.encryption_params_configs.polynomial_degree,
-                configs.encryption_params_configs.log_coefficient_modulus,
-                enc_params
+            configs.encryption_params_configs.polynomial_degree,
+            configs.encryption_params_configs.log_coefficient_modulus,
+            enc_params
         );
 
         verify_encryption_params(enc_params);
@@ -60,13 +60,13 @@ namespace TestUtils {
 
 
     CryptoObjects::CryptoObjects(seal::EncryptionParameters encryption_params) :
-            encryption_params(encryption_params),
-            seal_context(encryption_params, true),
-            keygen(seal::SEALContext(seal_context)),
-            secret_key(keygen.secret_key()),
-            encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
-            decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
-            encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
+        encryption_params(encryption_params),
+        seal_context(encryption_params, true),
+        keygen(seal::SEALContext(seal_context)),
+        secret_key(keygen.secret_key()),
+        encryptor(seal::Encryptor(seal::SEALContext(seal_context), secret_key)),
+        decryptor(seal::Decryptor(seal::SEALContext(seal_context), secret_key)),
+        encoder(seal::BatchEncoder(seal::SEALContext(seal_context))) {
         //stoeln from seal pir. the needed rotation keys are generated here.
         std::vector<uint32_t> galois_elts;
         int N = encryption_params.poly_modulus_degree();
@@ -102,30 +102,30 @@ namespace TestUtils {
     }
 
     TestEncryptionParamsConfigs DEFAULT_ENCRYPTION_PARAMS_CONFIGS = {
-            .scheme_type = seal::scheme_type::bgv,
-            .polynomial_degree = 4096,
-            .log_coefficient_modulus = 20
+        .scheme_type = seal::scheme_type::bgv,
+        .polynomial_degree = 4096,
+        .log_coefficient_modulus = 20
     };
 
     TestPIRParamsConfigs DEFAULT_PIR_PARAMS_CONFIGS = {
-            .number_of_items = 100,
-            .size_per_item = 100,
-            .dimensions = 1,
-            .use_symmetric = true,
-            .use_batching = true,
-            .use_recursive_mod_switching = true
+        .number_of_items = 100,
+        .size_per_item = 100,
+        .dimensions = 1,
+        .use_symmetric = true,
+        .use_batching = true,
+        .use_recursive_mod_switching = true
     };
 
     SetupConfigs DEFAULT_SETUP_CONFIGS = {
-            .encryption_params_configs = DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
-            .pir_params_configs = DEFAULT_PIR_PARAMS_CONFIGS,
+        .encryption_params_configs = DEFAULT_ENCRYPTION_PARAMS_CONFIGS,
+        .pir_params_configs = DEFAULT_PIR_PARAMS_CONFIGS,
     };
 
     long time_func(const std::function<void()> &f) {
         auto start = std::chrono::high_resolution_clock::now();
         f();
         auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         return duration.count();
     }
 

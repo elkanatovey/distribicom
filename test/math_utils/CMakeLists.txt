@@ -12,6 +12,7 @@ create_test_sourcelist(Tests
         async_mat_mult.cpp
         threadpool_test.cpp
         expansion_speed_test.cpp
+        mempool_test.cpp
         )
 
 # add the executable
