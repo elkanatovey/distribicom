@@ -47,6 +47,12 @@ int main(int argc, char *argv[]) {
     distribicom::AppConfigs cnfgs;
     cnfgs.ParseFromString(load_from_file(argv[1]));
 
+#ifdef FREIVALDS
+    std::cout << "Running with FREIVALDS!!!!" << std::endl;
+#else
+    std::cout << "Running without FREIVALDS!!!!" << std::endl;
+#endif
+
     std::cout << "server set up with the following configs:" << std::endl;
     std::cout << cnfgs.DebugString() << std::endl;
 
@@ -76,6 +82,8 @@ int main(int argc, char *argv[]) {
     std::filesystem::remove(server_out_file_name);
     std::ofstream ofs(server_out_file_name);
     ofs << cnfgs.DebugString() << std::endl;
+
+    ofs << "num queries:" << num_clients << std::endl;
     ofs << "results: \n [" << std::endl;
 
     for (int i = 0; i < 1; ++i) {
