@@ -76,7 +76,7 @@ class Settings:
         test_setup = self.all["test_setup"]
 
         # os.cpu_count() on cluster isn't accurate
-        self.num_cpus = cpus_per_server if (cpus_per_server is not None) else test_setup["number_of_cpus_on_server"]
+        self.num_cpus = cpus_per_server
         self.num_cpus_per_worker = test_setup["number_of_cpus_per_worker"]
         self.num_servers = servers if servers is not None else test_setup["number_of_servers"]
 
@@ -115,9 +115,10 @@ def command_line_args():
         default=None
     )
     parser.add_argument(
-        "-c", "--cpus",
+        "--cpus",
         help="number of cpus per server",
         type=int,
+        required=True,
         default=None
     )
 

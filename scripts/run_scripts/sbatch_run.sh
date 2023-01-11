@@ -6,4 +6,4 @@
 #SBATCH --time=00:10:00
 #SBATCH --mem=64G
 
-srun -n 8 run.py -c test_setting.json -s 8 -c 16
+srun -n 8 run.py -c test_setting.json -s 8 --cpus 16
