@@ -80,8 +80,8 @@ class Settings:
         self.num_cpus_per_worker = test_setup["number_of_cpus_per_worker"]
         self.num_servers = servers if servers is not None else test_setup["number_of_servers"]
 
-        self.num_workers = int(self.num_cpus / self.num_cpus_per_worker)
-        if self.num_workers < 1:
+        self.num_workers_on_single_machine = int(self.num_cpus / self.num_cpus_per_worker)
+        if self.num_workers_on_single_machine < 1:
             raise Exception("more vcus per worker than possible")
 
         self.test_dir = test_setup["shared_folder"]
@@ -95,8 +95,8 @@ class Settings:
         self.app_configs_filename = os.path.join(self.test_dir, "app_configs.txt")
         self.configs = self.all["configs"]
         self.configs["server_cpus"] = self.num_cpus
-        self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers
-        self.configs["number_of_workers"] = int((self.num_cpus / self.num_workers) * (self.num_servers - 1))
+        self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers_on_single_machine
+        self.configs["number_of_workers"] = int(self.num_workers_on_single_machine * (self.num_servers - 1))
 
 
 def command_line_args():
@@ -138,8 +138,8 @@ def setup_workers(settings) -> List[subprocess.Popen]:
     print("waiting for main server")
     time.sleep(settings.sleep_time)
     out = []
-    print(f"creating {settings.num_workers} workers")
-    for i in range(settings.num_workers):
+    print(f"creating {settings.num_workers_on_single_machine} workers")
+    for i in range(settings.num_workers_on_single_machine):
         out.append(subprocess.Popen([settings.worker_bin, settings.app_configs_filename]))
     return out
 

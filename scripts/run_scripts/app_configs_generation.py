@@ -11,6 +11,7 @@ if __name__ == '__main__':
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
 
     app_configs = create_app_configs(settings.configs, hostname)
+    print(app_configs)
     with open(settings.app_configs_filename, 'wb') as f:
         f.write(app_configs.SerializeToString())
         print(f"configs written to {settings.app_configs_filename}")
