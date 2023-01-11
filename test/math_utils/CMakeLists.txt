@@ -11,6 +11,7 @@ create_test_sourcelist(Tests
         frievalds_test.cpp
         async_mat_mult.cpp
         threadpool_test.cpp
+        mempool_test.cpp
         )
 
 # add the executable
