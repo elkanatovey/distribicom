@@ -67,17 +67,23 @@ def get_all_hostnames(dir_path, hostname_suffix):
 
 
 class Settings:
-    def __init__(self, settings_file_name):
+    def __init__(self, settings_file_name, servers, cpus_per_server):
         self.sleep_time = 5
         self.hostname_suffix = ".hostname"
 
         self.all = load_test_settings("test_setting.json")
 
         test_setup = self.all["test_setup"]
-        self.num_cpus = test_setup["number_of_cpus_on_server"]  # os.cpu_count() on cluster isn't accurate
-        self.num_workers = test_setup["number_of_workers_per_server"]
-        self.num_servers = test_setup["number_of_servers"]
-        self.workers_print = test_setup["workers_print"]
+
+        # os.cpu_count() on cluster isn't accurate
+        self.num_cpus = cpus_per_server if (cpus_per_server is not None) else test_setup["number_of_cpus_on_server"]
+        self.num_cpus_per_worker = test_setup["number_of_cpus_per_worker"]
+        self.num_servers = servers if servers is not None else test_setup["number_of_servers"]
+
+        self.num_workers = int(self.num_cpus / self.num_cpus_per_worker)
+        if self.num_workers < 1:
+            raise Exception("more vcus per worker than possible")
+
         self.test_dir = test_setup["shared_folder"]
 
         self.binaries = self.all["binaries"]
@@ -90,6 +96,7 @@ class Settings:
         self.configs = self.all["configs"]
         self.configs["server_cpus"] = self.num_cpus
         self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers
+        self.configs["number_of_workers"] = (self.num_cpus / self.num_workers) * (self.num_servers - 1)
 
 
 def command_line_args():
@@ -101,6 +108,19 @@ def command_line_args():
         type=str,
         default="test_setting.json"
     )
+    parser.add_argument(
+        "-s", "--servers",
+        help="number of servers the sbatch will set up",
+        type=int,
+        default=None
+    )
+    parser.add_argument(
+        "-c", "--cpus",
+        help="number of cpus per server",
+        type=int,
+        default=None
+    )
+
     return parser.parse_args()
 
 
@@ -130,7 +150,7 @@ def get_all_hostname_files(hostname_suffix, test_dir):
 if __name__ == '__main__':
     args = command_line_args()
 
-    settings = Settings(args.config_file)
+    settings = Settings(args.config_file, args.servers, args.cpus)
     hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
 
     fd, hostname_file = tempfile.mkstemp(dir=settings.test_dir, suffix=settings.hostname_suffix, prefix="distribicom_")
