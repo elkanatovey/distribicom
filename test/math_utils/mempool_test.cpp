@@ -9,8 +9,8 @@
 // 980ms 6 core
 
 int mempool_test(int a, char *b[]) {
-    auto max_cores = 4;
-    auto n_thread = 4;
+    auto max_cores = 8;
+    auto n_thread = 8;
     concurrency::threadpool pool(n_thread);
 
     auto num_additions_per_thread = (50000 * max_cores) / n_thread;
@@ -22,7 +22,7 @@ int mempool_test(int a, char *b[]) {
         for (int i = 0; i < n_thread; ++i) {
             pool.submit(
                     {
-                            .f =[&] {
+                            .f =[&,num_additions_per_thread, i] {
                                 uint32_t N = 8192;
                                 uint32_t logt = 20;
                                 seal::EncryptionParameters enc_params(seal::scheme_type::bgv);

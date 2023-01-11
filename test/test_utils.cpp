@@ -125,7 +125,7 @@ namespace TestUtils {
         auto start = std::chrono::high_resolution_clock::now();
         f();
         auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         return duration.count();
     }
 

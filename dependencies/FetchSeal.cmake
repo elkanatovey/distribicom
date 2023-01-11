@@ -6,7 +6,8 @@ project(seal_download NONE)
 include(FetchContent)
 
 set(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT OFF)
-set(SEAL_USE_INTEL_HEXL ON)
+set(SEAL_USE_INTEL_HEXL OFF)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 FetchContent_Declare(
         com_microsoft_seal
