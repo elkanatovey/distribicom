@@ -96,7 +96,7 @@ class Settings:
         self.configs = self.all["configs"]
         self.configs["server_cpus"] = self.num_cpus
         self.configs["worker_num_cpus"] = self.num_cpus // self.num_workers
-        self.configs["number_of_workers"] = (self.num_cpus / self.num_workers) * (self.num_servers - 1)
+        self.configs["number_of_workers"] = int((self.num_cpus / self.num_workers) * (self.num_servers - 1))
 
 
 def command_line_args():
