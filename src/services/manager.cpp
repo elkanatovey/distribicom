@@ -285,7 +285,13 @@ namespace services {
             db_rows.reserve(num_rows_per_worker);
 
             auto partition_start = (worker_id % num_workers_in_group) * num_rows_per_worker;
-            for (std::uint64_t j = 0; j < num_rows_per_worker; ++j) {
+            auto num_rows_to_give = num_rows_per_worker;
+            // notice we already advanced i, so we check i %num_workers_in_group and not i+1%num_workers_in_group
+            if (i % num_workers_in_group == 0 &&
+                num_rows_per_worker * num_workers_in_group < app_configs.configs().db_rows()) {
+                num_rows_to_give += 1;
+            }
+            for (std::uint64_t j = 0; j < num_rows_to_give; ++j) {
                 db_rows.push_back(j + partition_start);
             }
 
