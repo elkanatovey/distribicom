@@ -515,11 +515,22 @@ namespace services {
     void Manager::calculate_final_answer() {
         try {
 
+            std::map<std::uint32_t, std::unique_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>> promises;
             for (const auto &client: client_query_manager.id_to_info) {
-                auto current_query = &epoch_data.queries_dim2[client.first];
-                matops->mat_mult(**current_query, (*client.second->partial_answer), (*client.second->final_answer));
+                auto current_query = epoch_data.queries_dim2[client.first];
+                promises.insert(
+                    {
+                        client.first,
+                        matops->async_mat_mult(current_query, client.second->partial_answer)
+                    }
+                );
+            }
+            for (const auto &client: client_query_manager.id_to_info) {
+                client.second->final_answer = std::move(promises[client.first]->get());
                 matops->from_ntt(client.second->final_answer->data);
             }
+
+
 
         }
         catch (const std::exception &e) {

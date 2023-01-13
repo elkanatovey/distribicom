@@ -19,8 +19,8 @@ namespace services {
         seal::GaloisKeys galois_keys;
         std::unique_ptr<distribicom::Client::Stub> client_stub;
 
-        std::unique_ptr<math_utils::matrix<seal::Plaintext>> partial_answer;
-        std::unique_ptr<math_utils::matrix<seal::Ciphertext>> final_answer;
+        std::shared_ptr<math_utils::matrix<seal::Plaintext>> partial_answer;
+        std::shared_ptr<math_utils::matrix<seal::Ciphertext>> final_answer;
         std::uint64_t answer_count;
     };
 
