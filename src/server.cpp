@@ -99,12 +99,25 @@ int main(int argc, char *argv[]) {
             auto time_round_s = std::chrono::high_resolution_clock::now();
 
             auto ledger = server->distribute_work(j);
+
             std::cout << "SERVER: waiting on ledger." << std::endl;
             ledger->done.read(); // todo: how much time should we wait?
-            std::cout << "SERVER: ledger done." << std::endl;
+            auto work_received_end = std::chrono::high_resolution_clock::now();
+            auto work_receive_total_time = duration_cast<std::chrono::milliseconds>(
+                work_received_end - time_round_s).count();
+            std::cout << "SERVER: received all, ledger done: total time: " << work_receive_total_time << " ms"
+                      << std::endl;
+
             // server should now inspect missing items and run the calculations for them.
             // server should also be notified by ledger about the rouge workers.
             server->learn_about_rouge_workers(ledger);
+
+            auto learn_about_rouge_workers_end = std::chrono::high_resolution_clock::now();
+            auto time_to_wait_on_all_freivalds_promises = duration_cast<std::chrono::milliseconds>(
+                learn_about_rouge_workers_end - time_round_s).count();
+            std::cout << "SERVER: learned about rouge workers: total time: " << time_to_wait_on_all_freivalds_promises
+                      << " ms" << std::endl;
+
 
             // perform step 2.
             server->run_step_2(ledger);

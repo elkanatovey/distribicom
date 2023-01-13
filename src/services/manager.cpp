@@ -527,9 +527,16 @@ namespace services {
             }
             for (const auto &client: client_query_manager.id_to_info) {
                 client.second->final_answer = std::move(promises[client.first]->get());
-                matops->from_ntt(client.second->final_answer->data);
-            }
 
+                auto to_ntt_time = utils::time_it([&]() {
+                    matops->from_ntt(client.second->final_answer->data);
+                });
+
+                if (client.first == 0) {
+                    std::cout << "Manager::calculate_final_answer:to_ntt sample time: " << to_ntt_time << " ms"
+                              << std::endl;
+                }
+            }
 
 
         }
