@@ -123,8 +123,11 @@ void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistrib
 }
 
 void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {
-    std::cout << "Running step 2" << std::endl;
-    manager.calculate_final_answer();
+    auto time = utils::time_it([&]() {
+        manager.calculate_final_answer();
+    });
+    std::cout << "Running step 2: " << time << " ms" << std::endl;
+
 }
 
 void services::FullServer::tell_new_round() {
