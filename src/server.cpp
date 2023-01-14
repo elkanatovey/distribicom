@@ -99,8 +99,10 @@ int main(int argc, char *argv[]) {
             auto time_round_s = std::chrono::high_resolution_clock::now();
 
             auto ledger = server->distribute_work(j);
+            auto distribute_work_took = std::chrono::high_resolution_clock::now();
+            std::cout << "distribute work took: " << std::chrono::duration_cast<std::chrono::milliseconds>(
+                distribute_work_took - time_round_s).count() << " ms" << std::endl;
 
-            std::cout << "SERVER: waiting on ledger." << std::endl;
             ledger->done.read(); // todo: how much time should we wait?
             auto work_received_end = std::chrono::high_resolution_clock::now();
             auto work_receive_total_time = duration_cast<std::chrono::milliseconds>(

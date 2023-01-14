@@ -581,8 +581,7 @@ namespace services {
 
                     auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
                     auto rows = work_responsibility.db_rows;
-                    auto query_row_len =
-                        work_responsibility.query_range_end - work_responsibility.query_range_start;
+                    auto query_row_len = work_responsibility.query_range_end - work_responsibility.query_range_start;
 
 #ifdef DISTRIBICOM_DEBUG
                     if (query_row_len != epoch_data.size_freivalds_group) {
@@ -591,15 +590,14 @@ namespace services {
                     }
 #endif
                     for (size_t i = 0; i < rows.size(); i++) {
-                        std::vector<seal::Ciphertext> temp;
-                        temp.reserve(query_row_len);
+                        auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                            query_row_len, 1);
+
+                        auto &mpdata = workers_db_row_x_query->data;
                         for (size_t j = 0; j < query_row_len; j++) {
-                            temp.push_back(parts[j + i * query_row_len]->get()->ctx);
+                            mpdata[j] = parts[j + i * query_row_len]->get()->ctx;
                         }
 
-                        auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                            query_row_len, 1,
-                            temp);
                         auto is_valid = verify_row(workers_db_row_x_query, rows[i],
                                                    work_responsibility.group_number);
                         if (!is_valid) {
