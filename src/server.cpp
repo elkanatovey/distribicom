@@ -62,6 +62,12 @@ int main(int argc, char *argv[]) {
     }
 
     std::uint64_t num_clients = std::stoi(argv[2]);
+    if (num_clients == 0) {
+        std::cout << "num clients given in 0. assuming the expected number of workers as number of queries"
+                  << std::endl;
+        num_clients = cnfgs.number_of_workers();
+    }
+
     std::cout << "server set up with " << num_clients << " queries" << std::endl;
 
     auto enc_params = services::utils::setup_enc_params(cnfgs);
@@ -77,8 +83,10 @@ int main(int argc, char *argv[]) {
 
     server->wait_for_workers(int(cnfgs.number_of_workers()));
     // 1 epoch
-
-    auto server_out_file_name = "server.log";
+    std::stringstream server_out_file_name_stream;
+    server_out_file_name_stream << "server_out_" << cnfgs.number_of_workers() << "_workers_" << num_clients
+                                << "_queries.log";
+    auto server_out_file_name = server_out_file_name_stream.str();
     std::filesystem::remove(server_out_file_name);
     std::ofstream ofs(server_out_file_name);
     ofs << cnfgs.DebugString() << std::endl;
