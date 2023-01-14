@@ -31,7 +31,7 @@ bool is_valid_command_line_args(int argc, char *argv[]) {
         return false;
     }
 
-    if (std::stoi(argv[2]) < 1) {
+    if (std::stoi(argv[2]) < 0) {
         std::cout << "num queries " << argv[2] << " is invalid" << std::endl;
         return false;
     }
