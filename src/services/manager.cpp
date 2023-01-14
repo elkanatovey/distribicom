@@ -550,7 +550,6 @@ namespace services {
                         std::uint64_t row_id,
                         std::uint64_t group_id) {
         try {
-            auto start = std::chrono::high_resolution_clock::now();
 
             auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query,
                                                                              epoch_data.random_scalar_vector);
@@ -558,11 +557,6 @@ namespace services {
             matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
             const bool is_row_valid = db_row_x_query_x_challenge_vec->data[0].is_transparent();
 
-            auto end = std::chrono::high_resolution_clock::now();
-            if (row_id == 0 && group_id == 0) {
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                std::cout << "Manager::verify_row::sample verification time: " << duration << " ms" << std::endl;
-            }
 
             return is_row_valid;
         } catch (std::exception &e) {
@@ -589,26 +583,31 @@ namespace services {
                             "unimplemented case: query_row_len != epoch_data.size_freivalds_group");
                     }
 #endif
-                    for (size_t i = 0; i < rows.size(); i++) {
-                        auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                            query_row_len, 1);
+                    auto worker_verify_time = utils::time_it([&]() {
 
-                        auto &mpdata = workers_db_row_x_query->data;
-                        for (size_t j = 0; j < query_row_len; j++) {
-                            mpdata[j] = parts[j + i * query_row_len]->get()->ctx;
+                        for (size_t i = 0; i < rows.size(); i++) {
+                            auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                                query_row_len, 1);
+
+                            auto &mpdata = workers_db_row_x_query->data;
+                            for (size_t j = 0; j < query_row_len; j++) {
+                                mpdata[j] = parts[j + i * query_row_len]->get()->ctx;
+                            }
+
+                            auto is_valid = verify_row(workers_db_row_x_query, rows[i],
+                                                       work_responsibility.group_number);
+                            if (!is_valid) {
+                                epoch_data.ledger->worker_verification_results[worker_creds]->set(
+                                    std::make_unique<bool>(false)
+                                );
+                                return;
+                            }
                         }
 
-                        auto is_valid = verify_row(workers_db_row_x_query, rows[i],
-                                                   work_responsibility.group_number);
-                        if (!is_valid) {
-                            epoch_data.ledger->worker_verification_results[worker_creds]->set(
-                                std::make_unique<bool>(false)
-                            );
-                            return;
-                        }
-                    }
-
-                    epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
+                        epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
+                    });
+                    std::cout << "Manager::async_verify_worker::verification time: " << worker_verify_time << " ms"
+                              << std::endl;
                 },
                 .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch(),
                 .name = "async_verify_worker_lambda"
