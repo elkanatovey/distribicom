@@ -61,6 +61,7 @@ int work_distribution_test(int, char *[]) {
     verify_all_queries_are_covered(partitions, num_queries);
     return 0;
     #endif
+    return 0;
 }
 
 void
