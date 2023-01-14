@@ -554,9 +554,9 @@ namespace services {
 
             auto db_row_x_query_x_challenge_vec = matops->scalar_dot_product(workers_db_row_x_query,
                                                                              epoch_data.random_scalar_vector);
-            auto expected_result = epoch_data.ledger->db_x_queries_x_randvec[group_id].data[row_id];
+            const auto &expected_result = epoch_data.ledger->db_x_queries_x_randvec[group_id].data[row_id];
             matops->w_evaluator->evaluator->sub_inplace(db_row_x_query_x_challenge_vec->data[0], expected_result);
-            bool is_row_valid = db_row_x_query_x_challenge_vec->data[0].is_transparent();
+            const bool is_row_valid = db_row_x_query_x_challenge_vec->data[0].is_transparent();
 
             auto end = std::chrono::high_resolution_clock::now();
             if (row_id == 0 && group_id == 0) {
