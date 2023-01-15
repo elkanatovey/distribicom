@@ -18,17 +18,25 @@ using namespace seal;
 // For this test, we need the parameters to be such that the number of
 // compressed ciphertexts needed is 1.
 int main(int argc, char *argv[]) {
+    uint32_t num_threads = 2;
+    if (argc >1 && std::stoi(argv[1]) >1)
+    {
+        num_threads = std::stoi(argv[1]);
+    }
 
     uint64_t number_of_items = 65536;
-    uint64_t size_per_item = 1024; // in bytes
+    uint64_t size_per_item = 256; // in bytes
     uint32_t N = 4096;
 
     // Recommended values: (logt, d) = (12, 2) or (8, 1).
     uint32_t logt = 20;
     uint32_t d = 2;
 
-    uint32_t num_threads = 16;
     uint32_t num_queries = 128;
+    if (argc > 2 && std::stoi(argv[2]) >1)
+    {
+        num_queries = std::stoi(argv[2]);
+    }
 
     EncryptionParameters enc_params(scheme_type::bgv);
     PirParams pir_params;
