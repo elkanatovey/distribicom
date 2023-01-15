@@ -26,6 +26,8 @@ target_link_libraries(main1 distribicom_cpp)
 # eval executables:
 add_executable(main_server server.cpp)
 add_executable(worker worker.cpp)
+add_executable(run_sealpir run_sealpir.cpp)
 
 target_link_libraries(main_server distribicom_cpp)
 target_link_libraries(worker distribicom_cpp)
+target_link_libraries(run_sealpir distribicom_cpp)
