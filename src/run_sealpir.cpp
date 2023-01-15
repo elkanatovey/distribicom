@@ -8,16 +8,23 @@
 #include <cstdint>
 #include <cstddef>
 #include "concurrency/concurrency.h"
+#include <fstream>
 
 using namespace std::chrono;
 using namespace std;
 using namespace seal;
 
-bool verify_params(int argc, char *const *argv) {
-    if(argc != 3 || std::stoi(argv[1]) < 1 || std::stoi(argv[2]) <= 0)
+bool verify_params(int argc, char *const *argv, uint32_t& num_threads, uint32_t& num_queries, std::string&
+log_address) {
+    if(argc < 3 || std::stoi(argv[1]) < 1 || std::stoi(argv[2]) <= 0)
     {
-        cout << "Usage: " << argv[0] << " <num_threads>" << " <num_queries>" << endl;
+        cout << "Usage: " << argv[0] << " <num_threads>" << " <num_queries> " << "<logfile_for_timings>" << endl;
         return false;
+    }
+    num_threads = std::stoi(argv[1]);
+    num_queries = std::stoi(argv[2]);
+    if(argc > 3){
+        log_address = argv[3];
     }
     return true;
 }
@@ -28,15 +35,16 @@ struct indice{
 };
 
 int main(int argc, char *argv[]) {
-    auto all_good = verify_params(argc, argv);
+    uint32_t num_threads;
+    uint32_t  num_queries;
+    std::string log_address = "run_sealpir_log.txt";
+    std::string cout_file = "run_sealpir.txt";
+    auto all_good = verify_params(argc, argv, num_threads, num_queries, log_address);
     if (!all_good)
     {
         return -1;
     }
-
-    uint32_t num_threads = std::stoi(argv[1]);
-
-    uint32_t  num_queries = std::stoi(argv[2]);
+    cout << "Main: timing logs saved to: " << log_address<< endl;
 
 
     uint64_t number_of_items = 1 << 16;
@@ -106,6 +114,12 @@ int main(int argc, char *argv[]) {
 
     }
 
+    std::streambuf *filebuf, *coutbackup;
+    std::ofstream coutfilestr;
+    coutfilestr.open (cout_file);
+    coutbackup = std::cout.rdbuf();     // back up cout's streambuf
+    filebuf = coutfilestr.rdbuf();        // get file's streambuf
+    std::cout.rdbuf(filebuf);         // assign streambuf to cout
 
     concurrency::threadpool* pool = new concurrency::threadpool(num_threads);
     concurrency::safelatch latch(num_queries);
@@ -128,9 +142,29 @@ int main(int argc, char *argv[]) {
     auto time_pool_e = high_resolution_clock::now();
     auto time_pool_us =
             duration_cast<microseconds>(time_pool_e - time_pool_s).count();
+    std::cout << "This is written to the file";
+    std::cout.rdbuf(coutbackup);        // restore cout's original streambuf
+
+    coutfilestr.close();
+
+
+    std::streambuf *psbuf, *backup;
+    std::ofstream filestr;
+    filestr.open (log_address, std::ios::app);
+    backup = std::clog.rdbuf();     // back up cout's streambuf
+    psbuf = filestr.rdbuf();        // get file's streambuf
+    std::clog.rdbuf(psbuf);         // assign streambuf to cout
+
 
     clog << "Main: pool query processing time: " << time_pool_us / 1000
          << " ms on "<<num_queries << " queries and "<< num_threads << " threads" << endl;
+    cout << "Main: pool query processing time: " << time_pool_us / 1000
+         << " ms on "<<num_queries << " queries and "<< num_threads << " threads" << endl;
+
+    std::clog.rdbuf(backup);        // restore cout's original streambuf
+
+    filestr.close();
+
     delete pool;
 
 
