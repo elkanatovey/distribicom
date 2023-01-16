@@ -57,9 +57,13 @@ namespace math_utils {
 #ifdef DISTRIBICOM_DEBUG
 
             if (row + col * rows >= data.size()) {
+                std::stringstream o;
+                o << "matrix::assert_pos: row + col * rows >= data.size()"
+                  << " row: " << row << ", col: " << col << ", rows: " << rows << ", cols: " << cols
+                    << ", data.size(): " << data.size();
+                throw std::out_of_range(o.str());
                 std::cout << std::endl;
             }
-            assert(row + col * rows < data.size());
 #endif
         };
     };
