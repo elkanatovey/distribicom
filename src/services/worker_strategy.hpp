@@ -75,7 +75,7 @@ namespace services::work_strategy {
 
         void expand_queries(WorkerServiceTask &task);
 
-        void parallel_expansions_into_query_mat(WorkerServiceTask &task);
+        void parallel_expansions_into_query_mat(WorkerServiceTask &task, std::map<int, int> &map);
 
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,

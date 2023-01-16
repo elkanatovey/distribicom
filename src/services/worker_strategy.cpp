@@ -26,13 +26,20 @@ namespace services::work_strategy {
         auto exp_time = utils::time_it([&]() {
 
             // define the map back from col to query index.
+            std::map<int,int> query_pos_to_col;
             auto col = -1;
             for (auto &key_val: task.ctx_cols) {
                 col_to_query_index[++col] = key_val.first;
+                query_pos_to_col[key_val.first] = col;
+            }
+            std::cout << "col_to_query_index: " << std::endl;
+            for (auto &key_val: col_to_query_index) {
+                std::cout << key_val.first << " -> " << key_val.second << std::endl;
             }
 
+
             std::cout << "expanding:" << task.ctx_cols.size() << " queries" << std::endl;
-            parallel_expansions_into_query_mat(task);
+            parallel_expansions_into_query_mat(task, query_pos_to_col);
 
             gkeys.clear();
 
@@ -42,7 +49,7 @@ namespace services::work_strategy {
     }
 
     void
-    RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task) {
+    RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task, std::map<int, int> &query_pos_to_col) {
         auto expanded_size = task.row_size;
 
         std::lock_guard lock(mu);
@@ -66,7 +73,7 @@ namespace services::work_strategy {
                             gkeys[q_pos]
                         );
 
-                        auto col = col_to_query_index[q_pos];
+                        auto col = query_pos_to_col.at(q_pos);
                         for (std::uint64_t row = 0; row < expanded_size; ++row) {
                             query_mat(row, col) = std::move(expanded[row]);
                         }
