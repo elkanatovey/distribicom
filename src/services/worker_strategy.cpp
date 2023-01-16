@@ -43,13 +43,13 @@ namespace services::work_strategy {
 
     void
     RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task) {
+        auto expanded_size = task.row_size;
+
+        std::lock_guard lock(mu);
         // prepare the query matrix.
         query_mat.resize(task.row_size, task.ctx_cols.size());
 
         concurrency::safelatch latch(int(task.ctx_cols.size()));
-        auto expanded_size = task.row_size;
-
-        std::lock_guard lock(mu);
         for (auto &pair: task.ctx_cols) {
             auto q_pos = pair.first;
 
@@ -66,8 +66,9 @@ namespace services::work_strategy {
                             gkeys[q_pos]
                         );
 
+                        auto col = col_to_query_index[q_pos];
                         for (std::uint64_t row = 0; row < expanded_size; ++row) {
-                            query_mat(row, q_pos) = std::move(expanded[row]);
+                            query_mat(row, col) = std::move(expanded[row]);
                         }
 
                         expanded.clear();
