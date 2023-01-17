@@ -5,9 +5,13 @@ from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 
 sealpir_clr = "#FE5F55"
 dpir_clr = "#E3A792"
+
+matplotlib.rcParams['font.size'] = 24
+line_size = 3
 
 
 class SealPirResults:
@@ -71,8 +75,9 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
     print(errbars)
     # y is the avg of test_result.data
     # TODO: colour nicely.
-    ax.plot(xs, ys, color=dpir_clr)
-    ax.errorbar(xs, ys, yerr=errbars, fmt='.', barsabove=True, capsize=2, ecolor=dpir_clr, color=dpir_clr)
+    ax.plot(xs, ys, marker='o', color=dpir_clr, linewidth=line_size, markersize=line_size + 1)
+    ax.errorbar(xs, ys, yerr=errbars, fmt='.', markersize=4, barsabove=True, capsize=2, ecolor=dpir_clr, color=dpir_clr,
+                elinewidth=line_size - 1)
 
 
 def plot_sealpir_line(ax):
@@ -90,7 +95,7 @@ def plot_sealpir_line(ax):
     errbars = [0, *map(lambda x: x.std, ys)]
     print(errbars)
     ys = [0, *map(lambda x: x.avg, ys)]
-    ax.plot(xs, ys, color=sealpir_clr)
+    ax.plot(xs, ys, color=sealpir_clr, marker='o', linewidth=line_size, markersize=line_size + 1)
     ax.errorbar(xs, ys, yerr=errbars, fmt='.', barsabove=True, capsize=2, ecolor=sealpir_clr, color=sealpir_clr)
 
 
@@ -113,6 +118,7 @@ if __name__ == '__main__':
 
     ax.legend(["dPIR", "sealPIR"])
 
+    ax.set_xticks([0, 42, 84, 126, 168])
     ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
     ax.set_xlabel('number of queries')
     ax.set_ylabel('round latency')
