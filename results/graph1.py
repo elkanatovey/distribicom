@@ -1,0 +1,120 @@
+# TODO:
+# 1. parse the files. and collect their name as data.
+import os
+from typing import List
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+sealpir_clr = "#FE5F55"
+dpir_clr = "#E3A792"
+
+
+class SealPirResults:
+    def __init__(self, queries, times):
+        # self.name = name
+        self.queries = queries
+        self.avg = np.average(times)
+        self.std = np.std(times)
+
+
+# according to Elkana's collected results.
+sealpir_results_42_queries = SealPirResults(42, [1519, 1476, 1492, 1577, 1517])
+sealpir_results_84_queries = SealPirResults(84, [2737, 2626, 2575, 2643, 2619])
+sealpir_results_126_queries = SealPirResults(126, [0, 0, 0, 0, 0, 0])  # No results.
+sealpir_results_168_queries = SealPirResults(168, [5114, 5053, 4941, 4767, 5041])
+
+
+class TestResult:
+    @staticmethod
+    def is_test_result(file_name: str) -> bool:
+        return not any(word in file_name for word in ["slurm", "ignore"])
+
+    def __init__(self, file_name: str):
+        self.file_name = file_name
+        # general info.
+        self.num_threads_per_worker = 1
+        self.num_cores = 12
+        self.num_vcpus = 24
+        self.server_num_threads = 12
+
+        self.num_workers = int(file_name.split("_")[2])
+        self.num_queries = self.num_workers
+        self.parse_file()
+
+    def parse_file(self):
+        with open(self.file_name, "r") as f:
+            for line in f:
+                if "results:" not in line:
+                    continue
+                break
+
+            f.readline()  # skip the first line.
+            self.data = []
+            for line in f:
+                if "]" in line:
+                    break
+                self.data.append(line[:-2].strip())
+
+            self.data = [int(x[:-3]) for x in self.data]  # remove "ms," from each data point
+
+
+def plot_dpir_line(ax, test_results: List[TestResult]):
+    test_results = sorted(test_results, key=lambda x: x.num_queries)
+    for test_result in test_results:
+        print(test_result.num_queries, test_result.data)
+    xs = [0, *(test_result.num_queries for test_result in test_results)]
+    ys = [0, *(np.average(test_result.data[1:]) for test_result in test_results)]
+
+    # TODO: verify err_bars are correct.
+    errbars = [0, *(np.std(test_result.data[1:]) for test_result in test_results)]
+    print(errbars)
+    # y is the avg of test_result.data
+    # TODO: colour nicely.
+    ax.plot(xs, ys, color=dpir_clr)
+    ax.errorbar(xs, ys, yerr=errbars, fmt='.', barsabove=True, capsize=2, ecolor=dpir_clr, color=dpir_clr)
+
+
+def plot_sealpir_line(ax):
+    xs = [0,
+          42,
+          84,
+          # 126,
+          168]
+    ys = [
+        sealpir_results_42_queries,
+        sealpir_results_84_queries,
+        # sealpir_results_126_queries,
+        sealpir_results_168_queries
+    ]
+    errbars = [0, *map(lambda x: x.std, ys)]
+    print(errbars)
+    ys = [0, *map(lambda x: x.avg, ys)]
+    ax.plot(xs, ys, color=sealpir_clr)
+    ax.errorbar(xs, ys, yerr=errbars, fmt='.', barsabove=True, capsize=2, ecolor=sealpir_clr, color=sealpir_clr)
+
+
+# colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
+if __name__ == '__main__':
+    folder_path = "./1thread"
+    test_results = []
+    for filename in os.listdir(folder_path):
+        if not TestResult.is_test_result(filename):
+            continue
+
+        test_results.append(TestResult(os.path.join(folder_path, filename)))
+
+    if len(test_results) == 0:
+        raise Exception("No test results found.")
+
+    fig, ax = plt.subplots()
+    plot_dpir_line(ax, test_results)
+    plot_sealpir_line(ax)
+
+    ax.legend(["dPIR", "sealPIR"])
+
+    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
+    ax.set_xlabel('number of queries')
+    ax.set_ylabel('round latency')
+
+    plt.show()
