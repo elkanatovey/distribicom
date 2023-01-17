@@ -22,10 +22,17 @@ class SealPirResults:
         self.std = np.std(times)
 
 
+"""
+query processing time: 3341 ms on 126 queries and 12 threads
+Main: pool query processing time: 3345 ms on 126 queries and 12 threads
+Main: pool query processing time: 3354 ms on 126 queries and 12 threads
+Main: pool query processing time: 3359 ms on 126 queries and 12 threads
+Main: pool query processing time: 3371 ms on 126 queries and 12 threads
+"""
 # according to Elkana's collected results.
 sealpir_results_42_queries = SealPirResults(42, [1519, 1476, 1492, 1577, 1517])
 sealpir_results_84_queries = SealPirResults(84, [2737, 2626, 2575, 2643, 2619])
-sealpir_results_126_queries = SealPirResults(126, [0, 0, 0, 0, 0, 0])  # No results.
+sealpir_results_126_queries = SealPirResults(126, [3341, 3345, 3354, 3359, 3371])  # No results.
 sealpir_results_168_queries = SealPirResults(168, [5114, 5053, 4941, 4767, 5041])
 
 
@@ -84,12 +91,12 @@ def plot_sealpir_line(ax):
     xs = [0,
           42,
           84,
-          # 126,
+          126,
           168]
     ys = [
         sealpir_results_42_queries,
         sealpir_results_84_queries,
-        # sealpir_results_126_queries,
+        sealpir_results_126_queries,
         sealpir_results_168_queries
     ]
     errbars = [0, *map(lambda x: x.std, ys)]
