@@ -4,12 +4,9 @@ from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import constants
 
-sealpir_clr = "#FE5F55"
-dpir_clr = "#E3A792"
-
-matplotlib.rcParams['font.size'] = 24
-line_size = 3
+matplotlib.rcParams['font.size'] = constants.font_size
 
 
 class SealPirResults:
@@ -74,11 +71,28 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
 
     xs = [0, *(test_result.num_queries for test_result in test_results)]
     ys = [0, *(np.average(test_result.data[1:]) for test_result in test_results)]
-
     errbars = [0, *(np.std(test_result.data[1:]) for test_result in test_results)]
-    ax.plot(xs, ys, marker='o', color=dpir_clr, linewidth=line_size, markersize=line_size + 1)
-    ax.errorbar(xs, ys, yerr=errbars, fmt='.', markersize=4, barsabove=True, capsize=2, ecolor=dpir_clr, color=dpir_clr,
-                elinewidth=line_size - 1)
+    print("dpir", ys)
+    ax.plot(
+        xs,
+        ys,
+        marker='o',
+        color=constants.dpir_clr,
+        linewidth=constants.line_size,
+        markersize=constants.line_size + 1
+    )
+    ax.errorbar(
+        xs,
+        ys,
+        yerr=errbars,
+        fmt='.',
+        markersize=4,
+        barsabove=True,
+        capsize=2,
+        ecolor=constants.dpir_clr,
+        color=constants.dpir_clr,
+        elinewidth=constants.line_size - 1
+    )
 
 
 def plot_sealpir_line(ax):
@@ -96,8 +110,25 @@ def plot_sealpir_line(ax):
     errbars = [0, *map(lambda y: y.std, ys)]
     print(errbars)
     ys = [0, *map(lambda y: y.avg, ys)]
-    ax.plot(xs, ys, color=sealpir_clr, marker='o', linewidth=line_size, markersize=line_size + 1)
-    ax.errorbar(xs, ys, yerr=errbars, fmt='.', barsabove=True, capsize=2, ecolor=sealpir_clr, color=sealpir_clr)
+    print("sealpir", ys)
+    ax.plot(
+        xs,
+        ys,
+        color=constants.sealpir_clr,
+        marker='o',
+        linewidth=constants.line_size,
+        markersize=constants.line_size + 1
+    )
+    ax.errorbar(
+        xs,
+        ys,
+        yerr=errbars,
+        fmt='.',
+        barsabove=True,
+        capsize=2,
+        ecolor=constants.sealpir_clr,
+        color=constants.sealpir_clr
+    )
 
 
 def collect_test_results(folder_path):
