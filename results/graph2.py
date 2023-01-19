@@ -64,8 +64,9 @@ class EpochSetupTime:
 def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
     test_results = sorted(test_results, key=lambda x: x.n_queries)
 
-    xs = [0, *(test_result.n_queries for test_result in test_results)]
-    ys = [0, *(test_result.total for test_result in test_results)]
+    xs = [*(test_result.n_queries for test_result in test_results)]
+    ys = [*(test_result.total for test_result in test_results)]
+
     ax.plot(
         xs,
         ys,
@@ -74,6 +75,7 @@ def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
         linewidth=constants.line_size,
         markersize=constants.line_size + 1
     )
+    ax.set_yticks([i * 1000 for i in range(6)])
 
 
 def collect_test_results(folder_path):
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     # ax.legend([])
 
     ax.set_xticks([0, 42, 84, 126, 168])
-    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4]))
+    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 1, 2, 3, 4, 5]))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('setup time')

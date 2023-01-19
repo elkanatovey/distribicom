@@ -69,9 +69,9 @@ class TestResult:
 def plot_dpir_line(ax, test_results: List[TestResult]):
     test_results = sorted(test_results, key=lambda x: x.num_queries)
 
-    xs = [0, *(test_result.num_queries for test_result in test_results)]
-    ys = [0, *(np.average(test_result.data[1:]) for test_result in test_results)]
-    errbars = [0, *(np.std(test_result.data[1:]) for test_result in test_results)]
+    xs = [*(test_result.num_queries for test_result in test_results)]
+    ys = [*(np.average(test_result.data[1:]) for test_result in test_results)]
+    errbars = [*(np.std(test_result.data[1:]) for test_result in test_results)]
     print("dpir", ys)
     ax.plot(
         xs,
@@ -106,10 +106,10 @@ def plot_sealpir_line(ax):
         key=lambda x: x.queries,
     )
 
-    xs = [0, *(result.queries for result in ys)]
-    errbars = [0, *map(lambda y: y.std, ys)]
+    xs = [*(result.queries for result in ys)]
+    errbars = [*map(lambda y: y.std, ys)]
     print(errbars)
-    ys = [0, *map(lambda y: y.avg, ys)]
+    ys = [*map(lambda y: y.avg, ys)]
     print("sealpir", ys)
     ax.plot(
         xs,
@@ -170,10 +170,11 @@ if __name__ == '__main__':
     plot_dpir_line(ax, test_results)
     plot_sealpir_line(ax)
 
-    ax.legend(["dPIR", "sealPIR"])
+    ax.legend(["DPIR", "SealPIR"])
 
     ax.set_xticks([0, 42, 84, 126, 168])
-    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
+    ax.set_yticks([i * 1000 for i in range(6)])
+    ax.set_yticklabels(map(lambda x: str(x) + "s", [ 0, 1, 2, 3, 4, 5]))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')
