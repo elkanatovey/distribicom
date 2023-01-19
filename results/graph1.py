@@ -132,16 +132,34 @@ def plot_sealpir_line(ax):
 
 
 def collect_test_results(folder_path):
-    test_results = []
-    for filename in os.listdir(folder_path):
-        if not TestResult.is_test_result(filename):
-            continue
-
-        test_results.append(TestResult(os.path.join(folder_path, filename)))
+    filtered = filter(lambda name: TestResult.is_test_result(name), get_all_fnames(folder_path))
+    test_results = [*map(lambda fname: TestResult(os.path.join(folder_path, fname)), filtered)]
 
     if len(test_results) == 0:
         raise Exception("No test results found.")
     return test_results
+
+
+def get_all_fnames(folder_path):
+    file_names = []
+    for filename in os.listdir(folder_path):
+        file_names.append(filename)
+    return file_names
+
+
+# def plot_epoch_line(ax, test_results: List[TestResult]):
+#     test_results = sorted(test_results, key=lambda x: x.num_queries)
+#
+#     xs = [0, *(test_result.num_queries for test_result in test_results)]
+#     ys = [0, *(test_result.data[0] for test_result in test_results)]
+#     ax.plot(
+#         xs,
+#         ys,
+#         marker='o',
+#         color=constants.epoch_setup,
+#         linewidth=constants.line_size,
+#         markersize=constants.line_size + 1
+#     )
 
 
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
@@ -155,9 +173,9 @@ if __name__ == '__main__':
     ax.legend(["dPIR", "sealPIR"])
 
     ax.set_xticks([0, 42, 84, 126, 168])
-    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
+    # ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
 
-    ax.set_xlabel('number of queries')
+    ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')
 
     plt.show()
