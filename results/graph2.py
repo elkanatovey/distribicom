@@ -75,7 +75,6 @@ def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
         linewidth=constants.line_size,
         markersize=constants.line_size + 1
     )
-    ax.set_yticks([i * 1000 for i in range(6)])
 
 
 def collect_test_results(folder_path):
@@ -94,7 +93,8 @@ if __name__ == '__main__':
     plot_dpir_line(ax, test_results)
     # ax.legend([])
 
-    ax.set_xticks([0, 42, 84, 126, 168])
+    ax.set_xticks([42, 84, 126, 168])
+    ax.set_yticks([i * 1000 for i in range(6)])
     ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 1, 2, 3, 4, 5]))
 
     ax.set_xlabel('number of clients')
