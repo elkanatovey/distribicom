@@ -27,7 +27,7 @@ sealpir_results_168_queries = SealPirResults(168, [5114, 5053, 4941, 4767, 5041]
 class TestResult:
     @staticmethod
     def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["slurm", "ignore"])
+        return not any(word in file_name for word in ["slurm", "ignore", "singleserverresults"])
 
     def __init__(self, file_name: str):
 
@@ -95,14 +95,9 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
     )
 
 
-def plot_sealpir_line(ax):
+def plot_sealpir_line(ax, sealpir_results: List[SealPirResults]):
     ys = sorted(
-        [
-            sealpir_results_42_queries,
-            sealpir_results_84_queries,
-            sealpir_results_126_queries,
-            sealpir_results_168_queries
-        ],
+        sealpir_results,
         key=lambda x: x.queries,
     )
 
@@ -147,6 +142,33 @@ def get_all_fnames(folder_path):
     return file_names
 
 
+class SingleServerParsing:
+    @staticmethod
+    def is_test_result(file_name: str) -> bool:
+        return file_name == "singleserverresults"
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.data_points = {}  # {num_queries, [data_points]}
+        self.parse_file()
+
+    def parse_file(self):
+        "Main: pool query processing time: 1981 ms on 95 queries and 95 threads"
+        with open(self.filename, "r") as f:
+            for line in f:
+                self.collect_line(line)
+
+    def collect_line(self, line):
+        time = int(line.split(" ")[5])
+        n_queries = int(line.split(" ")[8])
+        if n_queries not in self.data_points:
+            self.data_points[n_queries] = []
+        self.data_points[n_queries].append(time)
+
+    def into_sealpir_result_list(self):
+        return [*map(lambda x: SealPirResults(x[0], x[1]), self.data_points.items())]
+
+
 # def plot_epoch_line(ax, test_results: List[TestResult]):
 #     test_results = sorted(test_results, key=lambda x: x.num_queries)
 #
@@ -164,11 +186,22 @@ def get_all_fnames(folder_path):
 
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
-    test_results = collect_test_results("./1thread")
+    main_folder = "./1thread"
+    test_results = collect_test_results(main_folder)
 
     fig, ax = plt.subplots()
     plot_dpir_line(ax, test_results)
-    plot_sealpir_line(ax)
+    plot_sealpir_line(ax, [
+        sealpir_results_42_queries,
+        sealpir_results_84_queries,
+        sealpir_results_126_queries,
+        sealpir_results_168_queries
+    ])
+
+    # plot_sealpir_line(
+    #     ax,
+    #     SingleServerParsing(os.path.join(main_folder, "singleserverresults")).into_sealpir_result_list()
+    # )
 
     ax.legend(["DPIR", "SealPIR"])
 

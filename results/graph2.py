@@ -13,7 +13,7 @@ matplotlib.rcParams['font.size'] = constants.font_size
 class EpochSetupTime:
     @staticmethod
     def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["server", "ignore"])
+        return not any(word in file_name for word in ["server", "ignore", "singleserverresults"])
 
     def __init__(self, file_name):
 
