@@ -173,7 +173,7 @@ if __name__ == '__main__':
     ax.legend(["dPIR", "sealPIR"])
 
     ax.set_xticks([0, 42, 84, 126, 168])
-    # ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
+    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4, 5]))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')

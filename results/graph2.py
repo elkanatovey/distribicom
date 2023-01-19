@@ -90,11 +90,12 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots()
     plot_dpir_line(ax, test_results)
-    ax.legend(["dPIR first round"])
+    # ax.legend([])
 
     ax.set_xticks([0, 42, 84, 126, 168])
+    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 0, 1, 2, 3, 4]))
 
     ax.set_xlabel('number of clients')
-    ax.set_ylabel('round latency')
+    ax.set_ylabel('setup time')
 
     plt.show()
