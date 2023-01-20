@@ -217,6 +217,8 @@ namespace math_utils {
                        const matrix<seal::Ciphertext> &b,
                        matrix<seal::Ciphertext> &result) const;
 
+        template<typename U, typename V>
+        void verify_ntt_prior_to_mult(const matrix <U> &left, const matrix <V> &right) const;
     };
 
 }

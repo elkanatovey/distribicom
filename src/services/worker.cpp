@@ -6,10 +6,10 @@
 namespace services {
 
     // todo: take a const ref of the app_configs:
-    Worker::Worker(distribicom::WorkerConfigs &&wcnfgs)
-        : symmetric_secret_key(), cnfgs(std::move(wcnfgs)), chan(), mrshl() {
+    Worker::Worker(distribicom::AppConfigs &&wcnfgs)
+        : symmetric_secret_key(), appcnfgs(std::move(wcnfgs)), chan(), mrshl() {
         inspect_configs();
-        seal::EncryptionParameters enc_params = utils::setup_enc_params(cnfgs.appconfigs());
+        seal::EncryptionParameters enc_params = utils::setup_enc_params(appcnfgs);
 
         mrshl = marshal::Marshaller::Create(enc_params);
 
@@ -17,7 +17,7 @@ namespace services {
         // todo: put in a different function.
         auto manager_conn = std::make_unique<distribicom::Manager::Stub>(distribicom::Manager::Stub(
             grpc::CreateChannel(
-                cnfgs.appconfigs().main_server_hostname(),
+                appcnfgs.main_server_hostname(),
                 grpc::InsecureChannelCredentials()
             )
         ));
@@ -25,9 +25,6 @@ namespace services {
         grpc::ClientContext context;
         distribicom::Ack response;
         distribicom::WorkerRegistryRequest request;
-
-        request.set_workerport(cnfgs.workerport());
-        request.set_worker_ip(cnfgs.worker_ip());
 
 
         symmetric_secret_key.resize(32);
@@ -54,6 +51,7 @@ namespace services {
                         std::cout << "worker main thread: stopping execution" << std::endl;
                         break;
                     }
+                    std::cout << "worker main thread: processing task." << std::endl;
                     strategy->process_task(std::move(task_.answer));
                 }
             });
@@ -62,11 +60,11 @@ namespace services {
     }
 
     void Worker::inspect_configs() const {
-        if (cnfgs.appconfigs().configs().scheme() != "bgv") {
+        if (appcnfgs.configs().scheme() != "bgv") {
             throw std::invalid_argument("currently not supporting any scheme oother than bgv.");
         }
 
-        auto row_size = cnfgs.appconfigs().configs().db_cols();
+        auto row_size = appcnfgs.configs().db_cols();
         if (row_size <= 0) {
             throw std::invalid_argument("row size must be positive");
         }
@@ -80,16 +78,14 @@ namespace services {
         int row = tmp.row();
         int col = tmp.col();
 
-
         if (tmp.has_ptx()) {
             if (!task.ptx_rows.contains(row)) {
-                task.ptx_rows[row] = std::vector<seal::Plaintext>(task.row_size);
+                task.ptx_rows[row] = std::move(std::vector<seal::Plaintext>(task.row_size));
             }
             if (col >= task.row_size) {
                 throw std::invalid_argument("Invalid column index, too big");
             }
-            task.ptx_rows[row][col]
-                = mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data());
+            task.ptx_rows[row][col] = std::move(mrshl->unmarshal_seal_object<seal::Plaintext>(tmp.ptx().data()));
             return;
         }
 
@@ -97,9 +93,9 @@ namespace services {
             throw std::invalid_argument("Invalid matrix part, neither ptx nor ctx");
         }
         if (!task.ctx_cols.contains(col)) {
-            task.ctx_cols[col] = std::vector<seal::Ciphertext>(1);
+            task.ctx_cols[col] = std::move(std::vector<seal::Ciphertext>(1));
         }
-        task.ctx_cols[col][0] = mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data());
+        task.ctx_cols[col][0] = std::move(mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
     }
 
 
@@ -114,16 +110,16 @@ namespace services {
 
             switch (read_val.part_case()) {
                 case distribicom::WorkerTaskPart::PartCase::kGkey:
-                    std::cout << "received galois keys" << std::endl;
+//                    std::cout << "received galois keys" << std::endl;
                     strategy->store_galois_key(
-                        mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys()),
+                        std::move(mrshl->unmarshal_seal_object<seal::GaloisKeys>(read_val.gkey().keys())),
                         int(read_val.gkey().key_pos())
                     );
 
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
-                    std::cout << "received matrix part" << std::endl;
+//                    std::cout << "received matrix part" << std::endl;
                     update_current_task();
                     break;
 
@@ -134,14 +130,13 @@ namespace services {
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kTaskComplete:
-                    std::cout << "task complete" << std::endl;
+                    std::cout << "done receiving" << std::endl;
                     if (!task.ptx_rows.empty() || !task.ctx_cols.empty()) {
-                        std::cout << "sending task to be processed" << std::endl;
                         chan.write(std::move(task));
 
                         // TODO: does this leak memory?
                         task = WorkerServiceTask();
-                        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+                        task.row_size = int(appcnfgs.configs().db_cols());
                     }
                     break;
 
@@ -154,7 +149,7 @@ namespace services {
             read_val.clear_matrixpart();
 
         } catch (std::exception &e) {
-            std::cout << "Worker::OnReadDone: failure: " << e.what() << std::endl;
+            std::cerr << "Worker::OnReadDone: failure: " << e.what() << std::endl;
         }
 
         StartRead(&read_val);// queue the next read request.
@@ -184,7 +179,7 @@ namespace services {
     void Worker::setup_stream() {
         // TODO: setup any value that we need in our stream here:
 
-        task.row_size = int(cnfgs.appconfigs().configs().db_cols());
+        task.row_size = int(appcnfgs.configs().db_cols());
 
         // write worker's credentials here:
 
@@ -195,7 +190,7 @@ namespace services {
             ch_args.SetMaxSendMessageSize(constants::max_message_size);
             this->stub = distribicom::Manager::NewStub(
                 grpc::CreateCustomChannel(
-                    cnfgs.appconfigs().main_server_hostname(),
+                    appcnfgs.main_server_hostname(),
                     grpc::InsecureChannelCredentials(),
                     ch_args
                 )

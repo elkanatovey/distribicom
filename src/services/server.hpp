@@ -23,7 +23,6 @@ namespace services {
         seal::EncryptionParameters enc_params;
 
 
-
         std::vector<std::future<int>> db_write_requests;
 
     public:
@@ -51,7 +50,7 @@ namespace services {
 
         // The server gives the manager the current state of the DB and the queries.
         // The manager then distributes the work to the workers and returns the results.
-        std::shared_ptr<WorkDistributionLedger> distribute_work();
+        std::shared_ptr<services::WorkDistributionLedger> distribute_work(std::uint64_t round = 0);
 
         void wait_for_workers(int i);
 
@@ -70,6 +69,9 @@ namespace services {
         void run_step_2(std::shared_ptr<WorkDistributionLedger>);
 
         void close() { manager.close(); }
+
+        // for testing:
+        const ClientDB &get_client_db() { return manager.client_query_manager; }
 
     private:
         void init_pir_data(const distribicom::AppConfigs &app_configs);

@@ -23,7 +23,7 @@
 //
 //
 int client_test(int, char *[]) {
-
+return 0;
 }
 //    auto all = TestUtils::setup(TestUtils::DEFAULT_SETUP_CONFIGS);
 //

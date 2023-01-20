@@ -5,6 +5,7 @@
 #include <grpc++/grpc++.h>
 #include <latch>
 
+#define NUM_CLIENTS 64
 constexpr std::string_view server_port = "5051";
 constexpr std::string_view worker_port = "52100";
 
@@ -24,10 +25,18 @@ int worker_test(int, char *[]) {
         "localhost:" + std::string(server_port),
         int(all->encryption_params.poly_modulus_degree()),
         20,
-        6,
-        6,
+        42,
+        41,
         256
     );
+
+#ifdef FREIVALDS
+    std::cout << "Running with FREIVALDS!!!!" << std::endl;
+#else
+    std::cout << "Running without FREIVALDS!!!!" << std::endl;
+#endif
+    std::cout << cfgs.DebugString() << std::endl;
+    std::cout << "total queries: " << NUM_CLIENTS << "\n\n" << std::endl;
     services::FullServer fs = full_server_instance(all, cfgs);
 
     std::latch wg(1);
@@ -39,11 +48,31 @@ int worker_test(int, char *[]) {
     sleep(3);
 
     std::cout << "setting up worker-service" << std::endl;
-    threads.emplace_back(setupWorker(wg, cfgs));
+    distribicom::AppConfigs moveable_appcnfgs;
+    moveable_appcnfgs.CopyFrom(cfgs);
+    threads.emplace_back(setupWorker(wg, moveable_appcnfgs));
 
+    std::vector<std::chrono::microseconds> results;
     fs.wait_for_workers(1);
     fs.start_epoch();
-    fs.learn_about_rouge_workers(fs.distribute_work());
+    for (int i = 0; i < 10; ++i) {
+        auto time_round_s = std::chrono::high_resolution_clock::now();
+
+        auto ledger = fs.distribute_work(i);
+        ledger->done.read();
+        fs.run_step_2(ledger);
+
+        auto time_round_e = std::chrono::high_resolution_clock::now();
+        auto time_round_ms = duration_cast<std::chrono::milliseconds>(time_round_e - time_round_s).count();
+        std::cout << "Main_Server: round " << i << " running time: " << time_round_ms << " ms" << std::endl;
+        results.emplace_back(time_round_ms);
+    }
+
+    std::cout << "results: [ ";
+    for (std::uint64_t i = 0; i < results.size() - 1; ++i) {
+        std::cout << results[i].count() << "ms, ";
+    }
+    std::cout << results.back().count() << "ms ]" << std::endl;
 
     sleep(5);
     std::cout << "\nshutting down.\n" << std::endl;
@@ -69,7 +98,7 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
         m->marshal_query_vector(query, query_marshaled);
         auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.last_context_data()->parms()) * 2,
+        services::set_client(math_utils::compute_expansion_ratio(all->seal_context.first_context_data()->parms()) * 2,
                              app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
                              client_info);
 
@@ -81,8 +110,8 @@ create_client_db(int size, std::shared_ptr<TestUtils::CryptoObjects> &all, const
 
 services::FullServer
 full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distribicom::AppConfigs &configs) {
-    auto num_clients = configs.configs().db_rows() * 2;
-    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_rows());
+    auto num_clients = NUM_CLIENTS;
+    math_utils::matrix<seal::Plaintext> db(configs.configs().db_rows(), configs.configs().db_cols());
 
     for (auto &p: db.data) {
         p = all->random_plaintext();
@@ -98,13 +127,7 @@ full_server_instance(std::shared_ptr<TestUtils::CryptoObjects> &all, const distr
 std::thread setupWorker(std::latch &wg, distribicom::AppConfigs &configs) {
     return std::thread([&] {
         try {
-            services::Worker worker(
-                services::configurations::create_worker_configs(
-                    configs,
-                    std::stoi(std::string(worker_port)),
-                    "0.0.0.0"
-                )
-            );
+            services::Worker worker(std::move(configs));
 
             wg.wait();
             worker.close();

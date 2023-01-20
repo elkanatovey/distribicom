@@ -53,17 +53,18 @@ services::FullServer::RegisterAsClient(grpc::ServerContext *context, const distr
 grpc::Status
 services::FullServer::StoreQuery(grpc::ServerContext *context, const distribicom::ClientQueryRequest *request,
                                  distribicom::Ack *response) {
+    throw std::runtime_error("StoreQuery unimplemented");
 
-    auto id = request->mailbox_id();
-
-    std::unique_lock lock(*manager.client_query_manager.mutex);
-    if (manager.client_query_manager.id_to_info.find(id) == manager.client_query_manager.id_to_info.end()) {
-        return {grpc::StatusCode::NOT_FOUND, "Client not found"};
-    }
-
-    manager.client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
-    response->set_success(true);
-    return grpc::Status::OK;
+//    auto id = request->mailbox_id();
+//
+//    std::unique_lock lock(*manager.client_query_manager.mutex);
+//    if (manager.client_query_manager.id_to_info.find(id) == manager.client_query_manager.id_to_info.end()) {
+//        return {grpc::StatusCode::NOT_FOUND, "Client not found"};
+//    }
+//
+//    manager.client_query_manager.id_to_info[id]->query_info_marshaled.CopyFrom(*request);
+//    response->set_success(true);
+//    return grpc::Status::OK;
 }
 
 //@todo fix this to translate bytes to coeffs properly when writing
@@ -83,23 +84,9 @@ grpc::Status services::FullServer::WriteToDB(grpc::ServerContext *context, const
     return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work() {
-    std::shared_ptr<services::WorkDistributionLedger> ledger;
-
-    // block is to destroy the db handle.
-    {
-        auto db_handle = manager.db.many_reads();
-
-        std::shared_lock client_db_lock(*(manager.client_query_manager.mutex));
-
-        ledger = manager.distribute_work(db_handle.mat, manager.client_query_manager, 1, 1
-#ifdef DISTRIBICOM_DEBUG
-            , manager.client_query_manager.id_to_info.begin()->second->galois_keys
-#endif
-        );
-    }
-
-    return ledger;
+std::shared_ptr<services::WorkDistributionLedger> services::FullServer::distribute_work(std::uint64_t round) {
+    std::shared_lock client_db_lock(*(manager.client_query_manager.mutex));
+    return manager.distribute_work(manager.client_query_manager, round, 1);
 }
 
 void services::FullServer::start_epoch() {
@@ -130,11 +117,17 @@ void services::FullServer::send_stop_signal() {
 }
 
 void services::FullServer::learn_about_rouge_workers(std::shared_ptr<WorkDistributionLedger>) {
+#ifdef FREIVALDS
     manager.wait_on_verification();
+#endif
 }
 
 void services::FullServer::run_step_2(std::shared_ptr<WorkDistributionLedger>) {
-    manager.calculate_final_answer();
+    auto time = utils::time_it([&]() {
+        manager.calculate_final_answer();
+    });
+    std::cout << "Running step 2: " << time << " ms" << std::endl;
+
 }
 
 void services::FullServer::tell_new_round() {

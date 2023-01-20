@@ -30,9 +30,9 @@ namespace concurrency {
          */
         inline Result<T> pop_chan() {
             if (!q.empty()) {
-                T val = q.front();
+                Result<T> out{std::move(q.front()), true};
                 q.pop();
-                return Result<T>{val, true};
+                return out;
             }
             if (closed) {
                 return Result<T>{T(), false};
@@ -57,12 +57,12 @@ namespace concurrency {
         /**
          * Adds an element to the queue.
          */
-        void write(T t) {
+        void write(T &&t) {
             std::lock_guard<std::mutex> lock(m);
             if (closed) {
                 throw std::runtime_error("Channel::write() - channel closed.");
             }
-            q.push(t);
+            q.push(std::move(t));
             c.notify_one();
         }
 
@@ -74,25 +74,6 @@ namespace concurrency {
             std::unique_lock<std::mutex> lock(m);
             // returns if q is not empty, and if channel is not closed. // todo verify this expression.
             c.wait(lock, [&] { return (!q.empty() || closed); });
-
-            return pop_chan();
-        }
-
-        /**
-         * read_for behaves like read(), but ensures the caller does not block forever on the channel.
-         * After the given duration the channel returns a result of read failure.
-         */ // TODO: should return something that indicates timeout.
-        template<typename _Rep, typename _Period>
-        Result<T> read_for(const std::chrono::duration<_Rep, _Period> &dur) {
-            auto max_timeout = std::chrono::steady_clock::now() + dur;
-
-            std::unique_lock<std::mutex> lock(m);
-            // returns if q is not empty, and if channel is not closed.
-            c.wait_until(lock, max_timeout, [&] { return (!q.empty() || closed); });
-
-            if (std::chrono::steady_clock::now() > max_timeout) {
-                return Result<T>{T(), false}; // timeout passed..
-            }
 
             return pop_chan();
         }

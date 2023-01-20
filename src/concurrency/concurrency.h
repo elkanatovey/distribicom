@@ -5,3 +5,4 @@
 #include "promise.hpp"
 #include "threadpool.hpp"
 #include "safelatch.h"
+#include "globals.h"

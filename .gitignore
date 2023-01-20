@@ -1,4 +1,5 @@
 cmake-build-debug
+cmake-build-release
 cmake-build-debug-remote-host
 seal_download
 CmakeFiles
@@ -6,3 +7,6 @@ CmakeFiles
 .DS_Store
 bin
 *checks*
+venv
+__pycache__/
+*.py[cod]

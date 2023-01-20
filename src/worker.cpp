@@ -1,19 +1,38 @@
 #include <iostream>
-#include "services/factory.hpp"
+#include <filesystem>
 #include "worker.hpp"
+#include "marshal/local_storage.hpp"
 
-int main(int, char *[]) {
-    // todo: load configs from config file in specific folder.
-    // todo: need to define how to find server's ip address... it should be in a specific file.
-    // maybe when the server sets itself up it creates this file which everyone will read from?
-    auto server_ip = "0.0.0.0:5432";
-    auto wcnfgs = services::configurations::create_worker_configs(
-        services::configurations::create_app_configs(server_ip, 4096, 20, 5, 5, 256),
-        std::stoi(std::string("0")),
-        server_ip
-    );
+// TODO: understand how to use export to different file.
+bool is_valid_command_line_args(int argc, char *argv[]) {
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
+        return false;
+    }
 
-    services::Worker w(std::move(wcnfgs));
+    if (!std::filesystem::exists(argv[1])) {
+        std::cout << "Config file " << argv[1] << " does not exist" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+int main(int argc, char *argv[]) {
+    if (!is_valid_command_line_args(argc, argv)) {
+        return -1;
+    }
+
+    distribicom::AppConfigs cnfgs;
+    cnfgs.ParseFromString(load_from_file(argv[1]));
+
+    if (cnfgs.worker_num_cpus() > 0) {
+        concurrency::num_cpus = cnfgs.worker_num_cpus();
+        std::cout << "set global num cpus to:" << concurrency::num_cpus << std::endl;
+    }
+
+
+    services::Worker w(std::move(cnfgs));
     std::cout << "waiting for stream termination" << std::endl;
     auto status = w.wait_for_stream_termination();
     if (!status.ok()) {

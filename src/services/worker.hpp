@@ -22,12 +22,12 @@ namespace services {
         std::vector<std::byte> symmetric_secret_key;
 
         // states how this worker will operate.
-        distribicom::WorkerConfigs cnfgs;
+        distribicom::AppConfigs appcnfgs;
 
         concurrency::Channel<WorkerServiceTask> chan;
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::vector<std::thread> threads;
-        std::unique_ptr<::grpc::ClientReader<::distribicom::WorkerTaskPart>> handle;
+        std::unique_ptr<::grpc::ClientReader < ::distribicom::WorkerTaskPart>> handle;
 
 
         // Stream-Reader Properties:
@@ -53,11 +53,12 @@ namespace services {
 
     public:
         grpc::Status wait_for_stream_termination();
+
         // making this public for now, so that we can test it.
         std::shared_ptr<work_strategy::RowMultiplicationStrategy> strategy;
 
 
-        explicit Worker(distribicom::WorkerConfigs &&wcnfgs);
+        explicit Worker(distribicom::AppConfigs &&wcnfgs);
 
 
         void close();

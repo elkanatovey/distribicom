@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
         com_sealpir
         GIT_REPOSITORY https://github.com/elkanatovey/sealpir-distribicom.git
-        GIT_TAG        e7e3389b20aba29347d12ecb146b14af22db7a9d #distribicom sealpir version
+        GIT_TAG        370be4d69ba242b28905f9da2f41ee667a13a456 #distribicom sealpir version
         USES_TERMINAL_DOWNLOAD ON
 )
 

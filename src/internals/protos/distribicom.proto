@@ -163,7 +163,7 @@ message WorkerRegistryRequest {
   // the port the worker is listening to.
   uint32 workerPort = 2;
 
-  string worker_ip=3;
+  string worker_ip = 3;
 }
 
 // Every subscriber should have a certificate it created to ensure the connections from the server
@@ -200,7 +200,8 @@ message Configs {
 
 
   // legacy from sealpir
-  uint32 number_of_elements = 8; //number of elements packed in ptx, referred to as items in sealpir
+  uint32 number_of_elements = 8; //number of elements packed all db ptxs, referred to as items in sealpir,
+  // rows*cols*elems_per_ptx
   bool use_symmetric = 9;
   bool use_batching = 10;
   bool use_recursive_mod_switching = 11;
@@ -216,13 +217,11 @@ message AppConfigs {
   bytes main_server_cert = 3; // TODO: use for TLS connection.
   uint64 number_of_workers = 4;
   uint64 query_wait_time = 5;
-};
 
-message WorkerConfigs {
-  AppConfigs appConfigs = 1;
+  // used for testing.
+  uint64 number_of_clients = 6;
 
-  // the port the worker is listening to.
-  uint32 workerPort = 2;
-
-  string worker_ip=3;
+  // the worker's threadpool size.
+  uint32 worker_num_cpus = 7;
+  uint32 server_cpus = 8;
 };

@@ -38,7 +38,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     uint64_t get_row_id(uint32_t client_id);
 
-    string get_db_row_serialized(uint32_t client_id);
+    std::string get_db_row_serialized(uint32_t client_id);
 
     uint32_t get_row_len();
 
@@ -47,24 +47,24 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     uint64_t getNumberOfPartitions();
 
-    void store_query_ser(uint32_t client_id, const string &query);
+    void store_query_ser(uint32_t client_id, const std::string &query);
 
     void store_galois_key_ser(uint32_t client_id, std::stringstream &galois_stream);
 
-    int generate_final_reply_ser(uint32_t client_id, stringstream &stream);
+    int generate_final_reply_ser(uint32_t client_id, std::stringstream &stream);
 
-    PirReplyShard deserialize_partial_reply(stringstream &stream);
+    PirReplyShard deserialize_partial_reply(std::stringstream &stream);
 
-    void process_reply_at_server_ser(stringstream &partial_reply_ser, uint32_t client_id);
+    void process_reply_at_server_ser(std::stringstream &partial_reply_ser, uint32_t client_id);
 
     uint32_t get_bucket_id(uint32_t client_id);
 
     DistributedGaloisContextBucketSerial get_galois_bucket_ser(uint32_t client_id);
 
-    void set_one_galois_key_ser(uint32_t client_id, stringstream &galois_stream);
+    void set_one_galois_key_ser(uint32_t client_id, std::stringstream &galois_stream);
 
 
-    PirQuerySingleDim get_expanded_query_first_dim_ser(uint32_t client_id, stringstream &query_stream);
+    PirQuerySingleDim get_expanded_query_first_dim_ser(uint32_t client_id, std::stringstream &query_stream);
 
     void process_reply_at_server(uint32_t client_id, PirReplyShard &partial_reply);
 
@@ -74,7 +74,7 @@ void store_query(const PirQuery& query, uint32_t client_id);
 
     PirReply generate_reply_one_dim(PirQuery &query, uint32_t client_id);
 
-    shared_ptr<Database> get_db();
+    std::shared_ptr<Database> get_db();
 
     PirReply generate_reply_one_dim_enc(PirQuery &query, uint32_t client_id, std::vector<seal::Ciphertext>* db);
 

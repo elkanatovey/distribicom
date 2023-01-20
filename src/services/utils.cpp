@@ -155,5 +155,13 @@ namespace services::utils {
     std::string byte_vec_to_64base_string(const std::vector<std::byte> &bytes) {
         return base64_encode((unsigned char *) (&bytes[0]), bytes.size());
     }
+
+    long time_it(const std::function<void()> &f) {
+        auto start = std::chrono::high_resolution_clock::now();
+        f();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        return duration.count();
+    }
 }
 

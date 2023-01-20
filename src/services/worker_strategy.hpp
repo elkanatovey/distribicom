@@ -1,10 +1,12 @@
 #pragma once
 
 #include <future>
+#include <map>
 #include "distribicom.grpc.pb.h"
 #include "math_utils/matrix_operations.hpp"
 #include "math_utils/query_expander.hpp"
 #include "marshal/marshal.hpp"
+#include "utils.hpp"
 
 namespace services {
 
@@ -41,6 +43,7 @@ namespace services::work_strategy {
 
     protected:
         // TODO: make a unique ptr!
+        std::shared_ptr<concurrency::threadpool> pool;
         std::shared_ptr<math_utils::QueryExpander> query_expander;
         std::shared_ptr<math_utils::MatrixOperations> matops;
         std::map<int, seal::GaloisKeys> gkeys;
@@ -64,50 +67,47 @@ namespace services::work_strategy {
     };
 
     class RowMultiplicationStrategy : public WorkerStrategy {
-        std::map<int, math_utils::matrix<seal::Ciphertext> > queries;
         math_utils::matrix<seal::Ciphertext> query_mat;
         std::map<int, int> col_to_query_index;
+
         std::shared_ptr<marshal::Marshaller> mrshl;
         std::string sym_key;
 
-        std::future<int>
-        async_expand_query(int query_pos, int expanded_size, const std::vector<seal::Ciphertext> &&qry);
-
-
         void expand_queries(WorkerServiceTask &task);
+
+        void parallel_expansions_into_query_mat(WorkerServiceTask &task, std::map<int, int> &map);
 
     public:
         explicit RowMultiplicationStrategy(const seal::EncryptionParameters &enc_params,
                                            std::shared_ptr<marshal::Marshaller> &m,
                                            std::unique_ptr<distribicom::Manager::Stub> &&manager_conn,
                                            std::string &&sym_key) :
-                WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m), sym_key(std::move(sym_key)) {
+            WorkerStrategy(enc_params, std::move(manager_conn)), mrshl(m), sym_key(std::move(sym_key)) {
         };
 
         math_utils::matrix<seal::Ciphertext> multiply_rows(WorkerServiceTask &task);
 
-        void send_response(const WorkerServiceTask &task,
-                           math_utils::matrix<seal::Ciphertext> &computed);
+        void send_response(const WorkerServiceTask &task, math_utils::matrix<seal::Ciphertext> &computed);
+
 
 // assumes there is data to process in the task.
         void process_task(WorkerServiceTask &&task) override {
+            constexpr auto fname = "RowMultiplicationStrategy::process_task: ";
             try {
-
-                // expand all queries.
                 expand_queries(task);
 
-                if (task.ptx_rows.empty()) {
-                    return;
-                }
+                if (task.ptx_rows.empty()) { return; }
+
+                std::cout << fname << "multiplying..." << std::endl;
                 auto answer = multiply_rows(task);
 
                 send_response(task, answer);
-
             } catch (std::exception &e) {
-                std::cout << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
+                std::cerr << "RowMultiplicationStrategy::process_task: failure: " << e.what() << std::endl;
             }
         }
 
-        void queries_to_mat(const WorkerServiceTask &task);
+        std::vector<std::shared_ptr<concurrency::promise<distribicom::MatrixPart>>>
+        async_marshal_computed(const math_utils::matrix<seal::Ciphertext> &computed, const std::map<int, int> &row_to_index);
     };
 }
