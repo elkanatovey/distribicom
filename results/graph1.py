@@ -43,6 +43,7 @@ class TestResult:
 
         self.data = []  # initialise
         self.parse_file()
+        self.avg = np.average(self.data[1:])
 
     def parse_file(self):
         with open(self.file_name, "r") as f:
@@ -229,8 +230,8 @@ def addra_plot(ax, main_folder):
 
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
-    # dpir: throughput =  168/2.764 = 60.7 per sec..
-    # sealpir: throughput =168/4.983 = 33.7 per sec..
+    # dpir   : throughput = 168/2.764 = 60.7 per sec..
+    # sealpir: throughput = 168/4.983 = 33.7 per sec..
     main_folder = "./1thread"
     dpir_test_results = collect_test_results(main_folder)
 
@@ -244,7 +245,6 @@ if __name__ == '__main__':
     ])
 
     plot_dpir_line(ax, dpir_test_results)
-
     addra_plot(ax, main_folder)
     # plot_sealpir_line(
     #     ax,
