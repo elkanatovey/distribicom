@@ -9,7 +9,7 @@ import constants
 matplotlib.rcParams['font.size'] = constants.font_size
 
 
-class SealPirResults:
+class GenericDataPoint:
     def __init__(self, queries, times):
         # self.name = name
         self.queries = queries
@@ -18,16 +18,16 @@ class SealPirResults:
 
 
 # according to Elkana's collected results.
-sealpir_results_42_queries = SealPirResults(42, [1519, 1476, 1492, 1577, 1517])
-sealpir_results_84_queries = SealPirResults(84, [2737, 2626, 2575, 2643, 2619])
-sealpir_results_126_queries = SealPirResults(126, [3341, 3345, 3354, 3359, 3371])
-sealpir_results_168_queries = SealPirResults(168, [5114, 5053, 4941, 4767, 5041])
+sealpir_results_42_queries = GenericDataPoint(42, [1519, 1476, 1492, 1577, 1517])
+sealpir_results_84_queries = GenericDataPoint(84, [2737, 2626, 2575, 2643, 2619])
+sealpir_results_126_queries = GenericDataPoint(126, [3341, 3345, 3354, 3359, 3371])
+sealpir_results_168_queries = GenericDataPoint(168, [5114, 5053, 4941, 4767, 5041])
 
 
 class TestResult:
     @staticmethod
     def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["slurm", "ignore", "singleserverresults"])
+        return not any(word in file_name for word in ["slurm", "ignore", "addra", "singleserverresults"])
 
     def __init__(self, file_name: str):
 
@@ -54,9 +54,9 @@ class TestResult:
             if "results:" not in line:
                 continue
             break
+        f.readline()  # skip the first line ( "[" ).
 
     def collect_data(self, f):
-        f.readline()  # skip the first line ( "[" ).
         self.data = []
         for line in f:
             if "]" in line:
@@ -79,7 +79,8 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
         marker='o',
         color=constants.dpir_clr,
         linewidth=constants.line_size,
-        markersize=constants.line_size + 1
+        markersize=constants.line_size + 1,
+        label="DPIR"
     )
     ax.errorbar(
         xs,
@@ -95,7 +96,7 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
     )
 
 
-def plot_sealpir_line(ax, sealpir_results: List[SealPirResults]):
+def plot_other_sys_results(ax, sealpir_results: List[GenericDataPoint], clr=constants.sealpir_clr, label="SealPIR"):
     ys = sorted(
         sealpir_results,
         key=lambda x: x.queries,
@@ -109,10 +110,11 @@ def plot_sealpir_line(ax, sealpir_results: List[SealPirResults]):
     ax.plot(
         xs,
         ys,
-        color=constants.sealpir_clr,
+        color=clr,
         marker='o',
         linewidth=constants.line_size,
-        markersize=constants.line_size + 1
+        markersize=constants.line_size + 1,
+        label=label
     )
     ax.errorbar(
         xs,
@@ -121,8 +123,8 @@ def plot_sealpir_line(ax, sealpir_results: List[SealPirResults]):
         fmt='.',
         barsabove=True,
         capsize=2,
-        ecolor=constants.sealpir_clr,
-        color=constants.sealpir_clr
+        ecolor=clr,
+        color=clr
     )
 
 
@@ -166,7 +168,7 @@ class SingleServerParsing:
         self.data_points[n_queries].append(time)
 
     def into_sealpir_result_list(self):
-        return [*map(lambda x: SealPirResults(x[0], x[1]), self.data_points.items())]
+        return [*map(lambda x: GenericDataPoint(x[0], x[1]), self.data_points.items())]
 
 
 # def plot_epoch_line(ax, test_results: List[TestResult]):
@@ -184,26 +186,72 @@ class SingleServerParsing:
 #     )
 
 
+class AddraResult:
+    @staticmethod
+    def is_test_result(file_name: str) -> bool:
+        return file_name.startswith("addra")
+
+    def __init__(self, file_name: str):
+        self.file_name = file_name
+        self.data = []  # initialise
+        self.queries = int(os.path.basename(file_name).split("_")[1])
+        self.avg = 0
+        self.std = 0
+        self.parse_file()
+
+    def parse_file(self):
+        with open(self.file_name, "r") as f:
+            self.move_seeker_to_results(f)
+            self.collect_data(f)
+
+    def move_seeker_to_results(self, f):
+        f.readline()
+
+    def collect_data(self, f):
+        for line in f:
+            while len(line.split(" ")) != 3:
+                line = line.replace("  ", " ")
+            total_time = line.strip().split(" ")[2]
+            self.data.append(int(total_time))
+
+        # convert us to ms:
+        self.data = [*map(lambda x: x // 1000, self.data)]
+
+    def into_generic_data_point(self):
+        return GenericDataPoint(self.queries, self.data)
+
+
+def addra_plot(ax, main_folder):
+    fs = [*filter(AddraResult.is_test_result, get_all_fnames(main_folder))]
+    addra_results = [*map(lambda x: AddraResult(os.path.join(main_folder, x)).into_generic_data_point(), fs)]
+    plot_other_sys_results(ax, addra_results, clr=constants.addra_clr, label="Addra")
+
+
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
+    # dpir: throughput =  168/2.764 = 60.7 per sec..
+    # sealpir: throughput =168/4.983 = 33.7 per sec..
     main_folder = "./1thread"
-    test_results = collect_test_results(main_folder)
+    dpir_test_results = collect_test_results(main_folder)
 
     fig, ax = plt.subplots()
-    plot_dpir_line(ax, test_results)
-    plot_sealpir_line(ax, [
+
+    plot_other_sys_results(ax, [
         sealpir_results_42_queries,
         sealpir_results_84_queries,
         sealpir_results_126_queries,
         sealpir_results_168_queries
     ])
 
+    plot_dpir_line(ax, dpir_test_results)
+
+    addra_plot(ax, main_folder)
     # plot_sealpir_line(
     #     ax,
     #     SingleServerParsing(os.path.join(main_folder, "singleserverresults")).into_sealpir_result_list()
     # )
 
-    ax.legend(["DPIR", "SealPIR"])
+    ax.legend()
 
     ax.set_xticks([42, 84, 126, 168])
     ax.set_yticks([i * 1000 for i in range(6)])

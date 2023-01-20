@@ -13,7 +13,7 @@ matplotlib.rcParams['font.size'] = constants.font_size
 class EpochSetupTime:
     @staticmethod
     def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["server", "ignore", "singleserverresults"])
+        return not any(word in file_name for word in ["server", "ignore","addra","singleserverresults"])
 
     def __init__(self, file_name):
 
@@ -62,7 +62,7 @@ class EpochSetupTime:
 
 
 def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
-    test_results = sorted(test_results, key=lambda x: x.n_queries)
+    test_results = sorted(test_results, key=lambda x: x.queries)
 
     xs = [*(test_result.n_queries for test_result in test_results)]
     ys = [*(test_result.total for test_result in test_results)]
