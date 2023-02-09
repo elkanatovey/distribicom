@@ -1,0 +1,7 @@
+{
+  "binaries": {
+    "main_server": ".",
+    "worker": "."
+  },
+  "hostname_folder": "."
+}
