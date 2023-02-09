@@ -25,10 +25,15 @@ distribicom::Configs services::configurations::create_configs(int poly_deg, int 
 
 distribicom::AppConfigs
 services::configurations::create_app_configs(const std::string &server_hostname, int poly_deg, int logt, int rows,
-                                             int cols, std::uint64_t ele_size) {
+                                             int cols, std::uint64_t ele_size,
+                                             std::uint64_t number_of_workers,
+                                             std::uint64_t query_wait_time, std::uint64_t number_of_clients) {
     distribicom::AppConfigs c;
     c.mutable_configs()->CopyFrom(create_configs(poly_deg, logt, rows, cols, ele_size));
     c.mutable_main_server_hostname()->assign(server_hostname);
+    c.set_number_of_workers(number_of_workers);
+    c.set_query_wait_time(query_wait_time);
+    c.set_number_of_clients(number_of_clients);
 
     return c;
 }
