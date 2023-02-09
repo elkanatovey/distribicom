@@ -42,9 +42,9 @@ class Server_Params:
 
 if __name__ == '__main__':  # 1 config file 2 pir settings file 3 num queries 4 num workers 5 num server threads
     config_info = File_Locations(sys.argv[1])
-    server_parms = Server_Params(sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
+    server_parms = Server_Params(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
 
-    hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
+    hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip() + ":54321"
     hostname_filename = os.path.join(config_info.hostname_folder, "master_hostname.txt")
 
     with open(hostname_filename, "w") as file:

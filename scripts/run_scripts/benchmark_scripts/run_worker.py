@@ -38,14 +38,15 @@ class Worker_Params:
 
         with open(server_address_filename, "r") as file:
             server_address = file.read()
-        self.server_address = server_address + ":54321"
+        self.server_address = server_address
 
 
-if __name__ == '__main__': # 1 config file 2 pir settings file 3 num queries 4 num worker_threads
+if __name__ == '__main__': # 1 config file 2 pir settings file 3 num worker_threads
+
     config_info = File_Locations(sys.argv[1])
     server_address_filename = os.path.join(config_info.hostname_folder, "master_hostname.txt")
 
-    worker_parms = Worker_Params(sys.argv[2], int(sys.argv[3]), server_address_filename)
+    worker_parms = Worker_Params(sys.argv[2], sys.argv[3], server_address_filename)
 
     subprocesses = setup_worker(config_info, worker_parms)
     try:
