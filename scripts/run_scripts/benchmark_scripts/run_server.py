@@ -14,9 +14,9 @@ def load_json(test_settings_file: str):
         return all
 
 
-def setup_server(config_info, server_parms) -> List[subprocess.Popen]:
+def setup_server(config_info, server_parms, hostname) -> List[subprocess.Popen]:
     return [subprocess.Popen([config_info.server_bin, server_parms.pir_configs_file, server_parms.num_queries,
-                              server_parms.num_workers, server_parms.num_server_threads])]
+                              server_parms.num_workers, server_parms.num_server_threads, hostname])]
 
 
 class File_Locations:
@@ -52,7 +52,7 @@ if __name__ == '__main__':  # 1 config file 2 pir settings file 3 num queries 4 
 
     print(f"written hostname to {hostname_filename}")
 
-    subprocesses = setup_server(config_info, server_parms)
+    subprocesses = setup_server(config_info, server_parms, hostname)
     try:
         for (i, sub) in enumerate(subprocesses):
             sub.wait()

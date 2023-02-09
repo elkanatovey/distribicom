@@ -15,7 +15,8 @@ def load_json(test_settings_file: str):
 
 
 def setup_worker(config_info, worker_parms) -> List[subprocess.Popen]:
-    return [subprocess.Popen([config_info.worker_bin, worker_parms.pir_configs_file,  worker_parms.num_worker_threads])]
+    return [subprocess.Popen([config_info.worker_bin, worker_parms.pir_configs_file,
+                              worker_parms.num_worker_threads, worker_parms.server_address])]
 
 
 class File_Locations:
@@ -37,7 +38,7 @@ class Worker_Params:
 
         with open(server_address_filename, "r") as file:
             server_address = file.read()
-        self.server_address = server_address + "loch-06:54321"
+        self.server_address = server_address + ":54321"
 
 
 if __name__ == '__main__': # 1 config file 2 pir settings file 3 num queries 4 num worker_threads
