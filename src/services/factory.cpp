@@ -1,7 +1,7 @@
 #include "factory.hpp"
 #include "pir.hpp"
 
-distribicom::Configs services::configurations::create_configs(int poly_deg, int logt, int rows, int cols,
+distribicom::Configs services::configurations::create_configs(std::uint64_t poly_deg, std::uint64_t logt, std::uint64_t rows, std::uint64_t cols,
                                                               std::uint64_t ele_size) {
     distribicom::Configs c;
     c.mutable_scheme()->assign("bgv");
@@ -24,8 +24,8 @@ distribicom::Configs services::configurations::create_configs(int poly_deg, int 
 }
 
 distribicom::AppConfigs
-services::configurations::create_app_configs(const std::string &server_hostname, int poly_deg, int logt, int rows,
-                                             int cols, std::uint64_t ele_size,
+services::configurations::create_app_configs(const std::string &server_hostname, std::uint64_t poly_deg, std::uint64_t logt, std::uint64_t rows,
+                                             std::uint64_t cols, std::uint64_t ele_size,
                                              std::uint64_t number_of_workers,
                                              std::uint64_t query_wait_time, std::uint64_t number_of_clients) {
     distribicom::AppConfigs c;
