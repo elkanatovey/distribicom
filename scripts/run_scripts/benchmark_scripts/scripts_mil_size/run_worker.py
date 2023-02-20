@@ -44,7 +44,7 @@ class Worker_Params:
 if __name__ == '__main__': # 1 config file 2 pir settings file 3 num worker_threads
 
     config_info = File_Locations(sys.argv[1])
-    time.sleep(20)
+    time.sleep(30)
     server_address_filename = os.path.join(config_info.hostname_folder, "master_hostname.txt")
 
     worker_parms = Worker_Params(sys.argv[2], sys.argv[3], server_address_filename)
