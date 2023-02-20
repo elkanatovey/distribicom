@@ -4,14 +4,14 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --nodes=21
 #SBATCH --time=04:10:00
-#SBATCH --mem=256G
+#SBATCH --mem=800G
 
 
 #SBATCH hetjob
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=24
 #SBATCH --nodes=1
-#SBATCH --mem=256G
+#SBATCH --mem=800G
 
 
 
