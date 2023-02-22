@@ -23,7 +23,7 @@ void verify_results(std::shared_ptr<services::FullServer> &sharedPtr, std::vecto
 bool is_valid_command_line_args(int argc, char *argv[]) {
     if (argc < 6) {
         std::cout << "Usage: " << argv[0] << " <pir_config_file>" << " <num_queries>" << " <num_workers>" <<
-                  " <num_server_threads>" << std::endl;
+                  " <num_server_threads>" << " <your_hostname>" << std::endl;
         return false;
     }
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     auto json_str = load_from_file(pir_conf_file);
     google::protobuf::util::JsonStringToMessage(load_from_file(pir_conf_file), &temp_pir_configs);
     distribicom::AppConfigs cnfgs = services::configurations::create_app_configs(hostname, temp_pir_configs
-                                                                                         .polynomial_degree(),
+                                                                                     .polynomial_degree(),
                                                                                  temp_pir_configs.logarithm_plaintext_coefficient(),
                                                                                  temp_pir_configs.db_rows(),
                                                                                  temp_pir_configs.db_cols(),
@@ -120,8 +120,10 @@ int main(int argc, char *argv[]) {
     server->wait_for_workers(int(cnfgs.number_of_workers()));
     // 1 epoch
     std::stringstream server_out_file_name_stream;
-    server_out_file_name_stream << "server_out_" << cnfgs.number_of_workers() << "_workers_" << num_clients
-                                << "_queries.log";
+    server_out_file_name_stream << "server_out_" <<
+                                cnfgs.number_of_workers() << "_workers_" << num_clients << "_queries" <<
+                                "_" << cnfgs.configs().db_rows() << "x" << cnfgs.configs().db_cols() <<
+                                ".log";
     auto server_out_file_name = server_out_file_name_stream.str();
     std::filesystem::remove(server_out_file_name);
     std::ofstream ofs(server_out_file_name);
@@ -145,12 +147,12 @@ int main(int argc, char *argv[]) {
             auto ledger = server->distribute_work(j);
             auto distribute_work_took = std::chrono::high_resolution_clock::now();
             std::cout << "distribute work took: " << std::chrono::duration_cast<std::chrono::milliseconds>(
-                    distribute_work_took - time_round_s).count() << " ms" << std::endl;
+                distribute_work_took - time_round_s).count() << " ms" << std::endl;
 
             ledger->done.read(); // todo: how much time should we wait?
             auto work_received_end = std::chrono::high_resolution_clock::now();
             auto work_receive_total_time = duration_cast<std::chrono::milliseconds>(
-                    work_received_end - time_round_s).count();
+                work_received_end - time_round_s).count();
             std::cout << "SERVER: received all, ledger done: total time: " << work_receive_total_time << " ms"
                       << std::endl;
 
@@ -160,7 +162,7 @@ int main(int argc, char *argv[]) {
 
             auto learn_about_rouge_workers_end = std::chrono::high_resolution_clock::now();
             auto time_to_wait_on_all_freivalds_promises = duration_cast<std::chrono::milliseconds>(
-                    learn_about_rouge_workers_end - time_round_s).count();
+                learn_about_rouge_workers_end - time_round_s).count();
             std::cout << "SERVER: learned about rouge workers: total time: " << time_to_wait_on_all_freivalds_promises
                       << " ms" << std::endl;
 
@@ -250,16 +252,16 @@ std::vector<PIRClient> create_clients(std::uint64_t size, const distribicom::App
     std::mutex mtx;
     for (size_t i = 0; i < size; i++) {
         pool.submit(
-                {
-                        .f = [&, i]() {
-                            auto tmp = PIRClient(enc_params, pir_params);
-                            mtx.lock();
-                            clients.push_back(std::move(tmp));
-                            mtx.unlock();
-                        },
-                        .wg = latch,
-                        .name="create_clients"
-                }
+            {
+                .f = [&, i]() {
+                    auto tmp = PIRClient(enc_params, pir_params);
+                    mtx.lock();
+                    clients.push_back(std::move(tmp));
+                    mtx.unlock();
+                },
+                .wg = latch,
+                .name="create_clients"
+            }
         );
     }
     latch->wait();
@@ -285,27 +287,27 @@ create_client_db(const distribicom::AppConfigs &app_configs, const seal::Encrypt
     std::mutex mtx;
     for (size_t i = 0; i < clients.size(); i++) {
         pool.submit(
-                {
-                        .f = [&, i]() {
-                            seal::GaloisKeys gkey = clients[i].generate_galois_keys();
-                            auto gkey_serialised = m->marshal_seal_object(gkey);
-                            PirQuery query = clients[i].generate_query(i % (configs.db_rows() * configs.db_cols()));
-                            distribicom::ClientQueryRequest query_marshaled;
-                            m->marshal_query_vector(query, query_marshaled);
-                            auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
+            {
+                .f = [&, i]() {
+                    seal::GaloisKeys gkey = clients[i].generate_galois_keys();
+                    auto gkey_serialised = m->marshal_seal_object(gkey);
+                    PirQuery query = clients[i].generate_query(i % (configs.db_rows() * configs.db_cols()));
+                    distribicom::ClientQueryRequest query_marshaled;
+                    m->marshal_query_vector(query, query_marshaled);
+                    auto client_info = std::make_unique<services::ClientInfo>(services::ClientInfo());
 
-                            services::set_client(
-                                    math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms()) * 2,
-                                    app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
-                                    client_info);
+                    services::set_client(
+                        math_utils::compute_expansion_ratio(seal_context.first_context_data()->parms()) * 2,
+                        app_configs.configs().db_rows(), i, gkey, gkey_serialised, query, query_marshaled,
+                        client_info);
 
-                            mtx.lock();
-                            cdb.insert({i, std::move(client_info)});
-                            mtx.unlock();
-                        },
-                        .wg = latch,
-                        .name = "create_client_db"
-                }
+                    mtx.lock();
+                    cdb.insert({i, std::move(client_info)});
+                    mtx.unlock();
+                },
+                .wg = latch,
+                .name = "create_client_db"
+            }
         );
     }
     latch->wait();
