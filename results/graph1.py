@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 import constants
 
+from utils import *
+
 matplotlib.rcParams['font.size'] = constants.font_size
 
 
@@ -22,49 +24,7 @@ sealpir_results_42_queries = GenericDataPoint(42, [1519, 1476, 1492, 1577, 1517]
 sealpir_results_84_queries = GenericDataPoint(84, [2737, 2626, 2575, 2643, 2619])
 sealpir_results_126_queries = GenericDataPoint(126, [3341, 3345, 3354, 3359, 3371])
 sealpir_results_168_queries = GenericDataPoint(168, [5114, 5053, 4941, 4767, 5041])
-
-
-class TestResult:
-    @staticmethod
-    def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["slurm", "ignore", "addra", "singleserverresults"])
-
-    def __init__(self, file_name: str):
-
-        self.file_name = file_name
-        # general info.
-        self.num_threads_per_worker = 1
-        self.num_cores = 12
-        self.num_vcpus = 24
-        self.server_num_threads = 12
-
-        self.num_workers = int(file_name.split("_")[2])
-        self.num_queries = self.num_workers
-
-        self.data = []  # initialise
-        self.parse_file()
-        self.avg = np.average(self.data[1:])
-
-    def parse_file(self):
-        with open(self.file_name, "r") as f:
-            self.move_seeker_to_results(f)
-            self.collect_data(f)
-
-    def move_seeker_to_results(self, f):
-        for line in f:
-            if "results:" not in line:
-                continue
-            break
-        f.readline()  # skip the first line ( "[" ).
-
-    def collect_data(self, f):
-        self.data = []
-        for line in f:
-            if "]" in line:
-                break
-            self.data.append(line[:-2].strip())
-
-        self.data = [int(x[:-3]) for x in self.data]  # remove "ms," from each data point
+sealpir_results_336_queries = GenericDataPoint(336, [9449, 9940, 9960, 11121, 9462])
 
 
 def plot_dpir_line(ax, test_results: List[TestResult]):
@@ -127,22 +87,6 @@ def plot_other_sys_results(ax, sealpir_results: List[GenericDataPoint], clr=cons
         ecolor=clr,
         color=clr
     )
-
-
-def collect_test_results(folder_path):
-    filtered = filter(lambda name: TestResult.is_test_result(name), get_all_fnames(folder_path))
-    test_results = [*map(lambda fname: TestResult(os.path.join(folder_path, fname)), filtered)]
-
-    if len(test_results) == 0:
-        raise Exception("No test results found.")
-    return test_results
-
-
-def get_all_fnames(folder_path):
-    file_names = []
-    for filename in os.listdir(folder_path):
-        file_names.append(filename)
-    return file_names
 
 
 class SingleServerParsing:
@@ -232,8 +176,8 @@ def addra_plot(ax, main_folder):
 if __name__ == '__main__':
     # dpir   : throughput = 168/2.764 = 60.7 per sec..
     # sealpir: throughput = 168/4.983 = 33.7 per sec..
-    main_folder = "./1thread"
-    dpir_test_results = collect_test_results(main_folder)
+    main_folder = "evals/65k_size/64_workers_per_node/first_run"
+    dpir_test_results = collect_dpir_test_results(main_folder)
 
     fig, ax = plt.subplots()
 
@@ -241,21 +185,19 @@ if __name__ == '__main__':
         sealpir_results_42_queries,
         sealpir_results_84_queries,
         sealpir_results_126_queries,
-        sealpir_results_168_queries
+        sealpir_results_168_queries,
+        sealpir_results_336_queries
     ])
 
     plot_dpir_line(ax, dpir_test_results)
     addra_plot(ax, main_folder)
-    # plot_sealpir_line(
-    #     ax,
-    #     SingleServerParsing(os.path.join(main_folder, "singleserverresults")).into_sealpir_result_list()
-    # )
 
     ax.legend()
 
-    ax.set_xticks([42, 84, 126, 168])
-    ax.set_yticks([i * 1000 for i in range(6)])
-    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 1, 2, 3, 4, 5]))
+    ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results), 336])
+
+    ax.set_yticks([i * 2000 for i in range(7)])
+    ax.set_yticklabels(map(lambda x: str(2*x) + "s", range(7)))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')
