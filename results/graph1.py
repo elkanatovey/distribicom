@@ -20,11 +20,21 @@ class GenericDataPoint:
 
 
 # according to Elkana's collected results.
-sealpir_results_42_queries = GenericDataPoint(42, [1519, 1476, 1492, 1577, 1517])
-sealpir_results_84_queries = GenericDataPoint(84, [2737, 2626, 2575, 2643, 2619])
-sealpir_results_126_queries = GenericDataPoint(126, [3341, 3345, 3354, 3359, 3371])
-sealpir_results_168_queries = GenericDataPoint(168, [5114, 5053, 4941, 4767, 5041])
-sealpir_results_336_queries = GenericDataPoint(336, [9449, 9940, 9960, 11121, 9462])
+# GenericDataPoint(, []),
+sealpir_res = [
+    GenericDataPoint(42, [1519, 1476, 1492, 1577, 1517]),
+    GenericDataPoint(84, [2737, 2626, 2575, 2643, 2619]),
+    GenericDataPoint(126, [3341, 3345, 3354, 3359, 3371]),
+    GenericDataPoint(168, [5114, 5053, 4941, 4767, 5041]),
+    GenericDataPoint(210, [5820, 5884, 5838, 5798, 5787]),
+    GenericDataPoint(252, [6808, 6860, 6848, 6804, 6922]),
+    GenericDataPoint(294, [8016, 8023, 8063, 8075, 8019]),
+    GenericDataPoint(336, [9449, 9940, 9960, 11121, 9462]),
+    GenericDataPoint(378, [10421, 10339, 10365, 10300, 10406]),
+    GenericDataPoint(420, [11310, 11371, 11371, 11417, 11293]),
+    GenericDataPoint(462, [12484, 12555, 12705, 12628, 12413]),
+    GenericDataPoint(504, [13532, 13697, 13652, 13565, 13644]),
+]
 
 
 def plot_dpir_line(ax, test_results: List[TestResult]):
@@ -181,13 +191,7 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots()
 
-    plot_other_sys_results(ax, [
-        sealpir_results_42_queries,
-        sealpir_results_84_queries,
-        sealpir_results_126_queries,
-        sealpir_results_168_queries,
-        sealpir_results_336_queries
-    ])
+    plot_other_sys_results(ax, sealpir_res)
 
     plot_dpir_line(ax, dpir_test_results)
     addra_plot(ax, main_folder)
@@ -197,7 +201,7 @@ if __name__ == '__main__':
     ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results), 336])
 
     ax.set_yticks([i * 2000 for i in range(7)])
-    ax.set_yticklabels(map(lambda x: str(2*x) + "s", range(7)))
+    ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')
