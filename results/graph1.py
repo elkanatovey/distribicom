@@ -194,11 +194,11 @@ if __name__ == '__main__':
     plot_other_sys_results(ax, sealpir_res)
 
     plot_dpir_line(ax, dpir_test_results)
-    addra_plot(ax, main_folder)
+    # addra_plot(ax, main_folder)
 
     ax.legend()
 
-    ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results), 336])
+    ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
 
     ax.set_yticks([i * 2000 for i in range(7)])
     ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))

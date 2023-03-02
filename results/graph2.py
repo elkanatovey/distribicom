@@ -2,6 +2,7 @@ import os
 from typing import List
 
 import graph1
+import utils
 import constants
 
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ matplotlib.rcParams['font.size'] = constants.font_size
 class EpochSetupTime:
     @staticmethod
     def is_test_result(file_name: str) -> bool:
-        return not any(word in file_name for word in ["server", "ignore","addra","singleserverresults"])
+        return not any(word in file_name for word in ["server", "ignore", "addra", "singleserverresults"])
 
     def __init__(self, file_name):
 
@@ -61,11 +62,11 @@ class EpochSetupTime:
         self.gal_key_send_time = int(line.split(" ")[1][:-3])
 
 
-def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
-    test_results = sorted(test_results, key=lambda x: x.queries)
+def plot_dpir_line(ax, test_results: List[utils.TestResult]):
+    test_results = sorted(test_results, key=lambda x: x.num_queries)
 
-    xs = [*(test_result.n_queries for test_result in test_results)]
-    ys = [*(test_result.total for test_result in test_results)]
+    xs = [*(test_result.num_queries for test_result in test_results)]
+    ys = [*(test_result.data[0] for test_result in test_results)]
 
     ax.plot(
         xs,
@@ -77,25 +78,26 @@ def plot_dpir_line(ax, test_results: List[EpochSetupTime]):
     )
 
 
-def collect_test_results(folder_path):
-    filtered = filter(lambda name: EpochSetupTime.is_test_result(name), graph1.get_all_fnames(folder_path))
-    test_results = [*map(lambda fname: EpochSetupTime(os.path.join(folder_path, fname)), filtered)]
-
-    if len(test_results) == 0:
-        raise Exception("No test results found.")
-    return test_results
+# def collect_test_results(folder_path):
+#     filtered = filter(lambda name: .is_test_result(name), graph1.get_all_fnames(folder_path))
+#     test_results = [*map(lambda fname: EpochSetupTime(os.path.join(folder_path, fname)), filtered)]
+#
+#     if len(test_results) == 0:
+#         raise Exception("No test results found.")
+#     return test_results
 
 
 if __name__ == '__main__':
-    test_results = collect_test_results("./1thread")
+    test_results = utils.collect_dpir_test_results("evals/65k_size/64_workers_per_node/combined")
 
     fig, ax = plt.subplots()
     plot_dpir_line(ax, test_results)
     # ax.legend([])
 
-    ax.set_xticks([42, 84, 126, 168])
-    ax.set_yticks([i * 1000 for i in range(6)])
-    ax.set_yticklabels(map(lambda x: str(x) + "s", [0, 1, 2, 3, 4, 5]))
+    ax.set_xticks([*utils.get_from_dpir_results_x_axis(test_results)])
+
+    ax.set_yticks([i * 2000 for i in range(8)])
+    ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(8)))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('setup time')

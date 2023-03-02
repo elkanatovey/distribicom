@@ -43,7 +43,7 @@ class TestResult:
             self.data.append(line.strip())
 
         self.data = [int(x[:-3]) for x in self.data]  # remove "ms," from each data point
-        if len(self.data) < 5:
+        if len(self.data) < 3:
             raise Exception("Not enough data points")
 
 
