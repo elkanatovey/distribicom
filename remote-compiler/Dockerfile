@@ -38,15 +38,13 @@ RUN mkdir -p /home/user/.ssh && \
     touch /home/user/.ssh/authorized_keys &&\
     chmod 666 /home/user/.ssh/authorized_keys
 
-COPY deps.sh /deps.sh
-RUN /deps.sh
-
 RUN apt-get install -y vim
 RUN apt-get install -y sudo
 
-RUN apt-get install graphviz pip kcachegrind
+RUN apt-get install -y graphviz pip kcachegrind
 RUN pip install gprof2dot # ./gprof2dot -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
-RUN apt-get mutrace # to detect mutex contention.
+RUN apt-get install -y mutrace # to detect mutex contention.
 
-
+COPY deps.sh /deps.sh
+RUN /deps.sh
 CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
