@@ -11,6 +11,13 @@ from utils import *
 
 matplotlib.rcParams['font.size'] = constants.font_size
 
+sealpir = [
+    graph1.GenericDataPoint(164, [42799, 42422, 42423, 42608, 42467]),
+    graph1.GenericDataPoint(328, [86106, 84490, 84662, 84755, 84576]),
+    graph1.GenericDataPoint(492, [124656, 123813, 123998, 124460, 123978]),
+    graph1.GenericDataPoint(656, [180675, 175734, 176022, 180259, 184216])
+]
+
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
     main_folder = "evals/scripts_mil_size/64_workers_per_node"
@@ -19,13 +26,14 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
 
     graph1.plot_dpir_line(ax, dpir_test_results)
+    graph1.plot_other_sys_results(ax, sealpir)
 
     ax.legend()
 
     ax.set_xticks(get_from_dpir_results_x_axis(dpir_test_results))
 
-    ax.set_yticks([i * 5000 for i in range(8)])
-    ax.set_yticklabels(map(lambda x: str(int(x / 2 * 10)) + "s", range(0, 8, 1)))
+    ax.set_yticks([i * 20000 for i in range(10)])
+    ax.set_yticklabels(map(lambda x: str(int(x * 20)) + "s", range(0, 10, 1)))
 
     ax.set_xlabel('number of clients')
     ax.set_ylabel('round latency')
