@@ -18,7 +18,7 @@ server_cpus: 12
 num queries:462
 results: 
  [
-12438ms, 
+12438ms,
 8578ms,
 8447ms,
 8429ms,

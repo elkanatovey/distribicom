@@ -186,7 +186,7 @@ def addra_plot(ax, main_folder):
 if __name__ == '__main__':
     # dpir   : throughput = 168/2.764 = 60.7 per sec..
     # sealpir: throughput = 168/4.983 = 33.7 per sec..
-    main_folder = "evals/65k_size/64_workers_per_node/first_run"
+    main_folder = "evals/65k_size/64_workers_per_node/combined"
     dpir_test_results = collect_dpir_test_results(main_folder)
 
     fig, ax = plt.subplots()

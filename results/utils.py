@@ -21,7 +21,7 @@ class TestResult:
 
         self.data = []  # initialise
         self.parse_file()
-        self.avg = np.average(self.data[1:])
+        self.avg = np.average(self.data[:])
 
     def parse_file(self):
         with open(self.file_name, "r") as f:
@@ -40,7 +40,7 @@ class TestResult:
         for line in f:
             if "]" in line:
                 break
-            self.data.append(line[:-2].strip())
+            self.data.append(line.strip())
 
         self.data = [int(x[:-3]) for x in self.data]  # remove "ms," from each data point
         if len(self.data) < 5:
