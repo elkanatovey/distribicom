@@ -31,7 +31,6 @@ int benchmarks(int, char *[]) {
     }) / repetitions;
     std::cout << "mult-cipher-time:      " << mult_cipher << std::endl;
 
-    // TODO: Maybe we should measure the ntt too?
     ev->transform_to_ntt_inplace(ctx1);
     ev->transform_to_ntt_inplace(ptx, ctx1.parms_id());
     auto mult_plain = TestUtils::time_func([&] {
@@ -42,9 +41,10 @@ int benchmarks(int, char *[]) {
 
     ptx = all->random_plaintext();
     auto wev = all->w_evaluator;
+    auto splt = wev->split_plaintext(ptx);
     auto preserving_mult_plain = TestUtils::time_func([&] {
         for (int i = 0; i < repetitions; i++)
-            wev->mult(ctx1, ptx, ctx3);
+            wev->mult(splt, ctx1, ctx3);
     }) / repetitions;
     std::cout << "preserving_mult_plain: " << preserving_mult_plain << std::endl;
     return 0;
