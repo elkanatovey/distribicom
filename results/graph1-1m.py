@@ -18,6 +18,11 @@ sealpir = [
     graph1.GenericDataPoint(656, [180675, 175734, 176022, 180259, 184216])
 ]
 
+step_two_times = [
+
+]
+
+
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
     main_folder = "evals/scripts_mil_size/64_workers_per_node"
@@ -26,6 +31,7 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
 
     graph1.plot_dpir_line(ax, dpir_test_results)
+    graph1.plot_dpir_step_2_times(ax, step_two_times)
     graph1.plot_other_sys_results(ax, sealpir)
 
     ax.legend()

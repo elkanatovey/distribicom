@@ -182,6 +182,40 @@ def addra_plot(ax, main_folder):
     plot_other_sys_results(ax, addra_results, clr=constants.addra_clr, label="Addra")
 
 
+# these times are for 42 queries, 84 queries, ...
+step_two_times = [
+    [106, 106, 107, 104, 105, 106],
+    [223, 208, 216, 205, 206, 207, 209],
+    [311, 309, 311, 310, 309, 318, 314],
+    [413, 411, 412, 414, 413, 411, 412],
+    [514, 516, 516, 517, 515, 516, 515],
+    [674, 626, 632, 625, 620, 621, 619],
+    [720, 727, 722, 719, 723, 726, 723],
+    [866],
+    [955, 953, 958, 962, 956, 960, 970],
+    [1066, 1065, 1055, 1044, 1058, 1044, 1051],
+    [1170, 1151, 1132, 1130, 1135, 1134, 1160],
+    [1272, 1279, 1278, 1279, 1287],
+]
+
+
+def plot_dpir_step_2_times(ax, step_two_times):
+    xs = np.arange(1, len(step_two_times) + 1) * 42
+    ys, errbars = zip(*map(lambda lst: [np.average(lst), np.std(lst)], step_two_times))
+    ax.errorbar(
+        xs,
+        ys,
+        yerr=errbars,
+        fmt='--.',
+        markersize=4,
+        barsabove=True,
+        capsize=2,
+        ecolor=constants.dpir_clr,
+        color=constants.dpir_clr,
+        elinewidth=constants.line_size - 1
+    )
+
+
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 if __name__ == '__main__':
     # dpir   : throughput = 168/2.764 = 60.7 per sec..
@@ -194,6 +228,7 @@ if __name__ == '__main__':
     plot_other_sys_results(ax, sealpir_res)
 
     plot_dpir_line(ax, dpir_test_results)
+    plot_dpir_step_2_times(ax, step_two_times)
     # addra_plot(ax, main_folder)
 
     ax.legend()
