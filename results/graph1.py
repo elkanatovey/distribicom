@@ -217,6 +217,7 @@ def plot_dpir_step_2_times(ax, step_two_times):
 
 
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
+# https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66
 if __name__ == '__main__':
     # dpir   : throughput = 168/2.764 = 60.7 per sec..
     # sealpir: throughput = 168/4.983 = 33.7 per sec..

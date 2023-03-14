@@ -1,8 +1,9 @@
-sealpir_clr = "#FE5F55"
-dpir_clr = "#E3A792"
-addra_clr = "#55434E"
+# clrs = https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66-423847
+sealpir_clr = "#E9D985"
+dpir_clr = "#749C75"
+addra_clr = "#423847"
 
-epoch_setup = "#55434E"
+epoch_setup = addra_clr
 
 font_size = 24
 

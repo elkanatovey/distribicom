@@ -18,3 +18,8 @@ Main: pool query processing time: 175734 ms on 656 queries and 12 threads
 Main: pool query processing time: 176022 ms on 656 queries and 12 threads
 Main: pool query processing time: 180259 ms on 656 queries and 12 threads
 Main: pool query processing time: 184216 ms on 656 queries and 12 threads
+Main: pool query processing time: 243887 ms on 984 queries and 12 threads
+Main: pool query processing time: 244439 ms on 984 queries and 12 threads
+Main: pool query processing time: 244371 ms on 984 queries and 12 threads
+Main: pool query processing time: 244556 ms on 984 queries and 12 threads
+Main: pool query processing time: 244686 ms on 984 queries and 12 threads
