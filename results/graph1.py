@@ -4,6 +4,8 @@ from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib import ticker
+
 import constants
 
 from utils import *
@@ -220,7 +222,15 @@ if __name__ == '__main__':
 
         ax.legend()
 
-        # ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
+        ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
+
+
+        def y_fmt(y, _):
+            return '{:.0f}s'.format(y / 1000)
+
+
+        # Apply the formatter function to the y-axis tick labels
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
         # ax.set_yticks([i * 2000 for i in range(7)])
         # ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))
