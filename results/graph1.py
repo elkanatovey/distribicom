@@ -11,7 +11,6 @@ from utils import *
 matplotlib.rcParams['font.size'] = constants.font_size
 
 
-
 # according to Elkana's collected results.
 # GenericDataPoint(, []),
 
@@ -198,29 +197,32 @@ def plot_dpir_step_2_times(ax, step_two_times):
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 # https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66
 if __name__ == '__main__':
-    # dpir   : throughput = 168/2.764 = 60.7 per sec..
-    # sealpir: throughput = 168/4.983 = 33.7 per sec..
-    main_folder = "evals/65k_size/64_workers_per_node/combined"
-    dpir_test_results = collect_dpir_test_results(main_folder)
+    data = [
+        ("evals/65k_size/64_workers_per_node/combined", "evals/65k_size/sealpir"),
+        ("evals/scripts_mil_size/64_workers_per_node", "evals/scripts_mil_size/sealpir"),
+    ]
+    # main_folder = "evals/65k_size/64_workers_per_node/combined"
+    # sealpir_res = grab_sealpir_results_from_file("evals/65k_size/sealpir")
 
-    sealpir_res = grab_sealpir_results_from_file("evals/65k_size/sealpir")
+    for dpir_data_folder, sealpir_data_folder in data:
+        fig, ax = plt.subplots()
+        dpir_test_results = collect_dpir_test_results(dpir_data_folder)
+        sealpir_res = grab_sealpir_results_from_file(sealpir_data_folder)
 
-    fig, ax = plt.subplots()
+        plot_other_sys_results(ax, sealpir_res)
 
-    plot_other_sys_results(ax, sealpir_res)
+        plot_dpir_line(ax, dpir_test_results)
+        # plot_dpir_step_2_times(ax, step_two_times) # TODO: find a way to add this too.
+        # addra_plot(ax, main_folder)
 
-    plot_dpir_line(ax, dpir_test_results)
-    plot_dpir_step_2_times(ax, step_two_times)
-    # addra_plot(ax, main_folder)
+        ax.legend()
 
-    ax.legend()
+        # ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
 
-    ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
+        # ax.set_yticks([i * 2000 for i in range(7)])
+        # ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))
 
-    ax.set_yticks([i * 2000 for i in range(7)])
-    ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))
-
-    ax.set_xlabel('number of clients')
-    ax.set_ylabel('round latency')
+        ax.set_xlabel('number of clients')
+        ax.set_ylabel('round latency')
 
     plt.show()
