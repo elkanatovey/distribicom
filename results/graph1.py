@@ -199,6 +199,7 @@ def plot_dpir_step_2_times(ax, step_two_times):
 if __name__ == '__main__':
     data = [
         ("evals/65k_size/64_workers_per_node/combined", "evals/65k_size/sealpir"),
+        ("evals/256k", "evals/256k/sealpir"),
         ("evals/scripts_mil_size/64_workers_per_node", "evals/scripts_mil_size/sealpir"),
     ]
     # main_folder = "evals/65k_size/64_workers_per_node/combined"
@@ -208,7 +209,9 @@ if __name__ == '__main__':
         fig, ax = plt.subplots()
         dpir_test_results = collect_dpir_test_results(dpir_data_folder)
         sealpir_res = grab_sealpir_results_from_file(sealpir_data_folder)
+        max_x = max([*get_from_dpir_results_x_axis(dpir_test_results)])
 
+        sealpir_res = [*filter(lambda x: x.queries <= max_x, sealpir_res)]
         plot_other_sys_results(ax, sealpir_res)
 
         plot_dpir_line(ax, dpir_test_results)
