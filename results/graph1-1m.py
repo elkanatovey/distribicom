@@ -1,33 +1,10 @@
-import os
-from typing import List
-
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import constants
 
-import graph1
 from utils import *
 
 matplotlib.rcParams['font.size'] = constants.font_size
-
-
-def grab_sealpir_results_from_file(fname):
-    lines = []
-    with open(fname) as f:
-        lines = f.readlines()
-
-    resmap = {}
-    for l in lines:
-        l = l.strip()
-        l = l.split(" ")
-        n_queries = int(l[8])
-        if n_queries not in resmap:
-            resmap[n_queries] = []
-        time = int(l[5])
-        resmap[n_queries].append(time)
-    return [*map(lambda k: graph1.GenericDataPoint(k, resmap[k]), resmap)]
-
 
 sealpir = [
     graph1.GenericDataPoint(164, [42799, 42422, 42423, 42608, 42467]),

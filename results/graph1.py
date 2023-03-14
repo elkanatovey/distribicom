@@ -11,30 +11,9 @@ from utils import *
 matplotlib.rcParams['font.size'] = constants.font_size
 
 
-class GenericDataPoint:
-    def __init__(self, queries, times):
-        # self.name = name
-        self.queries = queries
-        self.avg = np.average(times)
-        self.std = np.std(times)
-
 
 # according to Elkana's collected results.
 # GenericDataPoint(, []),
-sealpir_res = [
-    GenericDataPoint(42, [1519, 1476, 1492, 1577, 1517]),
-    GenericDataPoint(84, [2737, 2626, 2575, 2643, 2619]),
-    GenericDataPoint(126, [3341, 3345, 3354, 3359, 3371]),
-    GenericDataPoint(168, [5114, 5053, 4941, 4767, 5041]),
-    GenericDataPoint(210, [5820, 5884, 5838, 5798, 5787]),
-    GenericDataPoint(252, [6808, 6860, 6848, 6804, 6922]),
-    GenericDataPoint(294, [8016, 8023, 8063, 8075, 8019]),
-    GenericDataPoint(336, [9449, 9940, 9960, 11121, 9462]),
-    GenericDataPoint(378, [10421, 10339, 10365, 10300, 10406]),
-    GenericDataPoint(420, [11310, 11371, 11371, 11417, 11293]),
-    GenericDataPoint(462, [12484, 12555, 12705, 12628, 12413]),
-    GenericDataPoint(504, [13532, 13697, 13652, 13565, 13644]),
-]
 
 
 def plot_dpir_line(ax, test_results: List[TestResult]):
@@ -223,6 +202,8 @@ if __name__ == '__main__':
     # sealpir: throughput = 168/4.983 = 33.7 per sec..
     main_folder = "evals/65k_size/64_workers_per_node/combined"
     dpir_test_results = collect_dpir_test_results(main_folder)
+
+    sealpir_res = grab_sealpir_results_from_file("evals/65k_size/sealpir")
 
     fig, ax = plt.subplots()
 

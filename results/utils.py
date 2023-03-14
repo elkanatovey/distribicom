@@ -62,7 +62,7 @@ def collect_dpir_test_results(folder_path):
     filtered = filter(lambda name: TestResult.is_test_result(name), get_all_fnames(folder_path))
     test_results = []
     for fname in filtered:
-        try :
+        try:
             test_results.append(TestResult(os.path.join(folder_path, fname)))
         except Exception as e:
             print(f"skipping {fname} due to error: {e}")
@@ -70,3 +70,28 @@ def collect_dpir_test_results(folder_path):
     if len(test_results) == 0:
         raise Exception("No test results found.")
     return test_results
+
+
+class GenericDataPoint:
+    def __init__(self, queries, times):
+        # self.name = name
+        self.queries = queries
+        self.avg = np.average(times)
+        self.std = np.std(times)
+
+
+def grab_sealpir_results_from_file(fname):
+    lines = []
+    with open(fname) as f:
+        lines = f.readlines()
+
+    resmap = {}
+    for l in lines:
+        l = l.strip()
+        l = l.split(" ")
+        n_queries = int(l[8])
+        if n_queries not in resmap:
+            resmap[n_queries] = []
+        time = int(l[5])
+        resmap[n_queries].append(time)
+    return [*map(lambda k: GenericDataPoint(k, resmap[k]), resmap)]
