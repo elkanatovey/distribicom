@@ -213,6 +213,12 @@ if __name__ == '__main__':
         sealpir_res = grab_sealpir_results_from_file(sealpir_data_folder)
         max_x = max([*get_from_dpir_results_x_axis(dpir_test_results)])
 
+        sealpir_res = sorted(sealpir_res, key=lambda x: x.queries)
+        dpir_test_results = sorted(dpir_test_results, key=lambda x: x.num_queries)
+
+        sealpir_res = sealpir_res[:6]
+        dpir_test_results = dpir_test_results[:6]
+
         sealpir_res = [*filter(lambda x: x.queries <= max_x, sealpir_res)]
         plot_other_sys_results(ax, sealpir_res)
 
