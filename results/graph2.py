@@ -88,18 +88,24 @@ def plot_dpir_line(ax, test_results: List[utils.TestResult]):
 
 
 if __name__ == '__main__':
-    test_results = utils.collect_dpir_test_results("evals/65k_size/64_workers_per_node/combined")
-
+    fldrs = [
+        "evals/65k_size/64_workers_per_node/combined",
+        "evals/256k",
+        "evals/scripts_mil_size/64_workers_per_node",
+    ]
     fig, ax = plt.subplots()
-    plot_dpir_line(ax, test_results)
-    # ax.legend([])
+    for fldr in fldrs:
+        test_results = utils.collect_dpir_test_results(fldr)
 
-    ax.set_xticks([*utils.get_from_dpir_results_x_axis(test_results)])
+        plot_dpir_line(ax, test_results)
+        # ax.legend([])
 
-    ax.set_yticks([i * 2000 for i in range(8)])
-    ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(8)))
+        ax.set_xticks([*utils.get_from_dpir_results_x_axis(test_results)])
 
-    ax.set_xlabel('number of clients')
-    ax.set_ylabel('setup time')
+        ax.set_yticks([i * 2000 for i in range(8)])
+        ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(8)))
+
+        ax.set_xlabel('number of clients')
+        ax.set_ylabel('setup time')
 
     plt.show()
