@@ -222,8 +222,9 @@ if __name__ == '__main__':
         plot_other_sys_results(ax, sealpir_res)
 
         plot_dpir_line(ax, dpir_test_results)
-        # plot_dpir_step_2_times(ax, step_two_times) # TODO: find a way to add this too.
-        addra_plot(ax, dpir_data_folder)
+
+        if "65k_size" in dpir_data_folder:
+            addra_plot(ax, dpir_data_folder)
 
         ax.legend()
 
