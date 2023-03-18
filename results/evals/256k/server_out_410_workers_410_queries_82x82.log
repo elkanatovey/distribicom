@@ -9,7 +9,7 @@ configs {
   number_of_elements: 262236
   use_batching: true
 }
-main_server_hostname: "glacier-27:54321"
+main_server_hostname: "glacier-16:54321"
 number_of_workers: 410
 query_wait_time: 10
 number_of_clients: 410
@@ -18,14 +18,11 @@ server_cpus: 12
 num queries:410
 results: 
  [
-36025ms,
-15722ms,
-17971ms,
-17887ms,
-17726ms,
-17430ms,
-18209ms,
-18458ms,
-18162ms,
-18281ms,
-]
+21312ms, 
+13654ms, 
+12378ms, 
+12373ms, 
+12368ms, 
+12373ms, 
+12348ms, 
+12370ms, 

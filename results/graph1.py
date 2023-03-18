@@ -4,7 +4,6 @@ from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-from matplotlib import ticker
 
 import constants
 
@@ -216,27 +215,21 @@ if __name__ == '__main__':
         sealpir_res = sorted(sealpir_res, key=lambda x: x.queries)
         dpir_test_results = sorted(dpir_test_results, key=lambda x: x.num_queries)
 
-        sealpir_res = sealpir_res[:6]
-        dpir_test_results = dpir_test_results[:6]
+        sealpir_res = sealpir_res[:]
+        dpir_test_results = dpir_test_results[:]
 
         sealpir_res = [*filter(lambda x: x.queries <= max_x, sealpir_res)]
         plot_other_sys_results(ax, sealpir_res)
 
         plot_dpir_line(ax, dpir_test_results)
         # plot_dpir_step_2_times(ax, step_two_times) # TODO: find a way to add this too.
-        # addra_plot(ax, main_folder)
+        addra_plot(ax, dpir_data_folder)
 
         ax.legend()
 
         ax.set_xticks([*get_from_dpir_results_x_axis(dpir_test_results)])
 
-
-        def y_fmt(y, _):
-            return '{:.0f}s'.format(y / 1000)
-
-
-        # Apply the formatter function to the y-axis tick labels
-        ax.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
+        add_y_format(ax)
 
         # ax.set_yticks([i * 2000 for i in range(7)])
         # ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))

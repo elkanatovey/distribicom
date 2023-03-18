@@ -1,3 +1,4 @@
+from matplotlib import ticker
 import numpy as np
 import os
 
@@ -95,3 +96,11 @@ def grab_sealpir_results_from_file(fname):
         time = int(l[5])
         resmap[n_queries].append(time)
     return [*map(lambda k: GenericDataPoint(k, resmap[k]), resmap)]
+
+
+def add_y_format(ax):
+    def y_fmt(y, _):
+        return '{:.0f}s'.format(y / 1000)
+
+    # Apply the formatter function to the y-axis tick labels
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))

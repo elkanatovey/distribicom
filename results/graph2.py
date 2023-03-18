@@ -100,12 +100,7 @@ if __name__ == '__main__':
         plot_dpir_line(ax, test_results)
         # ax.legend([])
 
-        ax.set_xticks([*utils.get_from_dpir_results_x_axis(test_results)])
-
-        ax.set_yticks([i * 2000 for i in range(8)])
-        ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(8)))
-
         ax.set_xlabel('number of clients')
         ax.set_ylabel('setup time')
-
+    utils.add_y_format(ax)
     plt.show()
