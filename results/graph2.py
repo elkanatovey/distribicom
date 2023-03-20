@@ -62,7 +62,7 @@ class EpochSetupTime:
         self.gal_key_send_time = int(line.split(" ")[1][:-3])
 
 
-def plot_dpir_line(ax, test_results: List[utils.TestResult]):
+def plot_dpir_line(ax, test_results: List[utils.TestResult], clrr=constants.epoch_setup):
     test_results = sorted(test_results, key=lambda x: x.num_queries)
 
     xs = [*(test_result.num_queries for test_result in test_results)]
@@ -72,7 +72,7 @@ def plot_dpir_line(ax, test_results: List[utils.TestResult]):
         xs,
         ys,
         marker='o',
-        color=constants.epoch_setup,
+        color=clrr,
         linewidth=constants.line_size,
         markersize=constants.line_size + 1
     )
@@ -93,14 +93,25 @@ if __name__ == '__main__':
         "evals/256k",
         "evals/scripts_mil_size/64_workers_per_node",
     ]
+    clrs = [
+        constants.epoch_setup,
+        constants.dpir_clr,
+        constants.sealpir_clr,
+    ]
+
     fig, ax = plt.subplots()
-    for fldr in fldrs:
+    for i, fldr in enumerate(fldrs):
         test_results = utils.collect_dpir_test_results(fldr)
 
-        plot_dpir_line(ax, test_results)
-        # ax.legend([])
+        plot_dpir_line(ax, test_results, clrs[i])
 
         ax.set_xlabel('number of clients')
         ax.set_ylabel('setup time')
+
+    ax.legend([
+        '$2^{16}$',
+        '$2^{18}$',
+        '$2^{20}$',
+    ])
     utils.add_y_format(ax)
     plt.show()

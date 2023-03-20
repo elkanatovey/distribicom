@@ -67,10 +67,12 @@ def DPirBandwidth_graph(rows, cols):
 
 
 if __name__ == '__main__':
-    xs, ys = DPirBandwidth_graph(42, 41)
+    print(to_mb(DPirBandwidth(164,164,164).compute_worker_response_size()))
+    # xs, ys = DPirBandwidth_graph(42, 41)
+    # print(xs,ys)
     # need to add to the ys the total client sendings too.
 
-    plt.plot(xs, ys)
-    plt.show()
+    # plt.plot(xs, ys)
+    # plt.show()
 
 # print(server_bandwidth_per_client)
