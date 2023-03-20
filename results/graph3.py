@@ -40,11 +40,6 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots()
     xs = sorted(sealpir_dict.keys())
-    dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
-    dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
-
-    sealpir_ys = [*map(lambda x: sealpir_dict[x].avg, xs)]
-    sealpir_errs = [*map(lambda x: sealpir_dict[x].std, xs)]
 
     prms = {
         "markersize": 4,
@@ -53,13 +48,19 @@ if __name__ == '__main__':
         "elinewidth": constants.line_size - 1
     }
 
+    dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
+    dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
     set_color(prms, constants.dpir_clr)
     plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
 
+    sealpir_ys = [*map(lambda x: sealpir_dict[x].avg, xs)]
+    sealpir_errs = [*map(lambda x: sealpir_dict[x].std, xs)]
     set_color(prms, constants.sealpir_clr)
     plt.errorbar(xs, sealpir_ys, sealpir_errs, **prms)
 
     utils.add_y_format(ax)
+
     ax.set_xticks(xs)
     ax.set_xticklabels(["$2^{13}$", "$2^{14}$", "$2^{15}$", "$2^{16}$"])
+
     plt.show()
