@@ -1,7 +1,7 @@
 {
   "binaries": {
-    "main_server": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/main_server",
-    "worker": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/worker"
+    "main_server": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/main_server",
+    "worker": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/worker"
   },
-  "hostname_folder": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/temp_configs"
+  "hostname_folder": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/tmps"
 }
