@@ -4,18 +4,18 @@
 namespace services::work_strategy {
     WorkerStrategy::WorkerStrategy(const seal::EncryptionParameters &enc_params,
                                    std::unique_ptr<distribicom::Manager::Stub> &&manager_conn) noexcept
-        : gkeys(), manager_conn(std::move(manager_conn)) {
+            : gkeys(), manager_conn(std::move(manager_conn)) {
 
         pool = std::make_shared<concurrency::threadpool>();
 
         query_expander = math_utils::QueryExpander::Create(
-            enc_params,
-            pool
+                enc_params,
+                pool
         );
 
         matops = math_utils::MatrixOperations::Create(
-            math_utils::EvaluatorWrapper::Create(enc_params),
-            pool
+                math_utils::EvaluatorWrapper::Create(enc_params),
+                pool
         );
     }
 
@@ -26,7 +26,7 @@ namespace services::work_strategy {
         auto exp_time = utils::time_it([&]() {
 
             // define the map back from col to query index.
-            std::map<int,int> query_pos_to_col;
+            std::map<int, int> query_pos_to_col;
             auto col = -1;
             for (auto &key_val: task.ctx_cols) {
                 col_to_query_index[++col] = key_val.first;
@@ -49,7 +49,8 @@ namespace services::work_strategy {
     }
 
     void
-    RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task, std::map<int, int> &query_pos_to_col) {
+    RowMultiplicationStrategy::parallel_expansions_into_query_mat(WorkerServiceTask &task,
+                                                                  std::map<int, int> &query_pos_to_col) {
         auto expanded_size = task.row_size;
 
         std::lock_guard lock(mu);
@@ -65,25 +66,25 @@ namespace services::work_strategy {
             }
 
             pool->submit(
-                std::move(concurrency::Task{
-                    .f = [&, q_pos]() {
-                        auto expanded = query_expander->expand_query(
-                            task.ctx_cols[q_pos],
-                            expanded_size,
-                            gkeys[q_pos]
-                        );
+                    std::move(concurrency::Task{
+                            .f = [&, q_pos]() {
+                                auto expanded = query_expander->expand_query(
+                                        task.ctx_cols[q_pos],
+                                        expanded_size,
+                                        gkeys[q_pos]
+                                );
 
-                        auto col = query_pos_to_col.at(q_pos);
-                        for (std::uint64_t row = 0; row < expanded_size; ++row) {
-                            query_mat(row, col) = std::move(expanded[row]);
-                        }
+                                auto col = query_pos_to_col.at(q_pos);
+                                for (std::uint64_t row = 0; row < expanded_size; ++row) {
+                                    query_mat(row, col) = std::move(expanded[row]);
+                                }
 
-                        expanded.clear();
-                        latch.count_down();
-                    },
-                    .wg = nullptr,
-                    .name = "worker::expand_query",
-                })
+                                expanded.clear();
+                                latch.count_down();
+                            },
+                            .wg = nullptr,
+                            .name = "worker::expand_query",
+                    })
             );
 
         }
@@ -123,8 +124,8 @@ namespace services::work_strategy {
 
     void
     RowMultiplicationStrategy::send_response(
-        const WorkerServiceTask &task,
-        math_utils::matrix<seal::Ciphertext> &computed
+            const WorkerServiceTask &task,
+            math_utils::matrix<seal::Ciphertext> &computed
     ) {
         auto sending_time = utils::time_it([&]() {
 
@@ -146,22 +147,22 @@ namespace services::work_strategy {
                 for (uint64_t j = 0; j < computed.cols; ++j) {
 
                     to_send_promises.emplace_back(
-                        std::make_shared<concurrency::promise<distribicom::MatrixPart>>(1, nullptr));
+                            std::make_shared<concurrency::promise<distribicom::MatrixPart>>(1, nullptr));
 
                     promise_index++;
                     pool->submit(
-                        {
-                            .f=[&, promise_index, i, j]() {
-                                auto part = std::make_unique<distribicom::MatrixPart>();
-                                part->set_row(row_to_index.at(int(i)));
-                                part->set_col(col_to_query_index.at(int(j)));
-                                part->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+                            {
+                                    .f=[&, promise_index, i, j]() {
+                                        auto part = std::make_unique<distribicom::MatrixPart>();
+                                        part->set_row(row_to_index.at(int(i)));
+                                        part->set_col(col_to_query_index.at(int(j)));
+                                        part->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
 
-                                to_send_promises[promise_index]->set(std::move(part));
-                            },
-                            .wg = to_send_promises[promise_index]->get_latch(),
-                            .name = "worker::send_response",
-                        }
+                                        to_send_promises[promise_index]->set(std::move(part));
+                                    },
+                                    .wg = to_send_promises[promise_index]->get_latch(),
+                                    .name = "worker::send_response",
+                            }
                     );
 
                 }
@@ -176,15 +177,16 @@ namespace services::work_strategy {
             auto stream = manager_conn->ReturnLocalWork(&context, &resp);
 
             for (auto &p: to_send_promises) {
-                stream->Write(*p->get());
+                //Enable write batching in streams (message k + 1 does not rely on responses from message k)
+                stream->Write(*p->get(), grpc::WriteOptions().set_buffer_hint());
             }
 
             stream->WritesDone();
             auto status = stream->Finish();
             if (!status.ok()) {
                 std::cerr
-                    << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
-                    << std::endl;
+                        << "Services::RowMultiplicationStrategy:: hadn't completed its stream:" + status.error_message()
+                        << std::endl;
             }
         });
         std::cout << "worker::sending time: " << sending_time << "ms" << std::endl;
