@@ -27,7 +27,10 @@ target_link_libraries(main1 distribicom_cpp)
 add_executable(main_server server.cpp)
 add_executable(worker worker.cpp)
 add_executable(run_sealpir run_sealpir.cpp)
+add_executable(fastpir run_fastpir.cpp fastpir/server1.cpp fastpir/client.cpp fastpir/fastpirparams.cpp)
+
 
 target_link_libraries(main_server distribicom_cpp)
 target_link_libraries(worker distribicom_cpp)
+target_link_libraries(fastpir distribicom_cpp)
 target_link_libraries(run_sealpir distribicom_cpp)
