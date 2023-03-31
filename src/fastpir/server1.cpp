@@ -26,7 +26,7 @@ void Server::set_client_galois_keys(uint32_t client_id, seal::GaloisKeys gal_key
 void Server::encode_db(std::vector<std::vector<uint64_t>> db)
 {
     encoded_db = std::vector<seal::Plaintext>(db.size());
-    std::cout<<"sb size "<< db.size()<<std::endl;
+    std::cout<<"server: db size "<< db.size()<< " plaintexts"<<std::endl;
     for (int i = 0; i < db.size(); i++)
     {
         batch_encoder->encode(db[i], encoded_db[i]);

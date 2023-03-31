@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 
 
-#SBATCH --time=02:50:00
+#SBATCH --time=04:50:00
 #SBATCH --mem=256G
 
 for i in {1..1024}

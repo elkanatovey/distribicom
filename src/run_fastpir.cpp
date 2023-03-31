@@ -2,6 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
+#include <fstream>
 
 #include "fastpir/bfvparams.h"
 #include "fastpir/fastpirparams.hpp"
@@ -20,8 +21,11 @@ int main(int argc, char *argv[])
     size_t  num_queries=0;
     size_t num_threads=0;
 
+    std::string log_address = "run_fastpir_log.txt";
+    std::string cout_file = "run_fastpir.txt";
+
     int option;
-    const char *optstring = "n:s:q:t:";
+    const char *optstring = "n:s:q:t:l:";
     while ((option = getopt(argc, argv, optstring)) != -1)
     {
         switch (option)
@@ -37,6 +41,9 @@ int main(int argc, char *argv[])
             break;
         case 't':
             num_threads = std::stoi(optarg);
+            break;
+        case 'l':
+            log_address = optarg;
             break;
         case '?':
             print_usage();
@@ -83,7 +90,13 @@ int main(int argc, char *argv[])
     ;
     server.preprocess_db();
 
-    std::cout<<"Completed preprocessing db!"<<std::endl<<std::endl;
+
+    std::streambuf *filebuf, *coutbackup;
+    std::ofstream coutfilestr;
+    coutfilestr.open (cout_file);
+    coutbackup = std::cout.rdbuf();     // back up cout's streambuf
+    filebuf = coutfilestr.rdbuf();        // get file's streambuf
+    std::cout.rdbuf(filebuf);         // assign streambuf to cout
 
 
     concurrency::threadpool* pool = new concurrency::threadpool(num_threads);
@@ -108,9 +121,35 @@ int main(int argc, char *argv[])
     auto time_pool_us =
             duration_cast<std::chrono::microseconds>(time_pool_e - time_pool_s).count();
 
+    std::cout << "This is written to the file";
+    std::cout.rdbuf(coutbackup);        // restore cout's original streambuf
+
+    coutfilestr.close();
+
+    std::streambuf *psbuf, *backup;
+    std::ofstream filestr;
+    filestr.open (log_address, std::ios::app);
+    backup = std::clog.rdbuf();     // back up cout's streambuf
+    psbuf = filestr.rdbuf();        // get file's streambuf
+    std::clog.rdbuf(psbuf);         // assign streambuf to cout
+
+
 
     std::cout << "Main: pool query processing time: " << time_pool_us / 1000
          << " ms on "<<num_queries << " queries and "<< num_threads << " threads" << std::endl;
+
+    std::cout << "Main: " << num_obj
+              << " objects in DB of size: "<<obj_size << std::endl;
+
+    std::clog << "Main: pool query processing time: " << time_pool_us / 1000
+              << " ms on "<<num_queries << " queries and "<< num_threads << " threads" << std::endl;
+
+    std::clog << "Main: " << num_obj
+              << " objects in DB of size: "<<obj_size << std::endl;
+
+    std::clog.rdbuf(backup);        // restore cout's original streambuf
+
+    filestr.close();
 
     delete pool;
 
@@ -142,8 +181,7 @@ int main(int argc, char *argv[])
 
 void print_usage()
 {
-    std::cout << "usage: main -n <number of objects> -s <object size in bytes> -q <num queries> -t <num threads>" <<
-    std::endl;
+    std::cout << "usage: main -n <number of objects> -s <object size in bytes> -q <num queries> -t <num threads> -l <log address>" <<std::endl;
 }
 
 
