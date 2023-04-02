@@ -1,37 +1,27 @@
 import numpy as np
+import matplotlib
 from matplotlib import pyplot as plt
 
 import utils, constants
 
 # x db size to times.
 dpir_values = {
-    1 << 13: utils.GenericDataPoint(60, [470, 453, 544, 551, 517, 523, 488, 470, 468]),
-    1 << 14: utils.GenericDataPoint(105, [1286, 1273, 1267, 1263, 1176, 1180, 1030, 1291, 1255]),
-    1 << 15: utils.GenericDataPoint(210, [3535, 3405, 3401, 3477, 3300, 3406, 3329, 3348]),
-    1 << 16: utils.GenericDataPoint(420, [6397, 6410, 6430, 6426, 6426, 6438, 6430, 6424, 6462])
+    1 << 16: utils.GenericDataPoint(84, [1407, 1393, 1395, 1394, 1399, 1402, 1406, 1411, 1398]),
+    1 << 18: utils.GenericDataPoint(164, [5365, 5612, 5229, 5241, 5237, 5238, 5229, 5244, 5219]),
+    1 << 20: utils.GenericDataPoint(328, [23786, 21804, 21853, 21774, 21816, 21815, 21800, 21761, 21746]),
 }
 
 fpir_values = {
-    1 << 13: utils.GenericDataPoint(60, [182, 181, 170, 173, 171, 172]),
-    1 << 14: utils.GenericDataPoint(105, [382, 381, 382, 381, 383]),
-    1 << 15: utils.GenericDataPoint(210, [1071, 1069, 1071, 1065, 1068]),
-    1 << 16: utils.GenericDataPoint(420, [3289, 3297, 3294, 3299, 3280])
+    1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
+    1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
+    1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
 }
-sealpir_values = sealpir_res = utils.grab_sealpir_results_from_file(
-    "/Users/jonathanweiss/CLionProjects/distribicom/results/evals/3rd-graph/run_sealpir_log.txt")
 
-
-def num_queries_to_x_axis(num_queries):
-    if num_queries == 60:
-        return 1 << 13
-    elif num_queries == 105:
-        return 1 << 14
-    elif num_queries == 210:
-        return 1 << 15
-    elif num_queries == 420:
-        return 1 << 16
-
-    raise Exception("Unknown num queries: " + str(num_queries))
+sealpir_values = {
+    1 << 16: utils.GenericDataPoint(84, [664, 677, 670, 683, 670]),
+    1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
+    1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
+}
 
 
 def set_color(prms, clr):
@@ -39,28 +29,24 @@ def set_color(prms, clr):
     prms["color"] = clr
 
 
-if __name__ == '__main__':
-    sealpir_dict = {}
-    for res in sealpir_res:
-        sealpir_dict[num_queries_to_x_axis(res.queries)] = res
+matplotlib.rcParams['font.size'] = constants.font_size
 
+if __name__ == '__main__':
     fig, ax = plt.subplots()
-    xs = sorted(sealpir_dict.keys())
+    xs = sorted(sealpir_values.keys())
 
     prms = {
-        "markersize": 4,
+        "marker": 'o',
+        "linewidth": constants.line_size,
+        "markersize": constants.line_size + 1,
+
         "barsabove": True,
-        "capsize": 2,
-        "elinewidth": constants.line_size - 1
+        # "capsize": constants.line_size + 1,
+        # "linewidth": constants.line_size,
+        # "elinewidth": constants.line_size + 1
     }
-
-    dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
-    dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
-    set_color(prms, constants.dpir_clr)
-    plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
-
-    sealpir_ys = [*map(lambda x: sealpir_dict[x].avg, xs)]
-    sealpir_errs = [*map(lambda x: sealpir_dict[x].std, xs)]
+    sealpir_ys = [*map(lambda x: sealpir_values[x].avg, xs)]
+    sealpir_errs = [*map(lambda x: sealpir_values[x].std, xs)]
     set_color(prms, constants.sealpir_clr)
     plt.errorbar(xs, sealpir_ys, sealpir_errs, **prms)
 
@@ -69,9 +55,14 @@ if __name__ == '__main__':
     set_color(prms, constants.addra_clr)
     plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
 
+    dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
+    dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
+    set_color(prms, constants.dpir_clr)
+    plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
+
     utils.add_y_format(ax)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels(["$2^{13}$", "$2^{14}$", "$2^{15}$", "$2^{16}$"])
-
+    ax.set_xticklabels(["$2^{16}$", "$2^{18}$", "$2^{20}$"])
+    ax.legend(["SealPir", "FPIR", "DPIR"])
     plt.show()
