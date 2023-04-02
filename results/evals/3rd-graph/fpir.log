@@ -1,0 +1,42 @@
+Main: pool query processing time: 182 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 181 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 170 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 173 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 171 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 172 ms on 60 queries and 12 threads
+Main: 8192 objects in DB of size: 256
+Main: pool query processing time: 382 ms on 105 queries and 12 threads
+Main: 16384 objects in DB of size: 256
+Main: pool query processing time: 381 ms on 105 queries and 12 threads
+Main: 16384 objects in DB of size: 256
+Main: pool query processing time: 382 ms on 105 queries and 12 threads
+Main: 16384 objects in DB of size: 256
+Main: pool query processing time: 381 ms on 105 queries and 12 threads
+Main: 16384 objects in DB of size: 256
+Main: pool query processing time: 383 ms on 105 queries and 12 threads
+Main: 16384 objects in DB of size: 256
+Main: pool query processing time: 1071 ms on 210 queries and 12 threads
+Main: 32768 objects in DB of size: 256
+Main: pool query processing time: 1069 ms on 210 queries and 12 threads
+Main: 32768 objects in DB of size: 256
+Main: pool query processing time: 1071 ms on 210 queries and 12 threads
+Main: 32768 objects in DB of size: 256
+Main: pool query processing time: 1065 ms on 210 queries and 12 threads
+Main: 32768 objects in DB of size: 256
+Main: pool query processing time: 1068 ms on 210 queries and 12 threads
+Main: 32768 objects in DB of size: 256
+Main: pool query processing time: 3289 ms on 420 queries and 12 threads
+Main: 65536 objects in DB of size: 256
+Main: pool query processing time: 3297 ms on 420 queries and 12 threads
+Main: 65536 objects in DB of size: 256
+Main: pool query processing time: 3294 ms on 420 queries and 12 threads
+Main: 65536 objects in DB of size: 256
+Main: pool query processing time: 3299 ms on 420 queries and 12 threads
+Main: 65536 objects in DB of size: 256
+Main: pool query processing time: 3280 ms on 420 queries and 12 threads
+Main: 65536 objects in DB of size: 256
