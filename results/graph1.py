@@ -199,32 +199,34 @@ def plot_dpir_step_2_times(ax, step_two_times):
 # https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66
 if __name__ == '__main__':
     data = [
-        ("evals/65k_size/64_workers_per_node/combined", "evals/65k_size/sealpir"),
-        ("evals/256k", "evals/256k/sealpir"),
-        ("evals/scripts_mil_size/64_workers_per_node", "evals/scripts_mil_size/sealpir"),
+        ("evals/65k_size/64_workers_per_node/combined", "evals/65k_size"),
+        ("evals/256k", "evals/256k"),
+        ("evals/scripts_mil_size/64_workers_per_node", "evals/scripts_mil_size"),
     ]
     # main_folder = "evals/65k_size/64_workers_per_node/combined"
     # sealpir_res = grab_sealpir_results_from_file("evals/65k_size/sealpir")
 
-    for dpir_data_folder, sealpir_data_folder in data:
+    for dpir_data_folder, folder in data:
         fig, ax = plt.subplots()
+
         dpir_test_results = collect_dpir_test_results(dpir_data_folder)
-        sealpir_res = grab_sealpir_results_from_file(sealpir_data_folder)
+        sealpir_res = grab_sealpir_results_from_file(os.path.join(folder, "sealpir"))
+        fpir_res = grab_sealpir_results_from_file(os.path.join(folder, "fpir"))
+
         max_x = max([*get_from_dpir_results_x_axis(dpir_test_results)])
 
+        # sort results
         sealpir_res = sorted(sealpir_res, key=lambda x: x.queries)
+        fpir_res = sorted(fpir_res, key=lambda x: x.queries)
         dpir_test_results = sorted(dpir_test_results, key=lambda x: x.num_queries)
 
-        sealpir_res = sealpir_res[:]
-        dpir_test_results = dpir_test_results[:]
-
         sealpir_res = [*filter(lambda x: x.queries <= max_x, sealpir_res)]
+        fpir_res = [*filter(lambda x: x.queries <= max_x, fpir_res)]
+
         plot_other_sys_results(ax, sealpir_res)
-
         plot_dpir_line(ax, dpir_test_results)
+        plot_other_sys_results(ax, fpir_res, constants.addra_clr, "FastPIR")
 
-        if "65k_size" in dpir_data_folder:
-            addra_plot(ax, dpir_data_folder)
 
         ax.legend()
 
