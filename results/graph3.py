@@ -15,14 +15,14 @@ dpir_values = {
 fpir_values = {
     1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
     1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
-    1 << 19: utils.GenericDataPoint(232, [12708,12524,12606,12649,12534]),
+    1 << 19: utils.GenericDataPoint(232, [12708, 12524, 12606, 12649, 12534]),
     1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
 }
 
 sealpir_values = {
     1 << 16: utils.GenericDataPoint(84, [664, 677, 670, 683, 670]),
     1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
-    1 << 19: utils.GenericDataPoint(232, [0]),
+    1 << 19: utils.GenericDataPoint(232, [33509, 33543, 33058, 33220, 33585]),
     1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
 }
 
