@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib
 from matplotlib import pyplot as plt
 
 import utils, constants
@@ -12,6 +13,7 @@ dpir_values = {
     80: [14158, 13935, 13912, 14026, 14101, 13750, 14152, 14073, 13944],
     100: [13989, 13855, 13735, 13882, 13867, 13951, 13826, 13741, 13815]
 }
+matplotlib.rcParams['font.size'] = constants.font_size
 
 if __name__ == '__main__':
     fig, ax = plt.subplots()
@@ -27,13 +29,15 @@ if __name__ == '__main__':
         "markersize": 4,
         "barsabove": True,
         "capsize": 2,
-        "elinewidth": constants.line_size - 1,
+        "linewidth": constants.line_size-1,
+        "elinewidth": constants.line_size ,
         "ecolor": clr,
         "color": clr,
     }
 
     ax.errorbar(xs, ys, yerr=yerr, **pr)
     ax.set_xlabel("mbit/s")
+    ax.set_ylabel("round latency")
     # ax. = "Number of queries"
 
     plt.show()

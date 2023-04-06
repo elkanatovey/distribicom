@@ -64,5 +64,7 @@ if __name__ == '__main__':
 
     ax.set_xticks(xs)
     ax.set_xticklabels(["$2^{16}$", "$2^{18}$", "$2^{20}$"])
-    ax.legend(["SealPir", "FPIR", "DPIR"])
+
+    ax.set_ylabel('round latency')
+    ax.legend(["SealPir (pung's engine)", "FPIR (Addra's engine)", "DPIR"])
     plt.show()
