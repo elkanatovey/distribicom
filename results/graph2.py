@@ -109,9 +109,9 @@ if __name__ == '__main__':
         ax.set_ylabel('setup time')
 
     ax.legend([
-        '$2^{16}$',
-        '$2^{18}$',
-        '$2^{20}$',
+        '$|message matrix|=2^{16}$',
+        '$|message matrix|=2^{18}$',
+        '$|message matrix|=2^{20}$',
     ])
     utils.add_y_format(ax)
     plt.show()

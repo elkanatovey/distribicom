@@ -66,8 +66,9 @@ if __name__ == '__main__':
     utils.add_y_format(ax)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels(["$2^{16}$", "$2^{18}$", "$s^{19}$", "$2^{20}$"])
+    ax.set_xticklabels(["$2^{16}$", "$2^{18}$", "$2^{19}$", "$2^{20}$"])
 
     ax.set_ylabel('round latency')
-    ax.legend(["SealPir (pung's engine)", "FPIR (Addra's engine)", "DPIR"])
+    ax.set_xlabel('|message matrix|')
+    ax.legend(["SealPIR (pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
     plt.show()
