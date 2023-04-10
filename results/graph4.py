@@ -27,11 +27,10 @@ if __name__ == '__main__':
     clr = constants.dpir_clr
 
     utils.plot_errbars(ax, xs, ys, yerr, "", clr)
-    # ax.errorbar(xs, ys, yerr=yerr, **pr)
+
     ax.set_xlabel("mbit/s")
     ax.set_ylabel("round latency")
     ax.set_xticks([10, 20, 40, 60, 80, 100])
-    # ax.set_ylim(0, max(ys)*1.05)  # Use `max(y)` to automatically set the upper limit to the maximum value in y
-    # ax. = "Number of queries"
+
     ax.set_ylim(0)
     plt.show()

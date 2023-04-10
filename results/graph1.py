@@ -154,8 +154,8 @@ if __name__ == '__main__':
         fpir_res = [*filter(lambda x: x.queries <= max_x, fpir_res)]
 
         plot_other_sys_results(ax, sealpir_res, constants.sealpir_clr, "SealPIR (pung's engine)")
-        plot_dpir_line(ax, dpir_test_results)
         plot_other_sys_results(ax, fpir_res, constants.addra_clr, "FastPIR (Addra's engine)")
+        plot_dpir_line(ax, dpir_test_results)
 
         ax.legend()
 

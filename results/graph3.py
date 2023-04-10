@@ -48,31 +48,20 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     xs = sorted(sealpir_values.keys())
 
-    prms = {
-        "marker": 'o',
-        "linewidth": constants.line_size,
-        "markersize": constants.line_size + 3,
-
-        "barsabove": True,
-        # "capsize": constants.line_size + 1,
-        # "linewidth": constants.line_size,
-        # "elinewidth": constants.line_size + 1
-    }
     sealpir_ys = [*map(lambda x: sealpir_values[x].avg, xs)]
     sealpir_errs = [*map(lambda x: sealpir_values[x].std, xs)]
-    set_color(prms, constants.sealpir_clr)
-    plt.errorbar(xs, sealpir_ys, sealpir_errs, **prms)
+
+    utils.plot_errbars(ax, xs, sealpir_ys, sealpir_errs, "", constants.sealpir_clr)
 
     fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
     fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
-    set_color(prms, constants.addra_clr)
-    plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
+
+    utils.plot_errbars(ax, xs, fpir_ys, fpir_errs, "", constants.addra_clr)
 
     dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
     dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
-    set_color(prms, constants.dpir_clr)
-    plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
 
+    utils.plot_errbars(ax, xs, dpir_ys, dpir_errs, "", constants.dpir_clr)
 
     utils.add_y_format(ax)
 
