@@ -1,6 +1,24 @@
 from matplotlib import ticker
 import numpy as np
 import os
+import constants
+
+
+def plot_errbars(ax, xs, ys, errbars, label, clr):
+    ax.errorbar(
+        xs,
+        ys,
+        label=label,
+        yerr=errbars,
+        fmt='-o',
+        barsabove=True,
+        capsize=constants.marker_size,
+        ecolor=clr,
+        color=clr,
+
+        linewidth=constants.line_size,
+        markersize=constants.marker_size,
+    )
 
 
 class TestResult:

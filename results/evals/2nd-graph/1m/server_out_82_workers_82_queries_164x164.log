@@ -1,0 +1,26 @@
+configs {
+  scheme: "bgv"
+  polynomial_degree: 4096
+  logarithm_plaintext_coefficient: 20
+  db_rows: 164
+  db_cols: 164
+  size_per_element: 256
+  dimensions: 2
+  number_of_elements: 1048944
+  use_batching: true
+}
+main_server_hostname: "glacier-19:54321"
+number_of_workers: 82
+query_wait_time: 10
+number_of_clients: 82
+server_cpus: 12
+
+num queries:82
+results: 
+ [
+19078ms, 
+18578ms, 
+18345ms, 
+18335ms, 
+18469ms, 
+]

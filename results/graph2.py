@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+import numpy as np
+
 import graph1
 import utils
 import constants
@@ -66,32 +68,16 @@ def plot_dpir_line(ax, test_results: List[utils.TestResult], clrr=constants.epoc
     test_results = sorted(test_results, key=lambda x: x.num_queries)
 
     xs = [*(test_result.num_queries for test_result in test_results)]
-    ys = [*(test_result.data[0] for test_result in test_results)]
-
-    ax.plot(
-        xs,
-        ys,
-        marker='o',
-        color=clrr,
-        linewidth=constants.line_size,
-        markersize=constants.line_size + 1
-    )
-
-
-# def collect_test_results(folder_path):
-#     filtered = filter(lambda name: .is_test_result(name), graph1.get_all_fnames(folder_path))
-#     test_results = [*map(lambda fname: EpochSetupTime(os.path.join(folder_path, fname)), filtered)]
-#
-#     if len(test_results) == 0:
-#         raise Exception("No test results found.")
-#     return test_results
+    ys = [*(test_result.avg for test_result in test_results)]
+    yerrs = [*(np.std(test_result.data) for test_result in test_results)]
+    utils.plot_errbars(ax, xs, ys, yerrs, "", clrr)
 
 
 if __name__ == '__main__':
     fldrs = [
-        "evals/65k_size/64_workers_per_node/combined",
-        "evals/256k",
-        "evals/scripts_mil_size/64_workers_per_node",
+        "evals/2nd-graph/65k",
+        "evals/2nd-graph/262k",
+        "evals/2nd-graph/1m",
     ]
     clrs = [
         constants.epoch_setup,
@@ -109,9 +95,9 @@ if __name__ == '__main__':
         ax.set_ylabel('setup time')
 
     ax.legend([
-        '$2^{16} message$',
-        '$2^{18} message$',
-        '$2^{20} message$',
+        '$2^{16}$ messages',
+        '$2^{18}$ messages',
+        '$2^{20}$ messages',
     ])
     utils.add_y_format(ax)
     ax.set_ylim(0)

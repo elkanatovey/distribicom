@@ -8,3 +8,4 @@ epoch_setup = addra_clr
 font_size = 24
 
 line_size = 3
+marker_size = line_size + 3

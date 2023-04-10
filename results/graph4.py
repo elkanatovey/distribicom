@@ -25,17 +25,9 @@ if __name__ == '__main__':
     utils.add_y_format(ax)
 
     clr = constants.dpir_clr
-    pr = {
-        "markersize": 4,
-        "barsabove": True,
-        "capsize": 2,
-        "linewidth": constants.line_size - 1,
-        "elinewidth": constants.line_size,
-        "ecolor": clr,
-        "color": clr,
-    }
 
-    ax.errorbar(xs, ys, yerr=yerr, **pr)
+    utils.plot_errbars(ax, xs, ys, yerr, "", clr)
+    # ax.errorbar(xs, ys, yerr=yerr, **pr)
     ax.set_xlabel("mbit/s")
     ax.set_ylabel("round latency")
     ax.set_xticks([10, 20, 40, 60, 80, 100])

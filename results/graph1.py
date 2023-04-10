@@ -23,27 +23,8 @@ def plot_dpir_line(ax, test_results: List[TestResult]):
     ys = [*(np.average(test_result.data[1:]) for test_result in test_results)]
     errbars = [*(np.std(test_result.data[1:]) for test_result in test_results)]
     print("dpir", ys)
-    ax.plot(
-        xs,
-        ys,
-        marker='o',
-        color=constants.dpir_clr,
-        linewidth=constants.line_size,
-        markersize=constants.line_size + 1,
-        label="DPIR"
-    )
-    ax.errorbar(
-        xs,
-        ys,
-        yerr=errbars,
-        fmt='.',
-        markersize=4,
-        barsabove=True,
-        capsize=2,
-        ecolor=constants.dpir_clr,
-        color=constants.dpir_clr,
-        elinewidth=constants.line_size - 1
-    )
+
+    plot_errbars(ax, xs, ys, errbars, "DPIR", constants.dpir_clr)
 
 
 def plot_other_sys_results(ax, sealpir_results: List[GenericDataPoint], clr=constants.sealpir_clr, label="SealPIR"):
@@ -57,25 +38,7 @@ def plot_other_sys_results(ax, sealpir_results: List[GenericDataPoint], clr=cons
     print(errbars)
     ys = [*map(lambda y: y.avg, ys)]
     print("sealpir", ys)
-    ax.plot(
-        xs,
-        ys,
-        color=clr,
-        marker='o',
-        linewidth=constants.line_size,
-        markersize=constants.line_size + 1,
-        label=label
-    )
-    ax.errorbar(
-        xs,
-        ys,
-        yerr=errbars,
-        fmt='.',
-        barsabove=True,
-        capsize=2,
-        ecolor=clr,
-        color=clr
-    )
+    plot_errbars(ax, xs, ys, errbars, label, clr)
 
 
 class SingleServerParsing:
@@ -103,21 +66,6 @@ class SingleServerParsing:
 
     def into_sealpir_result_list(self):
         return [*map(lambda x: GenericDataPoint(x[0], x[1]), self.data_points.items())]
-
-
-# def plot_epoch_line(ax, test_results: List[TestResult]):
-#     test_results = sorted(test_results, key=lambda x: x.num_queries)
-#
-#     xs = [0, *(test_result.num_queries for test_result in test_results)]
-#     ys = [0, *(test_result.data[0] for test_result in test_results)]
-#     ax.plot(
-#         xs,
-#         ys,
-#         marker='o',
-#         color=constants.epoch_setup,
-#         linewidth=constants.line_size,
-#         markersize=constants.line_size + 1
-#     )
 
 
 class AddraResult:
@@ -176,24 +124,6 @@ step_two_times = [
     [1170, 1151, 1132, 1130, 1135, 1134, 1160],
     [1272, 1279, 1278, 1279, 1287],
 ]
-
-
-def plot_dpir_step_2_times(ax, step_two_times):
-    xs = np.arange(1, len(step_two_times) + 1) * 42
-    ys, errbars = zip(*map(lambda lst: [np.average(lst), np.std(lst)], step_two_times))
-    ax.errorbar(
-        xs,
-        ys,
-        yerr=errbars,
-        fmt='--.',
-        markersize=4,
-        barsabove=True,
-        capsize=2,
-        ecolor=constants.dpir_clr,
-        color=constants.dpir_clr,
-        elinewidth=constants.line_size - 1
-    )
-
 
 # colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
 # https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66

@@ -51,7 +51,7 @@ if __name__ == '__main__':
     prms = {
         "marker": 'o',
         "linewidth": constants.line_size,
-        "markersize": constants.line_size + 1,
+        "markersize": constants.line_size + 3,
 
         "barsabove": True,
         # "capsize": constants.line_size + 1,
@@ -63,15 +63,16 @@ if __name__ == '__main__':
     set_color(prms, constants.sealpir_clr)
     plt.errorbar(xs, sealpir_ys, sealpir_errs, **prms)
 
+    fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
+    fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
+    set_color(prms, constants.addra_clr)
+    plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
+
     dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
     dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
     set_color(prms, constants.dpir_clr)
     plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
 
-    fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
-    fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
-    set_color(prms, constants.addra_clr)
-    plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
 
     utils.add_y_format(ax)
 
