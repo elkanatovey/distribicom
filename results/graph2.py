@@ -105,13 +105,14 @@ if __name__ == '__main__':
 
         plot_dpir_line(ax, test_results, clrs[i])
 
-        ax.set_xlabel('number of clients')
+        ax.set_xlabel('clients per server')
         ax.set_ylabel('setup time')
 
     ax.legend([
-        '$|message matrix|=2^{16}$',
-        '$|message matrix|=2^{18}$',
-        '$|message matrix|=2^{20}$',
+        '$2^{16} message$',
+        '$2^{18} message$',
+        '$2^{20} message$',
     ])
     utils.add_y_format(ax)
+    ax.set_ylim(0)
     plt.show()

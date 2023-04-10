@@ -63,15 +63,15 @@ if __name__ == '__main__':
     set_color(prms, constants.sealpir_clr)
     plt.errorbar(xs, sealpir_ys, sealpir_errs, **prms)
 
-    fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
-    fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
-    set_color(prms, constants.addra_clr)
-    plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
-
     dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
     dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
     set_color(prms, constants.dpir_clr)
     plt.errorbar(xs, dpir_ys, dpir_errs, **prms)
+
+    fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
+    fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
+    set_color(prms, constants.addra_clr)
+    plt.errorbar(xs, fpir_ys, fpir_errs, **prms)
 
     utils.add_y_format(ax)
 
@@ -79,6 +79,7 @@ if __name__ == '__main__':
     ax.set_xticklabels(["$2^{16}$", "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$"])
 
     ax.set_ylabel('round latency')
-    ax.set_xlabel('|message matrix|')
+    ax.set_xlabel('|messages|')
     ax.legend(["SealPIR (pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
+    ax.set_ylim(0)
     plt.show()

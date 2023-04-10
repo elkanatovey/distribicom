@@ -238,5 +238,6 @@ if __name__ == '__main__':
 
         ax.set_xlabel('number of clients')
         ax.set_ylabel('round latency')
+        ax.set_ylim(0)
 
     plt.show()
