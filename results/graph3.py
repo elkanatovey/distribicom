@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 
 import utils, constants
 
-# x db size to times.
 dpir_values = {
     # 1 << 16: utils.GenericDataPoint(82, [1407, 1393, 1395, 1394, 1399, 1402, 1406, 1411, 1398]),
     # 1 << 17: utils.GenericDataPoint(116, [2933, 2782, 2745, 2706, 2690, 2689, 2693, 2691, 2782]),
@@ -19,28 +18,29 @@ dpir_values = {
 }
 
 fpir_values = {
-    # 60 105 210 420
     # 1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
-    1 << 17: utils.GenericDataPoint(116, [1720, 1759, 1664, 1741, 1712]),
-    1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
-    1 << 19: utils.GenericDataPoint(232, [12708, 12524, 12606, 12649, 12534]),
+    # 1 << 17: utils.GenericDataPoint(116, [1720, 1759, 1664, 1741, 1712]),
+    # 1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
+    # 1 << 19: utils.GenericDataPoint(232, [12708, 12524, 12606, 12649, 12534]),
     # 1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
 
     1 << 16: utils.GenericDataPoint(21, [221, 220, 224, 220, 203]),
-    # 1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
+    1 << 17: utils.GenericDataPoint(58, [1172, 1019, 973, 989, 988]),
+    1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
+    1 << 19: utils.GenericDataPoint(116, [7131, 7305, 7083, 7056, 7111]),
     1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578]),
 }
 
-"""
-"""
 sealpir_values = {
     # 1 << 16: utils.GenericDataPoint(84, [664, 677, 670, 683, 670]),
-    1 << 17: utils.GenericDataPoint(116, [5426, 5476, 5373, 5379, 5446]),
-    1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
-    1 << 19: utils.GenericDataPoint(232, [33509, 33543, 33058, 33220, 33585]),
+    # 1 << 17: utils.GenericDataPoint(116, [5426, 5476, 5373, 5379, 5446]),
+    # 1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
+    # 1 << 19: utils.GenericDataPoint(232, [33509, 33543, 33058, 33220, 33585]),
 
     1 << 16: utils.GenericDataPoint(21, [780, 764, 758, 781, 740]),
-    # 1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
+    1 << 17: utils.GenericDataPoint(58, [3140, 3265, 3119, 3074, 3137]),
+    1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
+    1 << 19: utils.GenericDataPoint(116, [19153, 18936, 19200, 19089, 19073]),
     1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
 }
 
