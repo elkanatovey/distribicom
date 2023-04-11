@@ -6,33 +6,39 @@ import utils, constants
 
 # x db size to times.
 dpir_values = {
-    1 << 16: utils.GenericDataPoint(84, [1407, 1393, 1395, 1394, 1399, 1402, 1406, 1411, 1398]),
+    # 1 << 16: utils.GenericDataPoint(82, [1407, 1393, 1395, 1394, 1399, 1402, 1406, 1411, 1398]),
     1 << 17: utils.GenericDataPoint(116, [2933, 2782, 2745, 2706, 2690, 2689, 2693, 2691, 2782]),
     1 << 18: utils.GenericDataPoint(164, [5365, 5612, 5229, 5241, 5237, 5238, 5229, 5244, 5219]),
     1 << 19: utils.GenericDataPoint(232, [11445, 11018, 10842, 10776, 10759, 10676, 10769, 10765, 10707]),
+
+    1 << 16: utils.GenericDataPoint(21, [647, 648, 649, 650, 647, 642, 648, 642, 646, ]),
+    # 1 << 18: utils.GenericDataPoint(82, [3158, 2900, 2908, 2902, 2907, 2902, 2898, 2912, 2909, ]),
     1 << 20: utils.GenericDataPoint(328, [23786, 21804, 21853, 21774, 21816, 21815, 21800, 21761, 21746]),
 }
 
 fpir_values = {
-    1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
+    # 60 105 210 420
+    # 1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
     1 << 17: utils.GenericDataPoint(116, [1720, 1759, 1664, 1741, 1712]),
     1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
     1 << 19: utils.GenericDataPoint(232, [12708, 12524, 12606, 12649, 12534]),
-    1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
+    # 1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
+
+    1 << 16: utils.GenericDataPoint(21, [221, 220, 224, 220, 203]),
+    # 1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
+    1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578]),
 }
 
 """
-Main: pool query processing time: 5426 ms on 116 queries and 12 threads
-Main: pool query processing time: 5476 ms on 116 queries and 12 threads
-Main: pool query processing time: 5373 ms on 116 queries and 12 threads
-Main: pool query processing time: 5379 ms on 116 queries and 12 threads
-Main: pool query processing time: 5446 ms on 116 queries and 12 threads
 """
 sealpir_values = {
-    1 << 16: utils.GenericDataPoint(84, [664, 677, 670, 683, 670]),
+    # 1 << 16: utils.GenericDataPoint(84, [664, 677, 670, 683, 670]),
     1 << 17: utils.GenericDataPoint(116, [5426, 5476, 5373, 5379, 5446]),
     1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
     1 << 19: utils.GenericDataPoint(232, [33509, 33543, 33058, 33220, 33585]),
+
+    1 << 16: utils.GenericDataPoint(21, [780, 764, 758, 781, 740]),
+    # 1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
     1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
 }
 
@@ -66,10 +72,14 @@ if __name__ == '__main__':
     utils.add_y_format(ax)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels(["$2^{16}$", "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$"])
+    ax.set_xticklabels(["$2^{16}$", "$2^{17}$","$2^{18}$", "$2^{19}$", "$2^{20}$"])
 
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
     ax.legend(["SealPIR (pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
     ax.set_ylim(0)
     plt.show()
+
+    print(xs)
+    print(np.array(fpir_ys) / np.array(dpir_ys))
+    print(np.array(sealpir_ys) / np.array(dpir_ys))

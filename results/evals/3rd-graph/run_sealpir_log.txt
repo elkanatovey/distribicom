@@ -20,13 +20,15 @@ Main: pool query processing time: 11769 ms on 420 queries and 12 threads
 Main: pool query processing time: 11842 ms on 420 queries and 12 threads
 Main: pool query processing time: 11746 ms on 420 queries and 12 threads
 
--- db = 512k ---
-Main: pool query processing time: 33509 ms on 232 queries and 12 threads
-Main: pool query processing time: 33543 ms on 232 queries and 12 threads
-Main: pool query processing time: 33058 ms on 232 queries and 12 threads
-Main: pool query processing time: 33220 ms on 232 queries and 12 threads
-Main: pool query processing time: 33585 ms on 232 queries and 12 threads
+-- 2^16 --
+Main: pool query processing time: 780 ms on 21 queries and 12 threads
+Main: pool query processing time: 764 ms on 21 queries and 12 threads
+Main: pool query processing time: 758 ms on 21 queries and 12 threads
+Main: pool query processing time: 781 ms on 21 queries and 12 threads
+Main: pool query processing time: 740 ms on 21 queries and 12 threads
 
+
+========================================================================
 
 -- 2^17--
 Main: pool query processing time: 5426 ms on 116 queries and 12 threads
@@ -34,4 +36,23 @@ Main: pool query processing time: 5476 ms on 116 queries and 12 threads
 Main: pool query processing time: 5373 ms on 116 queries and 12 threads
 Main: pool query processing time: 5379 ms on 116 queries and 12 threads
 Main: pool query processing time: 5446 ms on 116 queries and 12 threads
+
+========================================================================
+2^18:
+Main: pool query processing time: 7316 ms on 82 queries and 12 threads
+Main: pool query processing time: 7308 ms on 82 queries and 12 threads
+Main: pool query processing time: 7338 ms on 82 queries and 12 threads
+Main: pool query processing time: 7406 ms on 82 queries and 12 threads
+Main: pool query processing time: 7472 ms on 82 queries and 12 threads
+
+========================================================================
+
+-- db = 512k 2^19---
+Main: pool query processing time: 33509 ms on 232 queries and 12 threads
+Main: pool query processing time: 33543 ms on 232 queries and 12 threads
+Main: pool query processing time: 33058 ms on 232 queries and 12 threads
+Main: pool query processing time: 33220 ms on 232 queries and 12 threads
+Main: pool query processing time: 33585 ms on 232 queries and 12 threads
+
+
 
