@@ -40,6 +40,8 @@ if __name__ == '__main__':
     plot_line(ax, dpir_values_1m_db, constants.dpir_clr, "$2^{20}$ messages")
     plot_line(ax, dpir_values_65k_db, constants.addra_clr, "$2^{16}$ messages")
 
+
+    ax.legend()
     ax.set_xlabel("mbit/s")
     ax.set_ylabel("round latency")
     ax.set_xticks([10, 20, 40, 60, 80, 100])
