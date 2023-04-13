@@ -68,7 +68,7 @@ def plot_dpir_line(ax, test_results: List[utils.TestResult], clrr=constants.epoc
     test_results = sorted(test_results, key=lambda x: x.num_queries)
 
     xs = [*(test_result.num_queries for test_result in test_results)]
-    ys = [*(test_result.avg for test_result in test_results)]
+    ys = [*(np.average(test_result.data) for test_result in test_results)]
     yerrs = [*(np.std(test_result.data) for test_result in test_results)]
     utils.plot_errbars(ax, xs, ys, yerrs, "", clrr)
 
@@ -79,6 +79,13 @@ if __name__ == '__main__':
         "evals/2nd-graph/262k",
         "evals/2nd-graph/1m",
     ]
+
+    reg_rounds = [
+        "evals/65k_size/64_workers_per_node/combined",
+        "evals/256k",
+        "evals/scripts_mil_size/64_workers_per_node"
+    ]
+
     clrs = [
         constants.epoch_setup,
         constants.dpir_clr,
@@ -86,10 +93,22 @@ if __name__ == '__main__':
     ]
 
     fig, ax = plt.subplots()
-    for i, fldr in enumerate(fldrs):
+    for i, fldrs in enumerate(zip(fldrs, reg_rounds)):
+        fldr, reg_round = fldrs
         test_results = utils.collect_dpir_test_results(fldr)
+        reg_rslts = utils.collect_dpir_test_results(reg_round)
 
-        plot_dpir_line(ax, test_results, clrs[i])
+        tst_obj_dir = {test_result.num_queries: test_result for test_result in test_results}
+        for reg_rslt in reg_rslts:
+            if reg_rslt.num_queries not in tst_obj_dir:
+                print("missing", reg_rslt.num_queries)
+                continue
+            data = np.array(tst_obj_dir[reg_rslt.num_queries].data)
+            data_sub_avg = data - np.average(reg_rslt.data[1:])
+            print(tst_obj_dir[reg_rslt.num_queries].data, data_sub_avg)
+            tst_obj_dir[reg_rslt.num_queries].data = data_sub_avg
+
+        plot_dpir_line(ax, tst_obj_dir.values(), clrs[i])
 
         ax.set_xlabel('clients per server')
         ax.set_ylabel('setup time')
@@ -98,7 +117,8 @@ if __name__ == '__main__':
         '$2^{16}$ messages',
         '$2^{18}$ messages',
         '$2^{20}$ messages',
-    ])
+    ],loc='upper left')
+
     utils.add_y_format(ax)
     ax.set_ylim(0)
     plt.show()

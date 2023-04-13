@@ -5,7 +5,7 @@ addra_clr = "#423847"
 
 epoch_setup = addra_clr
 
-font_size = 24
+font_size = 32
 
-line_size = 3
+line_size = 5
 marker_size = line_size + 3
