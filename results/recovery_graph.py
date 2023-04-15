@@ -22,7 +22,7 @@ def db_plot(ax, db: DbData, clr, top_p=6):
     additional_work = []
     additional_work_err = []
     for i in range(0, top_p):
-        avg, std = calc_additional_work(db, i, ps)
+        avg, std = calc_additional_work(db, ps[i])
 
         additional_work.append(avg)
         additional_work_err.append(std)
@@ -31,15 +31,10 @@ def db_plot(ax, db: DbData, clr, top_p=6):
     # ax.errorbar(ps, additional_work, label=db.name, yerr=additional_work_err, fmt='-o')
 
 
-def calc_additional_work(db, i, ps):
+def calc_additional_work(db: DbData, prob_heads):
     tmps = []
+    max_fails_in_row = []
     for j in range(0, 5):
-        # Define the probability of getting heads (1) or tails (0)
-        prob_heads = ps[i]
-
-        # Define the size of the coin toss matrix
-        # num queries someone is responsible for: 164, num workers to reach 2^20:
-
         # Generate a random coin toss matrix
         coin_toss_matrix = np.random.choice(
             [0, 1],
@@ -49,15 +44,20 @@ def calc_additional_work(db, i, ps):
 
         row_sums = np.sum(coin_toss_matrix, axis=1)
         failed = max(row_sums)
-
+        max_fails_in_row.append(failed)
         tmps.append((failed / (db.num_cols - failed)) * 100)
 
     avg, std = np.average(tmps), np.std(tmps)
     return avg, std
 
 
+def get_aditional_work(db, num_queries, p):
+    avg, _ = calc_additional_work(db, p)
+
+    return int(np.ceil(avg / 100 * db.num_rows + num_queries))
+
+
 # TODO:
-#  2. maybe in [10%, 50%] add the actual number of queries each worker now needs to handle.
 #  3. Compute expansion costs.
 if __name__ == '__main__':
     fig, ax = plt.subplots()
@@ -78,6 +78,10 @@ if __name__ == '__main__':
     constants.change_sizes(2)
     for clr, db in zip(clrs, dbs):
         db_plot(ax, db, clr)
+        if db.name == "$2^{20}$":
+            for p in np.arange(0, 6) / 10:
+                print(f"number of queries in the busiest worker (p={p}): {get_aditional_work(db, 164, p)}")
+
     constants.change_sizes(ln_size)
 
     # y-axis = percentage of additional work per worker.
