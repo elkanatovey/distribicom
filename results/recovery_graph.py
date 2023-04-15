@@ -26,19 +26,35 @@ def db_plot(ax, db: DbData, clr, top_p=9):
 
     additional_work = []
     additional_work_err = []
+
+    query_expansion_overhead = []
+
     for i in range(0, top_p):
-        avg, std = calc_additional_work(db, ps[i])
+        queries_expansion_overhead, _ = calc_additional_work(db, ps[i])
+        additional_work.append(np.average(queries_expansion_overhead))
+        additional_work_err.append(np.std(queries_expansion_overhead))
 
-        additional_work.append(avg)
-        additional_work_err.append(std)
+    prms = {
+        'fmt': '-o',
+        'barsabove': True,
+        'capsize': constants.marker_size,
+        'ecolor': clr,
+        'color': clr,
 
-    utils.plot_errbars(ax, ps, additional_work, additional_work_err, db.name, clr)
+        'linewidth': constants.line_size,
+        'markersize': constants.marker_size,
+    }
+    ax.errorbar(
+        ps, additional_work,
+        yerr=additional_work_err,
+        label="",
+        **prms
+    )
     # ax.errorbar(ps, additional_work, label=db.name, yerr=additional_work_err, fmt='-o')
 
-
 def calc_additional_work(db: DbData, p_fault):
-    tmps = []
-    max_fails_in_row = []
+    queries_overhead = []
+    query_expansion_overhead = []
     for j in range(0, 10):
         # Generate a random coin toss matrix
         coin_toss_matrix = np.random.choice(
@@ -56,18 +72,14 @@ def calc_additional_work(db: DbData, p_fault):
         redistributed_on_row = num_queries_per_worker_without_redistirbution.sum(axis=1) / num_workers_in_row
 
         redistributed_on_row = np.ceil(redistributed_on_row)
-        tmps.append(np.max(redistributed_on_row) / db.num_rows)
+        queries_overhead.append(np.max(redistributed_on_row) / db.num_rows)
 
-        """
+        ####
         row_sums = np.sum(coin_toss_matrix, axis=1)
-        failed = min(row_sums) # min represents the row with minimal amount of workers
-        max_fails_in_row.append(failed)
-        tmps.append((failed / (db.num_cols - failed)) * 100)
-        """
+        failed = min(row_sums)
+        query_expansion_overhead.append((failed / (db.num_cols - failed)) * 100)
 
-    avg, std = np.average(tmps), np.std(tmps)
-    return avg, std
-
+    return queries_overhead, query_expansion_overhead
 
 # TODO:
 #  3. Compute expansion costs.
