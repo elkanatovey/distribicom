@@ -9,3 +9,10 @@ font_size = 32
 
 line_size = 5
 marker_size = line_size + 3
+
+
+def change_sizes(line_sz):
+    global line_size, marker_size
+
+    line_size = line_sz
+    marker_size = line_size + 3

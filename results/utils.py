@@ -2,6 +2,9 @@ from matplotlib import ticker
 import numpy as np
 import os
 import constants
+import matplotlib
+
+matplotlib.rcParams['font.size'] = constants.font_size
 
 
 def plot_errbars(ax, xs, ys, errbars, label, clr):
