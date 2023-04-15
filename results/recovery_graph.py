@@ -6,6 +6,11 @@ import constants
 
 class DbData:
     def __init__(self, num_rows, num_cols):
+        """
+        :param num_rows: Num rows represents the number of queries per group too,
+        :param num_cols: num cols represents the total number of groups.
+        So for db of 2^16 according to the paper: numrows= 42, num cols = 42*39
+        """
         self.num_rows = num_rows
         self.num_cols = num_cols
         self.name = "lala"
@@ -16,7 +21,7 @@ class DbData:
                 break
 
 
-def db_plot(ax, db: DbData, clr, top_p=6):
+def db_plot(ax, db: DbData, clr, top_p=9):
     ps = np.arange(0, top_p) / 10
 
     additional_work = []
@@ -31,30 +36,37 @@ def db_plot(ax, db: DbData, clr, top_p=6):
     # ax.errorbar(ps, additional_work, label=db.name, yerr=additional_work_err, fmt='-o')
 
 
-def calc_additional_work(db: DbData, prob_heads):
+def calc_additional_work(db: DbData, p_fault):
     tmps = []
     max_fails_in_row = []
-    for j in range(0, 5):
+    for j in range(0, 10):
         # Generate a random coin toss matrix
         coin_toss_matrix = np.random.choice(
-            [0, 1],
+            [1, 0],
             size=(db.num_rows, db.num_cols),
-            p=[1 - prob_heads, prob_heads]
+            p=[1 - p_fault, p_fault]
         )
 
+        num_oks_in_group = coin_toss_matrix.sum(axis=0)
+        num_queries_per_worker_without_redistirbution = np.ones(
+            shape=(db.num_rows, db.num_cols)) * num_oks_in_group.reshape(1, db.num_cols)
+
+        num_workers_in_row = coin_toss_matrix.sum(axis=1).reshape(db.num_rows, 1)
+
+        redistributed_on_row = num_queries_per_worker_without_redistirbution.sum(axis=1) / num_workers_in_row
+
+        redistributed_on_row = np.ceil(redistributed_on_row)
+        tmps.append(np.max(redistributed_on_row) / db.num_rows)
+
+        """
         row_sums = np.sum(coin_toss_matrix, axis=1)
-        failed = max(row_sums)
+        failed = min(row_sums) # min represents the row with minimal amount of workers
         max_fails_in_row.append(failed)
         tmps.append((failed / (db.num_cols - failed)) * 100)
+        """
 
     avg, std = np.average(tmps), np.std(tmps)
     return avg, std
-
-
-def get_aditional_work(db, num_queries, p):
-    avg, _ = calc_additional_work(db, p)
-
-    return int(np.ceil(avg / 100 * db.num_rows + num_queries))
 
 
 # TODO:
@@ -66,11 +78,12 @@ if __name__ == '__main__':
         # DbData(260, 39 * 260),
         DbData(164, 39 * 164),
         # DbData(82, 39 * 82),
-        DbData(42, 39 * 42),
+        # DbData(42, 39 * 42),
     ]
     clrs = [
         constants.dpir_clr,
-        constants.addra_clr,
+        # constants.addra_clr,
+        # constants.sealpir_clr
     ]
 
     ln_size = constants.line_size
@@ -78,9 +91,9 @@ if __name__ == '__main__':
     constants.change_sizes(2)
     for clr, db in zip(clrs, dbs):
         db_plot(ax, db, clr)
-        if db.name == "$2^{20}$":
-            for p in np.arange(0, 6) / 10:
-                print(f"number of queries in the busiest worker (p={p}): {get_aditional_work(db, 164, p)}")
+        # if db.name == "$2^{20}$":
+        #     for p in np.arange(0, 6) / 10:
+        #         print(f"number of queries in the busiest worker (p={p}): {get_aditional_work(db, 164, p)}")
 
     constants.change_sizes(ln_size)
 
@@ -88,5 +101,5 @@ if __name__ == '__main__':
     # x-axis = failure probability of a worker.
     ax.legend()
     ax.set_xlabel("worker failure probability")
-    ax.set_ylabel("Maximal relative overhead \n(On busiest worker)")
+    ax.set_ylabel("Number of queries per \n honest worker")
     plt.show()
