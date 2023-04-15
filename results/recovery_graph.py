@@ -21,25 +21,28 @@ class DbData:
                 break
 
 
-def db_plot(ax, db: DbData, clr, top_p=9):
+def db_plot(ax, db: DbData, top_p=9):
     ps = np.arange(0, top_p) / 10
 
     additional_work = []
     additional_work_err = []
 
-    query_expansion_overhead = []
-
+    query_expansion_overheads = []
+    query_expansion_overheads_err = []
     for i in range(0, top_p):
-        queries_expansion_overhead, _ = calc_additional_work(db, ps[i])
-        additional_work.append(np.average(queries_expansion_overhead))
-        additional_work_err.append(np.std(queries_expansion_overhead))
+        total_queries_per_worker, queries_expansion_overhead = calc_additional_work(db, ps[i])
+        additional_work.append(np.average(total_queries_per_worker))
+        additional_work_err.append(np.std(total_queries_per_worker))
+
+        query_expansion_overheads.append(np.average(queries_expansion_overhead))
+        query_expansion_overheads_err.append(np.std(queries_expansion_overhead))
 
     prms = {
         'fmt': '-o',
         'barsabove': True,
         'capsize': constants.marker_size,
-        'ecolor': clr,
-        'color': clr,
+        'ecolor': constants.dpir_clr,
+        'color': constants.dpir_clr,
 
         'linewidth': constants.line_size,
         'markersize': constants.marker_size,
@@ -47,10 +50,21 @@ def db_plot(ax, db: DbData, clr, top_p=9):
     ax.errorbar(
         ps, additional_work,
         yerr=additional_work_err,
-        label="",
+        label="number of queries",
         **prms
     )
+
+    prms['color'] = constants.addra_clr
+    prms['ecolor'] = constants.addra_clr
+    ax.errorbar(
+        ps, query_expansion_overheads,
+        yerr=query_expansion_overheads_err,
+        label="number of expansions",
+        **prms
+    )
+
     # ax.errorbar(ps, additional_work, label=db.name, yerr=additional_work_err, fmt='-o')
+
 
 def calc_additional_work(db: DbData, p_fault):
     queries_overhead = []
@@ -75,11 +89,12 @@ def calc_additional_work(db: DbData, p_fault):
         queries_overhead.append(np.max(redistributed_on_row) / db.num_rows)
 
         ####
-        row_sums = np.sum(coin_toss_matrix, axis=1)
-        failed = min(row_sums)
-        query_expansion_overhead.append((failed / (db.num_cols - failed)) * 100)
+        row_sums = np.abs(np.sum(1 - coin_toss_matrix, axis=1))
+        failed = max(row_sums)
+        query_expansion_overhead.append(1 + (failed / (db.num_cols - failed)))
 
     return queries_overhead, query_expansion_overhead
+
 
 # TODO:
 #  3. Compute expansion costs.
@@ -101,8 +116,8 @@ if __name__ == '__main__':
     ln_size = constants.line_size
 
     constants.change_sizes(2)
-    for clr, db in zip(clrs, dbs):
-        db_plot(ax, db, clr)
+    for db in dbs:
+        db_plot(ax, db)
         # if db.name == "$2^{20}$":
         #     for p in np.arange(0, 6) / 10:
         #         print(f"number of queries in the busiest worker (p={p}): {get_aditional_work(db, 164, p)}")
@@ -113,5 +128,5 @@ if __name__ == '__main__':
     # x-axis = failure probability of a worker.
     ax.legend()
     ax.set_xlabel("worker failure probability")
-    ax.set_ylabel("Number of queries per \n honest worker")
+    ax.set_ylabel("Maximal relative overhead\n (On busiest worker)")
     plt.show()
