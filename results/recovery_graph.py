@@ -21,7 +21,7 @@ class DbData:
                 break
 
 
-def db_plot(ax, db: DbData, top_p=9):
+def db_plot(ax, db: DbData, top_p=10):
     ps = np.arange(0, top_p) / 10
 
     additional_work = []
@@ -59,7 +59,7 @@ def db_plot(ax, db: DbData, top_p=9):
     ax.errorbar(
         ps, query_expansion_overheads,
         yerr=query_expansion_overheads_err,
-        label="number of expansions",
+        label="Number of additional expansions per worker",
         **prms
     )
 
@@ -70,28 +70,43 @@ def calc_additional_work(db: DbData, p_fault):
     queries_overhead = []
     query_expansion_overhead = []
     for j in range(0, 10):
-        # Generate a random coin toss matrix
         coin_toss_matrix = np.random.choice(
             [1, 0],
             size=(db.num_rows, db.num_cols),
             p=[1 - p_fault, p_fault]
         )
+        faults_mask = np.abs(1 - coin_toss_matrix)
 
-        num_oks_in_group = coin_toss_matrix.sum(axis=0)
-        num_queries_per_worker_without_redistirbution = np.ones(
-            shape=(db.num_rows, db.num_cols)) * num_oks_in_group.reshape(1, db.num_cols)
+        num_qs_per_group = np.ones(shape=(db.num_rows, db.num_cols)
+                                   ) * coin_toss_matrix.sum(axis=0).reshape(1, db.num_cols)
+        num_workers_in_row = coin_toss_matrix.sum(axis=1)
 
-        num_workers_in_row = coin_toss_matrix.sum(axis=1).reshape(db.num_rows, 1)
+        # First Line
+        # take fault workers.  Calc how many queries they add to each row.
+        # divide these queries equally over all valid workers (PER ROW).
+        # take the busiest worker that is still alive and add this division to it.
+        # get maximal worker.
+        qs_of_faulty_per_row = (num_qs_per_group * faults_mask).sum(axis=1)
+        qs_of_faulty_divided_equally = np.ceil(qs_of_faulty_per_row / num_workers_in_row)
 
-        redistributed_on_row = num_queries_per_worker_without_redistirbution.sum(axis=1) / num_workers_in_row
+        busiest_worker_post_redistribution = (num_qs_per_group * coin_toss_matrix).max(
+            axis=1) + qs_of_faulty_divided_equally
 
-        redistributed_on_row = np.ceil(redistributed_on_row)
-        queries_overhead.append(np.max(redistributed_on_row) / db.num_rows)
+        # What is the new load?
+        # for each group compute the fallen. Take maximal fallen in each row, add it to maximal non fallen in group.
+
+        # rmv num_rows to count only overhead.
+        queries_overhead.append(np.max(busiest_worker_post_redistribution) - db.num_rows)
 
         ####
-        row_sums = np.abs(np.sum(1 - coin_toss_matrix, axis=1))
-        failed = max(row_sums)
-        query_expansion_overhead.append(1 + (failed / (db.num_cols - failed)))
+        # Count per row the total new queries that need expansion.
+        # count the missing * their queries, these guys are the new queries in the row.
+        queries_that_need_expansion = num_qs_per_group * faults_mask
+
+        additional_queries_per_row = queries_that_need_expansion.sum(axis=1).reshape(1, db.num_rows)
+        redistributed_additional_queries_per_row = additional_queries_per_row / num_workers_in_row.reshape(1,
+                                                                                                           db.num_rows)
+        query_expansion_overhead.append(np.max(np.ceil(redistributed_additional_queries_per_row)))
 
     return queries_overhead, query_expansion_overhead
 
@@ -128,5 +143,5 @@ if __name__ == '__main__':
     # x-axis = failure probability of a worker.
     ax.legend()
     ax.set_xlabel("worker failure probability")
-    ax.set_ylabel("Maximal relative overhead\n (On busiest worker)")
+    ax.set_ylabel("ACTUAL work per worker****")
     plt.show()
