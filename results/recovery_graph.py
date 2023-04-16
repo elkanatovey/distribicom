@@ -1,7 +1,8 @@
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, ticker
 import utils
 import constants
+from mpl_axes_aligner import align
 
 
 class DbData:
@@ -47,10 +48,11 @@ def db_plot(ax, db: DbData, top_p=10):
         'linewidth': constants.line_size,
         'markersize': constants.marker_size,
     }
+
     ax.errorbar(
         ps, additional_work,
         yerr=additional_work_err,
-        label="number of queries",
+        label="Additional queries",
         **prms
     )
 
@@ -59,11 +61,25 @@ def db_plot(ax, db: DbData, top_p=10):
     ax.errorbar(
         ps, query_expansion_overheads,
         yerr=query_expansion_overheads_err,
-        label="Number of additional expansions per worker",
+        label="Additional expansions",
         **prms
     )
 
-    # ax.errorbar(ps, additional_work, label=db.name, yerr=additional_work_err, fmt='-o')
+    ax2 = ax.twinx()
+
+    def relative_tick_formatter(x, pos):
+        """Custom tick formatter to display relative tick values"""
+
+        return f'{int((x / db.num_rows) * 100)}%'  # Convert tick value to percentage and format as string
+
+    ax2.yaxis.set_major_formatter(ticker.FuncFormatter(relative_tick_formatter))
+
+    ax2.set_yticks(np.arange(0, 5) * 41)
+    org1 = 0.0  # Origin of first axis
+    org2 = 0.0  # Origin of second axis
+    pos = 0.1  # Position the two origins are aligned
+    align.yaxes(ax, org1, ax2, org2, pos)
+    ax2.set_ylabel("Relative Overhead on busiest worker")
 
 
 def calc_additional_work(db: DbData, p_fault):
@@ -143,5 +159,6 @@ if __name__ == '__main__':
     # x-axis = failure probability of a worker.
     ax.legend()
     ax.set_xlabel("worker failure probability")
-    ax.set_ylabel("ACTUAL work per worker****")
+    ax.set_ylabel("Overhead in busiest worker")
+
     plt.show()
