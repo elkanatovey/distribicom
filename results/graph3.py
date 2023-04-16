@@ -80,6 +80,8 @@ if __name__ == '__main__':
     ax.set_xlabel('|messages|')
     ax.legend(["SealPIR (pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
     ax.set_ylim(0)
+    fig.tight_layout()
+
     plt.show()
 
     print(xs)

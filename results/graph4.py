@@ -47,4 +47,5 @@ if __name__ == '__main__':
     ax.set_xticks([10, 20, 40, 60, 80, 100])
 
     ax.set_ylim(0)
+    fig.tight_layout()
     plt.show()

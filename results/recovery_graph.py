@@ -23,6 +23,8 @@ class DbData:
 
 
 def db_plot(ax, db: DbData, top_p=10):
+    ax2 = ax.twinx()
+
     ps = np.arange(0, top_p) / 10
 
     additional_work = []
@@ -49,7 +51,7 @@ def db_plot(ax, db: DbData, top_p=10):
         'markersize': constants.marker_size,
     }
 
-    ax.errorbar(
+    ax2.errorbar(
         ps, additional_work,
         yerr=additional_work_err,
         label="Additional queries",
@@ -58,28 +60,30 @@ def db_plot(ax, db: DbData, top_p=10):
 
     prms['color'] = constants.addra_clr
     prms['ecolor'] = constants.addra_clr
-    ax.errorbar(
+    ax2.errorbar(
         ps, query_expansion_overheads,
         yerr=query_expansion_overheads_err,
         label="Additional expansions",
         **prms
     )
 
-    ax2 = ax.twinx()
-
     def relative_tick_formatter(x, pos):
         """Custom tick formatter to display relative tick values"""
-
+        if pos == 6:
+            return ""
         return f'{int((x / db.num_rows) * 100)}%'  # Convert tick value to percentage and format as string
 
-    ax2.yaxis.set_major_formatter(ticker.FuncFormatter(relative_tick_formatter))
-
-    ax2.set_yticks(np.arange(0, 5) * 41)
+    ax.set_yticks([0, 33, 66, 99, 132, 164, 174])
     org1 = 0.0  # Origin of first axis
     org2 = 0.0  # Origin of second axis
-    pos = 0.1  # Position the two origins are aligned
+    pos = 0.05  # Position the two origins are aligned
     align.yaxes(ax, org1, ax2, org2, pos)
-    ax2.set_ylabel("Relative Overhead on busiest worker")
+
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(relative_tick_formatter))
+    ax.set_ylabel("Relative overhead on\n busiest worker")
+    ax2.legend()
+    ax.set_xlabel("worker failure probability")
+    ax2.set_ylabel("Overhead queries on\n busiest worker")
 
 
 def calc_additional_work(db: DbData, p_fault):
@@ -157,8 +161,5 @@ if __name__ == '__main__':
 
     # y-axis = percentage of additional work per worker.
     # x-axis = failure probability of a worker.
-    ax.legend()
-    ax.set_xlabel("worker failure probability")
-    ax.set_ylabel("Overhead in busiest worker")
 
     plt.show()
