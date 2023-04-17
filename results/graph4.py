@@ -31,15 +31,33 @@ def plot_line(ax, values_dict, clr, nm):
     ys = [np.mean(values_dict[x]) for x in xs]
     yerr = [np.std(values_dict[x]) for x in xs]
     utils.add_y_format(ax)
-    utils.plot_errbars(ax, xs, ys, yerr, nm, clr)
+
+    prms = {
+        'fmt': '-o',
+        'barsabove': True,
+        'capsize': constants.marker_size,
+        'ecolor': clr,
+        'color': clr,
+
+        'linewidth': constants.line_size,
+        'markersize': constants.marker_size,
+    }
+
+    ax.errorbar(
+        xs, ys,
+        yerr=yerr,
+        label=nm,
+        **prms
+    )
+    # utils.plot_errbars(ax, xs, ys, yerr, nm, clr)
 
 
 if __name__ == '__main__':
     fig, ax = plt.subplots()
 
+    # constants.change_sizes(2)
     plot_line(ax, dpir_values_1m_db, constants.dpir_clr, "$2^{20}$ messages")
     plot_line(ax, dpir_values_65k_db, constants.addra_clr, "$2^{16}$ messages")
-
 
     ax.legend()
     ax.set_xlabel("mbit/s")

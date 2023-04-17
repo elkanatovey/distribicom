@@ -54,7 +54,7 @@ def db_plot(ax, db: DbData, top_p=10):
     ax2.errorbar(
         ps, additional_work,
         yerr=additional_work_err,
-        label="Additional queries",
+        label="Additional PIR queries",
         **prms
     )
 
@@ -63,7 +63,7 @@ def db_plot(ax, db: DbData, top_p=10):
     ax2.errorbar(
         ps, query_expansion_overheads,
         yerr=query_expansion_overheads_err,
-        label="Additional expansions",
+        label="New query expansions",
         **prms
     )
 
@@ -80,10 +80,10 @@ def db_plot(ax, db: DbData, top_p=10):
     align.yaxes(ax, org1, ax2, org2, pos)
 
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(relative_tick_formatter))
-    ax.set_ylabel("Relative overhead on\n busiest worker")
+    ax.set_ylabel("Relative overhead on\n busiest client")
     ax2.legend()
-    ax.set_xlabel("worker failure probability")
-    ax2.set_ylabel("Overhead queries on\n busiest worker")
+    ax.set_xlabel("client failure probability")
+    ax2.set_ylabel("Overhead queries on\n busiest client")
 
 
 def calc_additional_work(db: DbData, p_fault):
