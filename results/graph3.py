@@ -15,6 +15,7 @@ dpir_values = {
     1 << 18: utils.GenericDataPoint(82, [3158, 2900, 2908, 2902, 2907, 2902, 2898, 2912, 2909, ]),  # 82x82
     1 << 19: utils.GenericDataPoint(116, [6530, 6442, 6479, 6530, 6373, 6523, 6443, 6407, 6594, ]),
     1 << 20: utils.GenericDataPoint(328, [23786, 21804, 21853, 21774, 21816, 21815, 21800, 21761, 21746]),  # 164x 164
+    1 << 21: utils.GenericDataPoint(464, [66234, 71135, 70590, 71612, 72395, 71140, 70148, 68856, 68037, ])  # 232*232
 }
 
 fpir_values = {
@@ -29,6 +30,7 @@ fpir_values = {
     1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
     1 << 19: utils.GenericDataPoint(116, [7131, 7305, 7083, 7056, 7111]),
     1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578]),
+    1 << 21: utils.GenericDataPoint(464, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578])  # 232*232
 }
 
 sealpir_values = {
@@ -42,6 +44,7 @@ sealpir_values = {
     1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
     1 << 19: utils.GenericDataPoint(116, [19153, 18936, 19200, 19089, 19073]),
     1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
+    1 << 21: utils.GenericDataPoint(464, [85106, 84490, 84662, 84755, 84576])
 }
 
 
@@ -74,7 +77,7 @@ if __name__ == '__main__':
     utils.add_y_format(ax)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels(["$2^{16}$", "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$"])
+    ax.set_xticklabels(["$2^{16}$", "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"])
 
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
