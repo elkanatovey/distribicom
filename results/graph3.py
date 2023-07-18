@@ -30,7 +30,7 @@ fpir_values = {
     1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
     1 << 19: utils.GenericDataPoint(116, [7131, 7305, 7083, 7056, 7111]),
     1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578]),
-    1 << 21: utils.GenericDataPoint(464, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578])  # 232*232
+    1 << 21: utils.GenericDataPoint(464, [96595, 96212, 96266, 96114, 96681])  # 232*232
 }
 
 sealpir_values = {
