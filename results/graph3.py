@@ -44,7 +44,7 @@ sealpir_values = {
     1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
     1 << 19: utils.GenericDataPoint(116, [19153, 18936, 19200, 19089, 19073]),
     1 << 20: utils.GenericDataPoint(328, [85106, 84490, 84662, 84755, 84576]),
-    1 << 21: utils.GenericDataPoint(464, [85106, 84490, 84662, 84755, 84576])
+    1 << 21: utils.GenericDataPoint(464, [223255, 224930, 224518, 230373, 236157])
 }
 
 
