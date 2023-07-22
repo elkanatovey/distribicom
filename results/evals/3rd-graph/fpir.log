@@ -150,6 +150,11 @@ Main: pool query processing time: 37481 ms on 328 queries and 12 threads
 Main: pool query processing time: 37578 ms on 328 queries and 12 threads
 ========================
 1<<21 (2M):
+Main: pool query processing time: 48105 ms on 232 queries and 12 threads
+Main: pool query processing time: 48206 ms on 232 queries and 12 threads
+Main: pool query processing time: 48204 ms on 232 queries and 12 threads
+Main: pool query processing time: 48168 ms on 232 queries and 12 threads
+
 
 Main: pool query processing time: 96595 ms on 464 queries and 12 threads
 Main: 2099136 objects in DB of size: 256
@@ -161,3 +166,6 @@ Main: pool query processing time: 96114 ms on 464 queries and 12 threads
 Main: 2099136 objects in DB of size: 256
 Main: pool query processing time: 96681 ms on 464 queries and 12 threads
 Main: 2099136 objects in DB of size: 256
+
+Main: pool query processing time: 143367 ms on 696 queries and 12 threads
+Main: pool query processing time: 143286 ms on 696 queries and 12 threads
