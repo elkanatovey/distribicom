@@ -122,6 +122,14 @@ namespace services::work_strategy {
         return result;
     }
 
+    void random_wait_time() {
+        std::random_device random;
+        std::uint64_t wait_time = random() % 1500;
+
+        //sleep for wait_time milliseconds
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_time));
+    }
+
     void
     RowMultiplicationStrategy::send_response(
             const WorkerServiceTask &task,
@@ -176,6 +184,8 @@ namespace services::work_strategy {
             distribicom::Ack resp;
             auto stream = manager_conn->ReturnLocalWork(&context, &resp);
 
+
+            random_wait_time();
             for (auto &p: to_send_promises) {
                 //Enable write batching in streams (message k + 1 does not rely on responses from message k)
                 stream->Write(*p->get(), grpc::WriteOptions().set_buffer_hint());
