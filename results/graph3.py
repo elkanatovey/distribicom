@@ -25,22 +25,21 @@ dpir_values = {
 }
 
 fpir_values = {
-    # 1 << 16: utils.GenericDataPoint(84, [664, 667, 670, 683, 670]),
-    # 1 << 17: utils.GenericDataPoint(116, [1720, 1759, 1664, 1741, 1712]),
-    # 1 << 18: utils.GenericDataPoint(164, [4463, 4467, 4483, 4478, 4476]),
-    # 1 << 19: utils.GenericDataPoint(232, [12708, 12524, 12606, 12649, 12534]),
-    # 1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852]),
+    # fast-pfir
+    #    1 << 16: utils.GenericDataPoint(21, [221, 220, 224, 220, 203]),
+    #    1 << 17: utils.GenericDataPoint(58, [1172, 1019, 973, 989, 988]),
+    #    1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
+    #    1 << 19: utils.GenericDataPoint(116, [7131, 7305, 7083, 7056, 7111]),
+    #    1 << 20: utils.GenericDataPoint(164, [16989, 17009, 16991, 16977, 16980]),
+    #    1 << 21: utils.GenericDataPoint(232, [48105, 48206, 48204, 48168])  # 232*232
 
-    1 << 16: utils.GenericDataPoint(21, [221, 220, 224, 220, 203]),
-    1 << 17: utils.GenericDataPoint(58, [1172, 1019, 973, 989, 988]),
-    1 << 18: utils.GenericDataPoint(82, [2503, 2505, 2419, 2502, 2548]),
-    1 << 19: utils.GenericDataPoint(116, [7131, 7305, 7083, 7056, 7111]),
-    1 << 20: utils.GenericDataPoint(164, [16989, 17009, 16991, 16977, 16980]),
-    # 1 << 20: utils.GenericDataPoint(328, [33838, 33837, 33852, 37303, 37589, 37765, 37481, 37578]),
-
-    1 << 21: utils.GenericDataPoint(232, [48105, 48206, 48204, 48168])  # 232*232
-    # 1 << 21: utils.GenericDataPoint(464, [96595, 96212, 96266, 96114, 96681])  # 232*232
-    # 1 << 21: utils.GenericDataPoint(696, [143367, 143286])  # 232*232
+    # slow-fpir:
+    1 << 16: utils.GenericDataPoint(21, [417, 411, 418, 453, 426]),
+    1 << 17: utils.GenericDataPoint(58, [2249, 2331, 1888, 2127, 2348]),
+    1 << 18: utils.GenericDataPoint(82, [6794, 5730, 5660, 5789, 5652]),
+    1 << 19: utils.GenericDataPoint(116, [14020, 14012, 11629, 11922, 31235]),
+    1 << 20: utils.GenericDataPoint(164, [35164, 31964, 32659, 32732, 16980]),
+    1 << 21: utils.GenericDataPoint(232, [96085, 90539, 100484, 89251, 89600])  # 232*232
 }
 
 sealpir_values = {
