@@ -13,6 +13,7 @@ create_test_sourcelist(Tests
         threadpool_test.cpp
         thrashing_test.cpp
         benchmarks.cpp
+        benchmark_PIR_step.cpp
         )
 
 # add the executable
