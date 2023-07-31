@@ -36,12 +36,45 @@ def pir_query_lvl2_time(db_rows, db_cols):
     return num_ops["mult"] * mult_cipher_time + num_ops["add"] * addition_cipher_time
 
 
+def ns2ms(ns):
+    return ns * 1e-6
+
+
 if __name__ == '__main__':
     # db sizes to PIR costs
+    pir1_ys = []
+    pir2_ys = []
 
+    xs = []
     for rows, cols in [(42, 41), (82, 82), (164, 164), (232, 232)]:
         pir1 = pir_query_lvl1_time(rows, cols)
         pir2 = pir_query_lvl2_time(rows, cols)
         db_size = rows * cols * 39
 
-        print(f"db={db_size}, PIR-lvl1: {pir1}, PIR-lvl2: {pir2}, pir1 / pir2: {pir1 / pir2}")
+        print(f"{db_size} & {ns2ms(pir1)} & {ns2ms(pir2)} \\\\")
+
+        xs.append(db_size)
+        # in seconds:
+        pir1_ys.append(pir1 * 1e-9)
+        pir2_ys.append(pir2 * 1e-9)
+
+    fig, ax = plt.subplots()
+
+    plt.plot(xs, np.array(pir1_ys), label="PIR lvl1")
+    plt.plot(xs, np.array(pir2_ys), label="PIR lvl2")
+
+
+    #
+    def y_fmt(y, _):
+        return '{:.0f}s'.format(y)
+
+
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
+
+    ax.set_xticks(xs)
+    ax.set_xticklabels(["$2^{16}$", "$2^{18}$", "$2^{20}$", "$2^{21}$"])
+    ax.set_ylim(0)
+
+    ax.legend()
+    fig.tight_layout()
+    plt.show()

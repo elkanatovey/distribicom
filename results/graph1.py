@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
         dpir_test_results = collect_dpir_test_results(dpir_data_folder)
         sealpir_res = grab_sealpir_results_from_file(os.path.join(folder, "sealpir"))
-        fpir_res = grab_sealpir_results_from_file(os.path.join(folder, "fpir-slow.log"))
+        fpir_res = grab_sealpir_results_from_file(os.path.join(folder, "fpir-slow"))
 
         max_x = max([*get_from_dpir_results_x_axis(dpir_test_results)])
 
