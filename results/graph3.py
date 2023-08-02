@@ -10,7 +10,7 @@ dpir_values = {
     # 1 << 18: utils.GenericDataPoint(164, [5365, 5612, 5229, 5241, 5237, 5238, 5229, 5244, 5219]),
     # 1 << 19: utils.GenericDataPoint(232, [11445, 11018, 10842, 10776, 10759, 10676, 10769, 10765, 10707]),
 
-    1 << 16: utils.GenericDataPoint(21, [647, 648, 649, 650, 647, 642, 648, 642, 646, ]),  # 42
+    # 1 << 16: utils.GenericDataPoint(42, [647, 648, 649, 650, 647, 642, 648, 642, 646, ]),  # 42
     1 << 17: utils.GenericDataPoint(58, [1503, 1486, 1473, 1478, 1480, 1476, 1478, 1473, 1458, ]),
     1 << 18: utils.GenericDataPoint(82, [3158, 2900, 2908, 2902, 2907, 2902, 2898, 2912, 2909, ]),  # 82x82
     1 << 19: utils.GenericDataPoint(116, [6530, 6442, 6479, 6530, 6373, 6523, 6443, 6407, 6594, ]),
@@ -34,7 +34,7 @@ fpir_values = {
     #    1 << 21: utils.GenericDataPoint(232, [48105, 48206, 48204, 48168])  # 232*232
 
     # slow-fpir:
-    1 << 16: utils.GenericDataPoint(21, [417, 411, 418, 453, 426]),
+    # 1 << 16: utils.GenericDataPoint(21, [417, 411, 418, 453, 426]),
     1 << 17: utils.GenericDataPoint(58, [2249, 2331, 1888, 2127, 2348]),
     1 << 18: utils.GenericDataPoint(82, [6794, 5730, 5660, 5789, 5652]),
     1 << 19: utils.GenericDataPoint(116, [14020, 14012, 11629, 11922, 31235]),
@@ -48,7 +48,7 @@ sealpir_values = {
     # 1 << 18: utils.GenericDataPoint(164, [15146, 15341, 15305, 15262, 15271]),
     # 1 << 19: utils.GenericDataPoint(232, [33509, 33543, 33058, 33220, 33585]),
 
-    1 << 16: utils.GenericDataPoint(21, [780, 764, 758, 781, 740]),
+    # 1 << 16: utils.GenericDataPoint(21, [780, 764, 758, 781, 740]),
     1 << 17: utils.GenericDataPoint(58, [3140, 3265, 3119, 3074, 3137]),
     1 << 18: utils.GenericDataPoint(82, [7316, 7308, 7338, 7406, 7472]),
     1 << 19: utils.GenericDataPoint(116, [19153, 18936, 19200, 19089, 19073]),
@@ -87,11 +87,11 @@ if __name__ == '__main__':
     utils.add_y_format(ax)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels(["$2^{16}$", "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"])
+    ax.set_xticklabels([ "$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"])
 
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
-    ax.legend(["SealPIR (pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
+    ax.legend(["SealPIR (Pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
     ax.set_ylim(0)
     fig.tight_layout()
 
