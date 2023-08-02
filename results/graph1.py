@@ -166,7 +166,7 @@ if __name__ == '__main__':
         # ax.set_yticks([i * 2000 for i in range(7)])
         # ax.set_yticklabels(map(lambda x: str(2 * x) + "s", range(7)))
 
-        ax.set_xlabel('number of clients')
+        ax.set_xlabel('clients per server')
         ax.set_ylabel('round latency')
         ax.set_ylim(0)
 
