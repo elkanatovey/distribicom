@@ -66,6 +66,12 @@ Main: pool query processing time: 19200 ms on 116 queries and 12 threads
 Main: pool query processing time: 19089 ms on 116 queries and 12 threads
 Main: pool query processing time: 19073 ms on 116 queries and 12 threads
 
+Main: pool query processing time: 8344 ms on 58 queries and 12 threads
+Main: pool query processing time: 8303 ms on 58 queries and 12 threads
+Main: pool query processing time: 8309 ms on 58 queries and 12 threads
+Main: pool query processing time: 8349 ms on 58 queries and 12 threads
+Main: pool query processing time: 8312 ms on 58 queries and 12 threads
+
 --db=1M 2^20---
 
 Main: pool query processing time: 42799 ms on 164 queries and 12 threads
