@@ -35,7 +35,10 @@ int work_distribution_test(int, char *[]) {
         20,
         3,
         3,
-        256
+        256,
+        9,
+        10,
+        18
     );
 
     auto num_workers = 9;

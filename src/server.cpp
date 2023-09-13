@@ -21,13 +21,15 @@ void verify_results(std::shared_ptr<services::FullServer> &sharedPtr, std::vecto
 
 
 bool is_valid_command_line_args(int argc, char *argv[]) {
-    if (argc < 3) {
-        std::cout << "Usage: " << argv[0] << " <config_file>" << " <num_queries>" << std::endl;
+    if (argc < 6) {
+        std::cout << "Usage: " << argv[0] << " <pir_config_file>" << " <num_queries>" << " <num_workers>" <<
+                  " <num_server_threads>" << " <your_hostname>" << std::endl;
         return false;
     }
 
+
     if (!std::filesystem::exists(argv[1])) {
-        std::cout << "Config file " << argv[1] << " does not exist" << std::endl;
+        std::cout << "Pir config file " << argv[1] << " does not exist" << std::endl;
         return false;
     }
 
@@ -36,16 +38,50 @@ bool is_valid_command_line_args(int argc, char *argv[]) {
         return false;
     }
 
+    if (std::stoi(argv[3]) < 1) {
+        std::cout << "num workers " << argv[3] << " is invalid" << std::endl;
+        return false;
+    }
+
+    if (std::stoi(argv[4]) < 1) {
+        std::cout << "num server threads " << argv[4] << " is invalid" << std::endl;
+        return false;
+    }
+
+//    if (size(argv[5]) < 1) {
+//        std::cout << "hostname is invalid" << std::endl;
+//        return false;
+//    }
+
     return true;
 }
+
+#include <google/protobuf/util/json_util.h>
 
 int main(int argc, char *argv[]) {
     if (!is_valid_command_line_args(argc, argv)) {
         return -1;
     }
+    auto pir_conf_file = argv[1];
+    auto num_queries = std::stoi(argv[2]);
+    auto num_workers = std::stoi(argv[3]);
+    auto num_server_threads = std::stoi(argv[4]);
+    auto hostname = std::string(argv[5]);
 
-    distribicom::AppConfigs cnfgs;
-    cnfgs.ParseFromString(load_from_file(argv[1]));
+
+    distribicom::Configs temp_pir_configs;
+    auto json_str = load_from_file(pir_conf_file);
+    google::protobuf::util::JsonStringToMessage(load_from_file(pir_conf_file), &temp_pir_configs);
+    distribicom::AppConfigs cnfgs = services::configurations::create_app_configs(hostname, temp_pir_configs
+                                                                                     .polynomial_degree(),
+                                                                                 temp_pir_configs.logarithm_plaintext_coefficient(),
+                                                                                 temp_pir_configs.db_rows(),
+                                                                                 temp_pir_configs.db_cols(),
+                                                                                 temp_pir_configs.size_per_element(),
+                                                                                 num_workers,
+                                                                                 10, num_queries);
+    cnfgs.set_server_cpus(num_server_threads); //@todo refactor into creation func
+
 
 #ifdef FREIVALDS
     std::cout << "Running with FREIVALDS!!!!" << std::endl;
@@ -61,7 +97,7 @@ int main(int argc, char *argv[]) {
         std::cout << "set global num cpus to:" << concurrency::num_cpus << std::endl;
     }
 
-    std::uint64_t num_clients = std::stoi(argv[2]);
+    std::uint64_t num_clients = num_queries;
     if (num_clients == 0) {
         std::cout << "num clients given in 0. assuming the expected number of workers as number of queries"
                   << std::endl;
@@ -84,8 +120,10 @@ int main(int argc, char *argv[]) {
     server->wait_for_workers(int(cnfgs.number_of_workers()));
     // 1 epoch
     std::stringstream server_out_file_name_stream;
-    server_out_file_name_stream << "server_out_" << cnfgs.number_of_workers() << "_workers_" << num_clients
-                                << "_queries.log";
+    server_out_file_name_stream << "server_out_" <<
+                                cnfgs.number_of_workers() << "_workers_" << num_clients << "_queries" <<
+                                "_" << cnfgs.configs().db_rows() << "x" << cnfgs.configs().db_cols() <<
+                                ".log";
     auto server_out_file_name = server_out_file_name_stream.str();
     std::filesystem::remove(server_out_file_name);
     std::ofstream ofs(server_out_file_name);

@@ -1,0 +1,7 @@
+{
+  "binaries": {
+    "main_server": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/main_server",
+    "worker": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/bin/worker"
+  },
+  "hostname_folder": "/cs/labs/yossigi/elkanatovey/CLionProjects/distribicom/temp_configs"
+}

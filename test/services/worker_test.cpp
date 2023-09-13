@@ -27,7 +27,10 @@ int worker_test(int, char *[]) {
         20,
         42,
         41,
-        256
+        256,
+        1,
+        10,
+        NUM_CLIENTS
     );
 
 #ifdef FREIVALDS
