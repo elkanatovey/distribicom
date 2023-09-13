@@ -40,7 +40,7 @@ def ns2ms(ns):
     return ns * 1e-6
 
 
-if __name__ == '__main__':
+def main():
     # db sizes to PIR costs
     for rows, cols in [(42, 41), (82, 82), (164, 164), (232, 232)]:
         pir1 = pir_query_lvl1_time(rows, cols)
@@ -48,3 +48,7 @@ if __name__ == '__main__':
         db_size = rows * cols * 39
 
         print(f"{db_size} & {ns2ms(pir1)} & {ns2ms(pir2)} \\\\")
+
+
+if __name__ == '__main__':
+    main()

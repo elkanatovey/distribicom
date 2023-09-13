@@ -125,9 +125,8 @@ step_two_times = [
     [1272, 1279, 1278, 1279, 1287],
 ]
 
-# colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
-# https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66
-if __name__ == '__main__':
+
+def main():
     data = [
         ("evals/65k_size/64_workers_per_node/combined", "evals/65k_size"),
         ("evals/256k", "evals/256k"),
@@ -171,3 +170,9 @@ if __name__ == '__main__':
         ax.set_ylim(0)
 
     plt.show()
+
+
+# colour-pallet: https://coolors.co/443d4a-55434e-ba6567-fe5f55-e3a792
+# https://coolors.co/e9d985-b2bd7e-749c75-6a5d7b-5d4a66
+if __name__ == '__main__':
+    main()

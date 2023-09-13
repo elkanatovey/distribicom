@@ -73,25 +73,23 @@ def plot_dpir_line(ax, test_results: List[utils.TestResult], clrr=constants.epoc
     utils.plot_errbars(ax, xs, ys, yerrs, "", clrr)
 
 
-if __name__ == '__main__':
+def main():
+    global ax, data
     fldrs = [
         "evals/2nd-graph/65k",
         "evals/2nd-graph/262k",
         "evals/2nd-graph/1m",
     ]
-
     reg_rounds = [
         "evals/65k_size/64_workers_per_node/combined",
         "evals/256k",
         "evals/scripts_mil_size/64_workers_per_node"
     ]
-
     clrs = [
         constants.epoch_setup,
         constants.dpir_clr,
         constants.sealpir_clr,
     ]
-
     fig, ax = plt.subplots()
     for i, fldrs in enumerate(zip(fldrs, reg_rounds)):
         fldr, reg_round = fldrs
@@ -112,13 +110,15 @@ if __name__ == '__main__':
 
         ax.set_xlabel('clients per server')
         ax.set_ylabel('setup time')
-
     ax.legend([
         '$2^{16}$ messages',
         '$2^{18}$ messages',
         '$2^{20}$ messages',
-    ],loc='upper left')
-
+    ], loc='upper left')
     utils.add_y_format(ax)
     ax.set_ylim(0)
     plt.show()
+
+
+if __name__ == '__main__':
+    main()

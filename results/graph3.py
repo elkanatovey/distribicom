@@ -72,37 +72,34 @@ def set_color(prms, clr):
 
 matplotlib.rcParams['font.size'] = constants.font_size
 
-if __name__ == '__main__':
+
+def main():
+    global ax
     fig, ax = plt.subplots()
     xs = sorted(sealpir_values.keys())
-
     sealpir_ys = [*map(lambda x: sealpir_values[x].avg, xs)]
     sealpir_errs = [*map(lambda x: sealpir_values[x].std, xs)]
-
     fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
     fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
-
     dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
     dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
-
     xs = [19, 20, 21]
     utils.plot_errbars(ax, xs, sealpir_ys, sealpir_errs, "", constants.sealpir_clr)
     utils.plot_errbars(ax, xs, fpir_ys, fpir_errs, "", constants.addra_clr)
     utils.plot_errbars(ax, xs, dpir_ys, dpir_errs, "", constants.dpir_clr)
-
     utils.add_y_format(ax)
-
     ax.set_xticks(xs)
     ax.set_xticklabels(["$2^{19}$", "$2^{20}$", "$2^{21}$"])
-
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
     ax.legend(["SealPIR (Pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
     ax.set_ylim(0)
     fig.tight_layout()
-
     plt.show()
-
     print(xs)
     print(np.array(fpir_ys) / np.array(dpir_ys))
     print(np.array(sealpir_ys) / np.array(dpir_ys))
+
+
+if __name__ == '__main__':
+    main()

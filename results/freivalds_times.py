@@ -16,7 +16,7 @@ def grab_verification_times(fname):
     return times
 
 
-if __name__ == '__main__':
+def main():
     for (db_size, fname) in [
         ("65k", "evals/65k_size/32_workers_per_node/third_run/slurm-5816869.out"),
         ("256k", "evals/256k/slurm-6291958.out"),
@@ -24,3 +24,7 @@ if __name__ == '__main__':
         ("2m", "evals/2mil-slurm.out"),
     ]:
         print(f"{db_size}: {np.average(grab_verification_times(fname))} ms")
+
+
+if __name__ == '__main__':
+    main()
