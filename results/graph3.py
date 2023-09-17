@@ -3,6 +3,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 import utils, constants
+import worker_runtimes
 
 dpir_values = {
     # 1 << 16: utils.GenericDataPoint(82, [1407, 1393, 1395, 1394, 1399, 1402, 1406, 1411, 1398]),
@@ -64,6 +65,13 @@ sealpir_values = {
     1 << 21: utils.GenericDataPoint(232, [115399, 123351, 121437, 125887, 131057])
 }
 
+workers_multiplication_times = {
+    1 << 19: utils.GenericDataPoint(58,
+                                    worker_runtimes.extract_time("evals/3rd-graph/slurm_58_workers_116x116.out")[0]),
+    1 << 20: utils.GenericDataPoint(164, worker_runtimes.extract_time("evals/scripts_mil_size/slurm-q328-c24.log")[0]),
+    1 << 21: utils.GenericDataPoint(232, worker_runtimes.extract_time("evals/2mil-slurm.out")[0])
+}
+
 
 def set_color(prms, clr):
     prms["ecolor"] = clr
@@ -74,25 +82,33 @@ matplotlib.rcParams['font.size'] = constants.font_size
 
 
 def main():
-    global ax
     fig, ax = plt.subplots()
     xs = sorted(sealpir_values.keys())
     sealpir_ys = [*map(lambda x: sealpir_values[x].avg, xs)]
     sealpir_errs = [*map(lambda x: sealpir_values[x].std, xs)]
+
     fpir_ys = [*map(lambda x: fpir_values[x].avg, xs)]
     fpir_errs = [*map(lambda x: fpir_values[x].std, xs)]
+
     dpir_ys = [*map(lambda x: dpir_values[x].avg, xs)]
     dpir_errs = [*map(lambda x: dpir_values[x].std, xs)]
+
+    dpir_workers_ys = [*map(lambda x: workers_multiplication_times[x].avg, xs)]
+    dpir_workers_errs = [*map(lambda x: workers_multiplication_times[x].std, xs)]
+
     xs = [19, 20, 21]
     utils.plot_errbars(ax, xs, sealpir_ys, sealpir_errs, "", constants.sealpir_clr)
     utils.plot_errbars(ax, xs, fpir_ys, fpir_errs, "", constants.addra_clr)
     utils.plot_errbars(ax, xs, dpir_ys, dpir_errs, "", constants.dpir_clr)
+    utils.plot_errbars(ax, xs, dpir_workers_ys, dpir_workers_errs, "", constants.dpir_clr, is_dashed=True)
+
     utils.add_y_format(ax)
     ax.set_xticks(xs)
+
     ax.set_xticklabels(["$2^{19}$", "$2^{20}$", "$2^{21}$"])
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
-    ax.legend(["SealPIR (Pung's engine)", "FastPIR (Addra's engine)", "DPIR"])
+    ax.legend(["SealPIR (Pung's engine)", "FastPIR (Addra's engine)", "DPIR", "DPIR workers"])
     ax.set_ylim(0)
     fig.tight_layout()
     plt.show()
