@@ -80,7 +80,7 @@ seal::Ciphertext random_ctx(seal::EncryptionParameters &enc_params) {
     return ctx;
 }
 
-auto msg = "Our DB sizes from the experiment (rowsXcols): 42x41 (~2^16), 84x84 (~2^18), 164x164 (~2^20)";
+auto msg = "Our DB sizes from the experiment (rowsXcols): 116x116 (~2^19), 164x164 (~2^20), 232x232 (~2^21)";
 
 int main(int argc, char *argv[]) {
     if (!is_valid_command_line_args(argc, argv)) {

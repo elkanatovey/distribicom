@@ -114,7 +114,9 @@ def main():
         '$2^{16}$ messages',
         '$2^{18}$ messages',
         '$2^{20}$ messages',
-    ], loc='upper left')
+    ], loc='upper left',framealpha=0.3)
+
+
     utils.add_y_format(ax)
     ax.set_ylim(0)
     plt.show()
