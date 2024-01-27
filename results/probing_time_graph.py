@@ -79,7 +79,7 @@ def get_plot(xs: List[int], measurements: dict[str, utils.TestResult]):
             if dim not in measurements:
                 # we know that we have missing dims for db <= 2^9 luckily we can use times from 2^10 to compensate
                 # since 2^10 times are an upperbound for 2^9.
-                cumulative_averages += np.ones(5)
+                cumulative_averages += np.ones(5) * 1.4
             else:
                 cumulative_averages += np.array(measurements[dim].data[:5])
 
