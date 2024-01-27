@@ -6,7 +6,8 @@ import numpy as np
 import utils
 from results import constants
 
-FOLDER_NAME = '/Users/jonathanweiss/CLionProjects/distribicom/results/evals/probe_graph'
+PROBE_252_CLIENTS = '/Users/jonathanweiss/CLionProjects/distribicom/results/evals/probe_graph/252clients'
+PROBE_500_CLIENTS = '/Users/jonathanweiss/CLionProjects/distribicom/results/evals/probe_graph/500clients'
 
 """
 the size of the db translated to the dimensions of the matrix.
@@ -59,7 +60,7 @@ def prepare_ax(xs):
     ax.set_xticks(xs)
     ax.set_xticklabels([f'$2^\u007b {i} \u007d $' for i in POWERS])
     utils.add_y_format(ax)
-    ax.set_ylabel('round latency')
+    ax.set_ylabel('probe latency')
     ax.set_xlabel('|messages|')
     return ax
 
@@ -91,8 +92,11 @@ def main():
     xs = [2 ** i for i in POWERS]
     ax = prepare_ax(xs)
 
-    y_errs, ys = get_plot(xs, into_dict_of_dims(utils.collect_dpir_test_results(FOLDER_NAME)))
-    utils.plot_errbars(ax, xs, ys, y_errs, "probe 252~ clients per server", constants.dpir_clr)
+    y_errs, ys = get_plot(xs, into_dict_of_dims(utils.collect_dpir_test_results(PROBE_252_CLIENTS)))
+    utils.plot_errbars(ax, xs, ys, y_errs, "250 clients per server", constants.dpir_clr)
+
+    y_errs, ys = get_plot(xs, into_dict_of_dims(utils.collect_dpir_test_results(PROBE_500_CLIENTS)))
+    utils.plot_errbars(ax, xs, ys, y_errs, "500 clients per server", constants.addra_clr)
 
     ax.legend(framealpha=0.3)
     ax.set_ylim(0)
