@@ -108,7 +108,7 @@ def main():
     ax.set_xticklabels(["$2^{19}$", "$2^{20}$", "$2^{21}$"])
     ax.set_ylabel('round latency')
     ax.set_xlabel('|messages|')
-    ax.legend(["SealPIR (Pung's engine)", "FastPIR (Addra's engine)", "DPIR", "client compute time"], framealpha=0.3)
+    ax.legend(["Pung (using SealPIR)", "Addra (using FastPIR)", "DPIR", "client compute time"], framealpha=0.3)
     ax.set_ylim(0)
     fig.tight_layout()
     plt.show()

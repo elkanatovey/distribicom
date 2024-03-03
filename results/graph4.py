@@ -67,7 +67,7 @@ def sealpir_plot(ax, xs):
 
     sealpir_err = [np.std(sealpir_164)] * len(xs)
     ax.errorbar(xs, sealpir_line, yerr=sealpir_err,
-                **edit_plot_params(plot_params, '#E9D985', 'Sealpir $2^{20}$ messages', fmt='--')
+                **edit_plot_params(plot_params, '#E9D985', 'Pung $2^{20}$ messages', fmt='--')
                 )
 
 
@@ -77,7 +77,7 @@ def fast_pir_plot(ax, xs):
     addra_err = [np.std(addra_results)] * len(xs)
 
     ax.errorbar(xs, addras_164_points_unchained, yerr=addra_err,
-                **edit_plot_params(plot_params, '#6E7579', 'Fastpir $2^{20}$ messages', fmt='--')
+                **edit_plot_params(plot_params, '#6E7579', 'addra $2^{20}$ messages', fmt='--')
                 )
 
 

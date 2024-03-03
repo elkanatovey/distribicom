@@ -60,8 +60,8 @@ def prepare_ax(xs):
     ax.set_xticks(xs)
     ax.set_xticklabels([f'$2^\u007b {i} \u007d $' for i in POWERS])
     utils.add_y_format(ax)
-    ax.set_ylabel('probe latency')
-    ax.set_xlabel('|messages|')
+    ax.set_ylabel('dialing latency')
+    ax.set_xlabel('clients')
     return ax
 
 
