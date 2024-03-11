@@ -44,7 +44,7 @@ if __name__ == '__main__':  # 1 config file 2 pir settings file 3 num queries 4 
     config_info = File_Locations(sys.argv[1])
     server_parms = Server_Params(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
 
-    hostname = subprocess.run(['dig', '-4' ,'TXT' ,'+short', 'o-o.myaddr.l.google.com @ns1.google.com'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()[1:-1] + ":54321"
+    hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.decode("utf-8").strip() + ":54321"
     hostname_filename = os.path.join(config_info.hostname_folder, "master_hostname.txt")
     print(f"hostname is: {hostname}")
 
