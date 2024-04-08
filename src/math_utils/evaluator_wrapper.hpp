@@ -106,8 +106,6 @@ namespace math_utils {
 
         void scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
-        void scalar_multiply(std::uint64_t scalar, const seal::Plaintext &ptx, seal::Ciphertext &sum) const;
-
         void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
 
         /***

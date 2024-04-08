@@ -179,7 +179,7 @@ namespace math_utils {
             pool->submit(
                 {
                     .f = [&, k, result_vec, vec, mat]() {
-                        seal::Ciphertext tmp;
+                        seal::Ciphertext tmp(w_evaluator->context);
                         seal::Ciphertext rslt(w_evaluator->context);
                         for (uint64_t j = 0; j < mat->rows; j++) {
                             w_evaluator->scalar_multiply((*vec)[j], (*mat)(j, k), tmp);
@@ -211,7 +211,7 @@ namespace math_utils {
             pool->submit(
                 {
                     .f= [&, k, result_vec, vec, mat]() {
-                        seal::Ciphertext tmp;
+                        seal::Ciphertext tmp(w_evaluator->context);
                         seal::Ciphertext rslt(w_evaluator->context);
                         for (uint64_t j = 0; j < mat->cols; j++) {
                             w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
@@ -239,7 +239,7 @@ namespace math_utils {
 #endif
         auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->cols, 1);
         for (uint64_t k = 0; k < mat->cols; k++) {
-            seal::Ciphertext tmp;
+            seal::Ciphertext tmp(w_evaluator->context);
             seal::Ciphertext rslt(w_evaluator->context);
             for (uint64_t j = 0; j < mat->rows; j++) {
                 w_evaluator->scalar_multiply((*vec)[j], (*mat)(j, k), tmp);
@@ -263,7 +263,7 @@ namespace math_utils {
 #endif
         auto result_vec = std::make_shared<matrix<seal::Ciphertext>>(mat->rows, 1);
         for (uint64_t k = 0; k < mat->rows; k++) {
-            seal::Ciphertext tmp;
+            seal::Ciphertext tmp(w_evaluator->context);
             seal::Ciphertext rslt(w_evaluator->context);
             for (uint64_t j = 0; j < mat->cols; j++) {
                 w_evaluator->scalar_multiply((*vec)[j], (*mat)(k, j), tmp);
