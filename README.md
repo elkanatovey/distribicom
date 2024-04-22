@@ -9,7 +9,7 @@ code on ubuntu 22.04 and cannot guarantee test results on other OSes or versions
 
 ## Compilation instructions
 
-Distribicom is a ```cmake``` project. To compile it, do the following:
+Distribicom is a ```cmake``` project. To compile it with vendored dependencies, do the following:
 
 ```PowerShell
 cmake -S . -B build
