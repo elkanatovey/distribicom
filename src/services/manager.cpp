@@ -490,7 +490,7 @@ namespace services {
                 );
             }
 
-            // TODO: ask Elkana why bother shared locking, there is no point in time where we are locking it for write.
+
             client_query_manager.mutex->lock_shared();
             for (auto i = 0; i < parts.size(); i++) {
                 auto partial_answer = parts[i]->get();

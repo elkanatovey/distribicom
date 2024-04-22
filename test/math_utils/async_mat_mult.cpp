@@ -1,6 +1,3 @@
-//
-// Created by Jonathan Weiss on 12/9/22.
-//
 
 #include "../test_utils.hpp"
 #include "math_utils/matrix_operations.hpp"

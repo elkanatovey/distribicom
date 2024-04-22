@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS "-static -O3")
+set(CMAKE_CXX_FLAGS " -O3")
 option(DONT_COMPILE_DEPENDENCIES "GET_SEAL" OFF)
 
 option(USE_PRECOMPILED_SEAL "Use preinstalled seal" OFF)

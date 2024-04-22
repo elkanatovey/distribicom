@@ -1,6 +1,4 @@
-//
-// Created by Jonathan Weiss on 09/08/2022.
-//
+
 
 #include "marshal.hpp"
 
