@@ -5,11 +5,11 @@ Distribicom is a POC of a fully untrusted communication system with workers that
 
 # Compiling Distribicom
 Distribicom is written in C++20. and in particular requires GCC 11.2 or later or clang 14.0 or later. We have tested our
-code on ubuntu 22.04 and cannot guarantee test results on other OSes or versions. We assume that you have gcc/clang and cmake installed
+code on ubuntu 22.04 and cannot guarantee test results on other OSes or versions. We assume that you have gcc/clang and cmake 3.20+ installed
 
 ## Compilation instructions
 
-Distribicom is a ```cmake``` project. To compile it with vendored dependencies, do the following:
+Distribicom is a ```cmake``` project. To compile it with vendored dependencies, from the project root directory do the following:
 
 ```PowerShell
 cmake -S . -B build
@@ -18,7 +18,7 @@ cmake --build build --target all -j 4
 
 Alternatively, if you plan on building Distribicom many times, you can install the dependencies once, and compile as follows:
 
-run [/scripts/compile_install_scripts/deps.sh](/scripts/compile_install_scripts/deps.sh) documentation as to where and how the dependencies are installed is in the script file.
+run [./scripts/compile_install_scripts/deps.sh](/scripts/compile_install_scripts/deps.sh) documentation as to where and how the dependencies are installed is in the script file.
 Next run
 
 ```PowerShell
