@@ -41,9 +41,9 @@ RUN mkdir -p /home/user/.ssh && \
 RUN apt-get install -y vim
 RUN apt-get install -y sudo
 
-RUN apt-get install -y graphviz pip kcachegrind
-RUN pip install gprof2dot # ./gprof2dot -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
-RUN apt-get install -y mutrace # to detect mutex contention.
+#RUN apt-get install -y graphviz pip kcachegrind
+#RUN pip install gprof2dot # ./gprof2dot -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
+#RUN apt-get install -y mutrace # to detect mutex contention.
 
 COPY deps.sh /deps.sh
 RUN /deps.sh

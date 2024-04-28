@@ -152,8 +152,8 @@ def main():
         sealpir_res = [*filter(lambda x: x.queries <= max_x, sealpir_res)]
         fpir_res = [*filter(lambda x: x.queries <= max_x, fpir_res)]
 
-        plot_other_sys_results(ax, sealpir_res, constants.sealpir_clr, "SealPIR (Pung's engine)")
-        plot_other_sys_results(ax, fpir_res, constants.addra_clr, "FastPIR (Addra's engine)")
+        plot_other_sys_results(ax, sealpir_res, constants.sealpir_clr, "Pung (using SealPIR)")
+        plot_other_sys_results(ax, fpir_res, constants.addra_clr, "Addra (using FastPIR)")
         plot_dpir_line(ax, dpir_test_results)
 
         ax.legend()

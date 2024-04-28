@@ -7,13 +7,16 @@ import matplotlib
 matplotlib.rcParams['font.size'] = constants.font_size
 
 
-def plot_errbars(ax, xs, ys, errbars, label, clr):
+def plot_errbars(ax, xs, ys, errbars, label, clr, is_dashed=False):
+    fmt = "-o"
+    if is_dashed:
+        fmt = "--o"
     ax.errorbar(
         xs,
         ys,
         label=label,
         yerr=errbars,
-        fmt='-o',
+        fmt=fmt,
         barsabove=True,
         capsize=constants.marker_size,
         ecolor=clr,
