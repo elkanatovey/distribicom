@@ -34,7 +34,7 @@ rm -rf grpc
 # install seal
 git clone --recurse-submodules -b v4.0.0 --depth 1 --shallow-submodules https://github.com/microsoft/SEAL
 cd SEAL
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR -DSEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF -DSEAL_USE_INTEL_HEXL=ON
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR -DSEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF
 cmake --build build
 cmake --install build
 cd ..

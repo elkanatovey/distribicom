@@ -23,7 +23,7 @@ void verify_results(std::shared_ptr<services::FullServer> &sharedPtr, std::vecto
 bool is_valid_command_line_args(int argc, char *argv[]) {
     if (argc < 6) {
         std::cout << "Usage: " << argv[0] << " <pir_config_file>" << " <num_queries>" << " <num_workers>" <<
-                  " <num_server_threads>" << " <your_hostname>" << std::endl;
+                  " <num_server_threads>" << " <your_hostname:port_to_listen_on>" << std::endl;
         return false;
     }
 
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
             auto learn_about_rouge_workers_end = std::chrono::high_resolution_clock::now();
             auto time_to_wait_on_all_freivalds_promises = duration_cast<std::chrono::milliseconds>(
                 learn_about_rouge_workers_end - time_round_s).count();
-            std::cout << "SERVER: learned about rouge workers: total time: " << time_to_wait_on_all_freivalds_promises
+            std::cout << "SERVER: learned about rogue workers: total time: " << time_to_wait_on_all_freivalds_promises
                       << " ms" << std::endl;
 
 

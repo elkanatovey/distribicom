@@ -6,8 +6,8 @@
 
 // TODO: understand how to use export to different file.
 bool is_valid_command_line_args(int argc, char *argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <pir_config_file>" << std::endl;
+    if (argc < 4) {
+        std::cout << "Usage: " << argv[0] << " <pir_config_file>" << " <num_worker_threads>" << " <server_address:server_listening_port>" << std::endl;
         return false;
     }
 

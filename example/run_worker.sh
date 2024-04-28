@@ -1,0 +1,1 @@
+../bin/worker pir_configs.json 2 $(hostname):54321

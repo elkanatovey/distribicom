@@ -1,7 +1,0 @@
-{
-  "binaries": {
-    "main_server": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/main_server",
-    "worker": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/worker"
-  },
-  "hostname_folder": "/sci/nosnap/yossigi/mcboomy/distribicom/scripts/run_scripts/benchmark_scripts/scripts_mil_size/tmps"
-}

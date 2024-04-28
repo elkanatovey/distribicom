@@ -5,12 +5,11 @@ add_subdirectory(marshal)
 add_subdirectory(services)
 add_subdirectory(internals)
 
-add_library(distribicom_cpp old_src/distributed_pir.hpp old_src/distributed_pir.cpp old_src/master.hpp old_src/master.cpp old_src/worker.hpp old_src/worker.cpp
-        old_src/FreivaldsVector.hpp old_src/FreivaldsVector.cpp)
+add_library(distribicom_cpp INTERFACE)
 
 
-target_include_directories(distribicom_cpp PUBLIC marshal math_utils services ${com_sealpir_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(distribicom_cpp marshal_package multiplication_utils sealpir services)
+target_include_directories(distribicom_cpp INTERFACE marshal math_utils services ${com_sealpir_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(distribicom_cpp INTERFACE marshal_package multiplication_utils sealpir services)
 
 
 add_executable(main1 main.cpp)
@@ -26,10 +25,10 @@ target_link_libraries(main1 distribicom_cpp)
 # eval executables:
 add_executable(main_server server.cpp)
 add_executable(worker worker.cpp)
-add_executable(run_sealpir run_sealpir.cpp)
+
 add_executable(worker_bench worker_benchmark.cpp)
 
 target_link_libraries(main_server distribicom_cpp)
 target_link_libraries(worker distribicom_cpp)
-target_link_libraries(run_sealpir distribicom_cpp)
+
 target_link_libraries(worker_bench distribicom_cpp)
