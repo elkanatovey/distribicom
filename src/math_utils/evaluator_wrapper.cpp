@@ -1,6 +1,7 @@
 #include "evaluator_wrapper.hpp"
+#include <seal/util/polyarithsmallmod.h>
 
-namespace math_utils{
+namespace math_utils {
 
     /*
      * for the correct expansion ratio take last_parms_id() times 2
@@ -16,7 +17,7 @@ namespace math_utils{
     }
 }
 namespace {
-    uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params) {
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters &params) {
         uint32_t expansion_ratio = 0;
         uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
         for (size_t i = 0; i < params.coeff_modulus().size(); ++i) {
@@ -26,7 +27,7 @@ namespace {
         return expansion_ratio;
     }
 
-    std::vector<seal::Plaintext> decompose_to_plaintexts(const seal::EncryptionParameters& params,
+    std::vector<seal::Plaintext> decompose_to_plaintexts(const seal::EncryptionParameters &params,
                                                          const seal::Ciphertext &ct) {
         const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
         const auto coeff_count = params.poly_modulus_degree();
@@ -59,7 +60,7 @@ namespace {
         return result;
     }
 
-    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+    void compose_to_ciphertext(const seal::EncryptionParameters &params,
                                std::vector<seal::Plaintext>::const_iterator pt_iter,
                                const size_t ct_poly_count, seal::Ciphertext &ct) {
         const uint32_t pt_bits_per_coeff = log2(params.plain_modulus().value());
@@ -92,7 +93,7 @@ namespace {
         }
     }
 
-    void compose_to_ciphertext(const seal::EncryptionParameters& params,
+    void compose_to_ciphertext(const seal::EncryptionParameters &params,
                                const std::vector<seal::Plaintext> &pts, seal::Ciphertext &ct) {
         return compose_to_ciphertext(
                 params, pts.begin(), pts.size() / compute_expansion_ratio(params), ct);
@@ -250,28 +251,31 @@ namespace math_utils {
         }
     }
 
-    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const {
+    void EvaluatorWrapper::get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext &ptx_decomposition) const {
 
-        ptx_decomposition =  std::move(decompose_to_plaintexts(context.first_context_data()->parms(), ctx));
+        ptx_decomposition = std::move(decompose_to_plaintexts(context.first_context_data()->parms(), ctx));
 
 
     }
 
-    void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext>  &ptx_decomposition, seal::Ciphertext &decoded) const {
+    void EvaluatorWrapper::compose_to_ctx(const std::vector<seal::Plaintext> &ptx_decomposition,
+                                          seal::Ciphertext &decoded) const {
         seal::Ciphertext ctx_copy(context, context.last_parms_id());
-        compose_to_ciphertext( context.first_context_data()->parms(), ptx_decomposition, ctx_copy);
+        compose_to_ciphertext(context.first_context_data()->parms(), ptx_decomposition, ctx_copy);
         decoded = std::move(ctx_copy);
     }
 
 
-    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertext &ptx_decomposition, const seal::Ciphertext &ctx, EncryptedEmbeddedCiphertext  &result) const {
+    void EvaluatorWrapper::mult_with_ptx_decomposition(const EmbeddedCiphertext &ptx_decomposition,
+                                                       const seal::Ciphertext &ctx,
+                                                       EncryptedEmbeddedCiphertext &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(ptx_decomposition[0].is_ntt_form());
         assert(ctx.is_ntt_form());
 #endif
 
         std::vector<seal::Ciphertext> result_copy(ptx_decomposition.size());
-        for(auto i=0; i<ptx_decomposition.size(); i++){
+        for (auto i = 0; i < ptx_decomposition.size(); i++) {
             evaluator->multiply_plain(ctx, ptx_decomposition[i], result_copy[i]);
         }
         result = std::move(result_copy);
@@ -279,34 +283,43 @@ namespace math_utils {
 
     void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
                                            seal::Ciphertext &sum) const {
-        seal::Plaintext ptx;
-        ptx = scalar;
-        evaluator->multiply_plain(right, ptx, sum);
+
+//        seal::Plaintext ptx;
+//        ptx = scalar;
+//        evaluator->multiply_plain(right, ptx, sum);
+
+        auto &ctx_data = *context.get_context_data(sum.parms_id());
+        auto &params = ctx_data.parms();
+
+        seal::util::negacyclic_multiply_poly_mono_coeffmod(
+                right, right.size(),
+                scalar,
+                0 /*dominant exponent is 0 (polynomial is scalar)*/,
+                params.coeff_modulus() /* modulus iter*/,
+                sum /* result put here*/,
+                seal::MemoryManager::GetPool()
+        );
     }
 
-    void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Plaintext &ptx,
-                                           seal::Ciphertext &sum) const {
-        trivial_ciphertext(ptx, sum);
-        scalar_multiply(scalar, sum, sum);
-    }
 
-
-    void EvaluatorWrapper::transform_to_ntt_inplace(EmbeddedCiphertext  &encoded) const {
-        for(auto & ptx_piece : encoded) {
+    void EvaluatorWrapper::transform_to_ntt_inplace(EmbeddedCiphertext &encoded) const {
+        for (auto &ptx_piece: encoded) {
             evaluator->transform_to_ntt_inplace(ptx_piece, context.first_parms_id());
         }
     }
 
 
-    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1, const EncryptedEmbeddedCiphertext &ctx_decomposition2, EncryptedEmbeddedCiphertext  &result) const {
+    void EvaluatorWrapper::add_embedded_ctxs(const EncryptedEmbeddedCiphertext &ctx_decomposition1,
+                                             const EncryptedEmbeddedCiphertext &ctx_decomposition2,
+                                             EncryptedEmbeddedCiphertext &result) const {
 #ifdef DISTRIBICOM_DEBUG
         assert(ctx_decomposition1[0].is_ntt_form());
         assert(ctx_decomposition2[0].is_ntt_form());
-        assert(ctx_decomposition1.size()==ctx_decomposition2.size());
+        assert(ctx_decomposition1.size() == ctx_decomposition2.size());
 #endif
 
         EncryptedEmbeddedCiphertext result_copy(ctx_decomposition1.size());
-        for(auto i=0; i<ctx_decomposition1.size(); i++){
+        for (auto i = 0; i < ctx_decomposition1.size(); i++) {
             evaluator->add(ctx_decomposition1[i], ctx_decomposition2[i], result_copy[i]);
         }
         result = std::move(result_copy);

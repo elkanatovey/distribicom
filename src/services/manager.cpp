@@ -12,8 +12,8 @@ namespace services {
         UNUSED(resp);
         try {
             std::string worker_creds = utils::extract_string_from_metadata(
-                context->client_metadata(),
-                constants::credentials_md
+                    context->client_metadata(),
+                    constants::credentials_md
             );
 
             mtx.lock_shared();
@@ -34,28 +34,28 @@ namespace services {
                 parts_vec.emplace_back(std::move(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr)));
                 auto latest = parts_vec.size() - 1;
                 pool->submit(
-                    {
-                        .f = [&, moved_ptr, latest]() {
+                        {
+                                .f = [&, moved_ptr, latest]() {
 
-                            parts_vec[latest]->set(
-                                std::make_unique<ResultMatPart>(
-                                    std::move(
-                                        ResultMatPart{
-                                            std::move(
-                                                marshal->unmarshal_seal_object<seal::Ciphertext>(
-                                                    moved_ptr->ctx().data())
-                                            ),
-                                            moved_ptr->row(),
-                                            moved_ptr->col()
-                                        }
-                                    )
-                                )
-                            );
+                                    parts_vec[latest]->set(
+                                            std::make_unique<ResultMatPart>(
+                                                    std::move(
+                                                            ResultMatPart{
+                                                                    std::move(
+                                                                            marshal->unmarshal_seal_object<seal::Ciphertext>(
+                                                                                    moved_ptr->ctx().data())
+                                                                    ),
+                                                                    moved_ptr->row(),
+                                                                    moved_ptr->col()
+                                                            }
+                                                    )
+                                            )
+                                    );
 
-                        },
-                        .wg = parts_vec[latest]->get_latch(),
-                        .name = "Manager::ReturnLocalWork::unmarshal",
-                    }
+                                },
+                                .wg = parts_vec[latest]->get_latch(),
+                                .name = "Manager::ReturnLocalWork::unmarshal",
+                        }
                 );
             }
 
@@ -119,10 +119,10 @@ namespace services {
         for (auto &worker: work_streams) {
             ledger->worker_list.push_back(worker.first);
             ledger->worker_verification_results.insert(
-                {
-                    worker.first,
-                    std::make_unique<concurrency::promise<bool>>(1, nullptr)
-                }
+                    {
+                            worker.first,
+                            std::make_unique<concurrency::promise<bool>>(1, nullptr)
+                    }
             );
         }
 
@@ -146,30 +146,30 @@ namespace services {
             for (auto &[name, stream]: work_streams) {
 
                 pool->submit(
-                    {
-                        .f = [&, name, stream]() {
-                            stream->add_task_to_write(rnd_msg.get());
+                        {
+                                .f = [&, name, stream]() {
+                                    stream->add_task_to_write(rnd_msg.get());
 
-                            auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
-                            for (const auto &db_row: db_rows) {
-                                // first send db
-                                for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
+                                    auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
+                                    for (const auto &db_row: db_rows) {
+                                        // first send db
+                                        for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
 
-                                    marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
-                                    marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
+                                            marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
+                                            marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
 
-                                    stream->add_task_to_write(marshall_db(db_row, j).get());
-                                }
-                            }
+                                            stream->add_task_to_write(marshall_db(db_row, j).get());
+                                        }
+                                    }
 
 
-                            stream->add_task_to_write(completion_message.get());
+                                    stream->add_task_to_write(completion_message.get());
 
-                            stream->write_next();
-                        },
-                        .wg = latch,
-                        .name = "send_db"
-                    }
+                                    stream->write_next();
+                                },
+                                .wg = latch,
+                                .name = "send_db"
+                        }
                 );
 
             }
@@ -187,25 +187,25 @@ namespace services {
             auto latch = std::make_shared<concurrency::safelatch>(work_streams.size());
             for (auto &[name, stream]: work_streams) {
                 pool->submit(
-                    {
-                        .f = [&, name, stream]() {
-                            auto current_worker_info = epoch_data.worker_to_responsibilities[name];
-                            auto range_start = current_worker_info.query_range_start;
-                            auto range_end = current_worker_info.query_range_end;
+                        {
+                                .f = [&, name, stream]() {
+                                    auto current_worker_info = epoch_data.worker_to_responsibilities[name];
+                                    auto range_start = current_worker_info.query_range_start;
+                                    auto range_end = current_worker_info.query_range_end;
 
-                            for (std::uint64_t i = range_start;
-                                 i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
+                                    for (std::uint64_t i = range_start;
+                                         i < range_end; ++i) { //@todo currently assume that query has one ctext in dim
 
-                                stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
-                            }
+                                        stream->add_task_to_write(all_clients.id_to_info.at(i)->query_to_send.get());
+                                    }
 
-                            stream->add_task_to_write(completion_message.get());
+                                    stream->add_task_to_write(completion_message.get());
 
-                            stream->write_next();
-                        },
-                        .wg = latch,
-                        .name = "send_queries"
-                    }
+                                    stream->write_next();
+                                },
+                                .wg = latch,
+                                .name = "send_queries"
+                        }
                 );
             }
             latch->wait();
@@ -227,20 +227,21 @@ namespace services {
             for (auto &[name, stream]: work_streams) {
 
                 pool->submit(
-                    {
-                        .f=[&, name, stream]() {
-                            auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
-                            auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
+                        {
+                                .f=[&, name, stream]() {
+                                    auto range_start = epoch_data.worker_to_responsibilities[name].query_range_start;
+                                    auto range_end = epoch_data.worker_to_responsibilities[name].query_range_end;
 
-                            for (std::uint64_t i = range_start; i < range_end; ++i) {
-                                stream->add_task_to_write(all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
+                                    for (std::uint64_t i = range_start; i < range_end; ++i) {
+                                        stream->add_task_to_write(
+                                                all_clients.id_to_info.at(i)->galois_keys_marshaled.get());
 
-                            }
-                            stream->write_next();
-                        },
-                        .wg = latch,
-                        .name = "send_galois_keys_lambda"
-                    }
+                                    }
+                                    stream->write_next();
+                                },
+                                .wg = latch,
+                                .name = "send_galois_keys_lambda"
+                        }
                 );
 
             }
@@ -296,11 +297,11 @@ namespace services {
             }
 
             worker_to_responsibilities[worker_name] = WorkerInfo{
-                .worker_number = worker_id,
-                .group_number = group_id,
-                .query_range_start= range_start,
-                .query_range_end = range_end,
-                .db_rows = db_rows
+                    .worker_number = worker_id,
+                    .group_number = group_id,
+                    .query_range_start= range_start,
+                    .query_range_end = range_end,
+                    .db_rows = db_rows
             };
         }
 
@@ -340,8 +341,8 @@ namespace services {
         seal::Blake2xbPRNGFactory factory;
         auto prng = factory.create({(std::random_device()) ()});
         std::uniform_int_distribution<unsigned long long> dist(
-            std::numeric_limits<uint64_t>::min(),
-            std::numeric_limits<uint64_t>::max()
+                std::numeric_limits<uint64_t>::min(),
+                std::numeric_limits<uint64_t>::max() >> 5 /* allowed max is 60bit.*/
         );
 
         for (auto &i: vec) { i = prng->generate(); }
@@ -353,39 +354,39 @@ namespace services {
             auto size_freivalds_group = db.client_counter / num_freivalds_groups;
 
             EpochData ed{
-                .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
-                .queries_dim2 = {},
-                .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
-                .query_mat_times_randvec = {},
-                .num_freivalds_groups = num_freivalds_groups,
-                .size_freivalds_group = size_freivalds_group,
+                    .worker_to_responsibilities = map_workers_to_responsibilities(db.client_counter),
+                    .queries_dim2 = {},
+                    .random_scalar_vector = std::make_shared<std::vector<std::uint64_t>>(size_freivalds_group),
+                    .query_mat_times_randvec = {},
+                    .num_freivalds_groups = num_freivalds_groups,
+                    .size_freivalds_group = size_freivalds_group,
             };
 
             auto expand_size_dim2 = app_configs.configs().db_rows();
             std::vector<std::shared_ptr<concurrency::promise<math_utils::matrix<seal::Ciphertext>> >> qs2(
-                db.id_to_info.size());
+                    db.id_to_info.size());
 
             for (const auto &info: db.id_to_info) {
 
                 // setting dim2 in matrix<seal::ciphertext> and ntt form.
                 auto p = std::make_shared<concurrency::promise<math_utils::matrix<seal::Ciphertext>>>(1, nullptr);
                 pool->submit(
-                    {
-                        .f = [&, p]() {
-                            auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>
-                                (
-                                    1, expand_size_dim2, // row vec.
-                                    expander->expand_query(
-                                        info.second->query[1],
-                                        expand_size_dim2,
-                                        info.second->galois_keys
-                                    ));
-                            matops->to_ntt(mat->data);
-                            p->set(mat);
-                        },
-                        .wg  = p->get_latch(),
-                        .name = "expand_query_dim2"
-                    }
+                        {
+                                .f = [&, p]() {
+                                    auto mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>
+                                            (
+                                                    1, expand_size_dim2, // row vec.
+                                                    expander->expand_query(
+                                                            info.second->query[1],
+                                                            expand_size_dim2,
+                                                            info.second->galois_keys
+                                                    ));
+                                    matops->to_ntt(mat->data);
+                                    p->set(mat);
+                                },
+                                .wg  = p->get_latch(),
+                                .name = "expand_query_dim2"
+                        }
                 );
                 qs2[info.first] = p;
 
@@ -414,9 +415,9 @@ namespace services {
             // promises for expanded queries
 
             qs[info.first] = expander->async_expand(
-                info.second->query[0],
-                expand_size,
-                info.second->galois_keys
+                    info.second->query[0],
+                    expand_size,
+                    info.second->galois_keys
             );
 
         }
@@ -430,7 +431,7 @@ namespace services {
         while (current_query_group < ed.num_freivalds_groups) {
 
             auto current_query_mat = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                rows, ed.size_freivalds_group);
+                    rows, ed.size_freivalds_group);
 
             auto range_start = current_query_group * ed.size_freivalds_group;
             auto range_end = range_start + ed.size_freivalds_group;
@@ -443,8 +444,8 @@ namespace services {
             }
 
             promises.push_back(matops->async_scalar_dot_product(
-                current_query_mat,
-                ed.random_scalar_vector
+                    current_query_mat,
+                    ed.random_scalar_vector
             ));
 
             current_query_group++;
@@ -475,17 +476,17 @@ namespace services {
             for (auto i = 0; i < parts.size(); i++) {
                 embeddeds[i] = std::make_unique<concurrency::promise<math_utils::EmbeddedCiphertext>>(1, nullptr);
                 pool->submit(
-                    {
-                        .f = [&, i]() {
-                            auto partial_answer = parts[i]->get();
-                            auto embedded = std::make_unique<math_utils::EmbeddedCiphertext>();
-                            matops->w_evaluator->get_ptx_embedding(partial_answer->ctx, *embedded);
-                            matops->w_evaluator->transform_to_ntt_inplace(*embedded);
-                            embeddeds[i]->set(std::move(embedded));
-                        },
-                        .wg = embeddeds[i]->get_latch(),
-                        .name = "Manager::put_in_result_matrix"
-                    }
+                        {
+                                .f = [&, i]() {
+                                    auto partial_answer = parts[i]->get();
+                                    auto embedded = std::make_unique<math_utils::EmbeddedCiphertext>();
+                                    matops->w_evaluator->get_ptx_embedding(partial_answer->ctx, *embedded);
+                                    matops->w_evaluator->transform_to_ntt_inplace(*embedded);
+                                    embeddeds[i]->set(std::move(embedded));
+                                },
+                                .wg = embeddeds[i]->get_latch(),
+                                .name = "Manager::put_in_result_matrix"
+                        }
                 );
             }
 
@@ -519,10 +520,10 @@ namespace services {
             for (const auto &client: client_query_manager.id_to_info) {
                 auto current_query = epoch_data.queries_dim2[client.first];
                 promises.insert(
-                    {
-                        client.first,
-                        matops->async_mat_mult(current_query, client.second->partial_answer)
-                    }
+                        {
+                                client.first,
+                                matops->async_mat_mult(current_query, client.second->partial_answer)
+                        }
                 );
             }
             for (const auto &client: client_query_manager.id_to_info) {
@@ -566,52 +567,55 @@ namespace services {
     }
 
     void Manager::async_verify_worker(
-        const std::shared_ptr<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>> parts_ptr,
-        const std::string worker_creds) {
+            const std::shared_ptr<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>> parts_ptr,
+            const std::string worker_creds) {
         pool->submit(
-            {
-                .f=[&, parts_ptr, worker_creds]() {
-                    auto &parts = *parts_ptr;
+                {
+                        .f=[&, parts_ptr, worker_creds]() {
+                            auto &parts = *parts_ptr;
 
-                    auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
-                    auto rows = work_responsibility.db_rows;
-                    auto query_row_len = work_responsibility.query_range_end - work_responsibility.query_range_start;
+                            auto work_responsibility = epoch_data.worker_to_responsibilities[worker_creds];
+                            auto rows = work_responsibility.db_rows;
+                            auto query_row_len =
+                                    work_responsibility.query_range_end - work_responsibility.query_range_start;
 
 #ifdef DISTRIBICOM_DEBUG
-                    if (query_row_len != epoch_data.size_freivalds_group) {
-                        throw std::runtime_error(
-                            "unimplemented case: query_row_len != epoch_data.size_freivalds_group");
-                    }
+                            if (query_row_len != epoch_data.size_freivalds_group) {
+                                throw std::runtime_error(
+                                        "unimplemented case: query_row_len != epoch_data.size_freivalds_group");
+                            }
 #endif
-                    auto worker_verify_time = utils::time_it([&]() {
+                            auto worker_verify_time = utils::time_it([&]() {
 
-                        for (size_t i = 0; i < rows.size(); i++) {
-                            auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
-                                query_row_len, 1);
+                                for (size_t i = 0; i < rows.size(); i++) {
+                                    auto workers_db_row_x_query = std::make_shared<math_utils::matrix<seal::Ciphertext>>(
+                                            query_row_len, 1);
 
-                            auto &mpdata = workers_db_row_x_query->data;
-                            for (size_t j = 0; j < query_row_len; j++) {
-                                mpdata[j] = parts[j + i * query_row_len]->get()->ctx;
-                            }
+                                    auto &mpdata = workers_db_row_x_query->data;
+                                    for (size_t j = 0; j < query_row_len; j++) {
+                                        mpdata[j] = parts[j + i * query_row_len]->get()->ctx;
+                                    }
 
-                            auto is_valid = verify_row(workers_db_row_x_query, rows[i],
-                                                       work_responsibility.group_number);
-                            if (!is_valid) {
+                                    auto is_valid = verify_row(workers_db_row_x_query, rows[i],
+                                                               work_responsibility.group_number);
+                                    if (!is_valid) {
+                                        epoch_data.ledger->worker_verification_results[worker_creds]->set(
+                                                std::make_unique<bool>(false)
+                                        );
+                                        return;
+                                    }
+                                }
+
                                 epoch_data.ledger->worker_verification_results[worker_creds]->set(
-                                    std::make_unique<bool>(false)
-                                );
-                                return;
-                            }
-                        }
-
-                        epoch_data.ledger->worker_verification_results[worker_creds]->set(std::make_unique<bool>(true));
-                    });
-                    std::cout << "Manager::async_verify_worker::verification time: " << worker_verify_time << " ms"
-                              << std::endl;
-                },
-                .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch(),
-                .name = "async_verify_worker_lambda"
-            }
+                                        std::make_unique<bool>(true));
+                            });
+                            std::cout << "Manager::async_verify_worker::verification time: " << worker_verify_time
+                                      << " ms"
+                                      << std::endl;
+                        },
+                        .wg = epoch_data.ledger->worker_verification_results[worker_creds]->get_latch(),
+                        .name = "async_verify_worker_lambda"
+                }
         );
 
     }
