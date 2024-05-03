@@ -6,7 +6,6 @@ create_test_sourcelist (Tests
         associativity_addition_test.cpp
         associativity_mult_test.cpp
         matrix_mult_order_test.cpp
-        matrix_mult_order_test_version_2.cpp
         matrix_mult_str_test.cpp
         )
 

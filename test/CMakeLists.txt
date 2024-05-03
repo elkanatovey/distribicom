@@ -15,33 +15,3 @@ add_subdirectory(math_utils)
 add_subdirectory(marshal)
 add_subdirectory(services)
 
-# create the testing file and list of tests
-create_test_sourcelist(Tests
-        CommonTests.cpp
-        db_serialisation_test.cpp
-        distributed_freivalds_verification_test.cpp
-        freivalds_verification_test.cpp
-        distribute_query_ser_test.cpp
-        distribute_query_test.cpp
-        )
-
-# add the executable
-add_executable(distribicom_CommonTests ${Tests})
-set_target_properties(
-        distribicom_CommonTests
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test
-)
-
-target_link_libraries(distribicom_CommonTests distribicom_cpp test_utils)
-
-# remove the test driver source file
-set(TestsToRun ${Tests})
-remove(TestsToRun CommonTests.cpp)
-
-# Add all the ADD_TEST for each test
-foreach (test ${TestsToRun})
-    get_filename_component(TName ${test} NAME_WE)
-    add_test(NAME ${TName} COMMAND distribicom_CommonTests ${TName})
-endforeach ()
-

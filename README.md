@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11080232.svg)](https://doi.org/10.5281/zenodo.11080232)
+
 # Distribicom: A communications library that achieves low communication costs and high performance.
 
 Distribicom is a research library and should not be used in production systems. 

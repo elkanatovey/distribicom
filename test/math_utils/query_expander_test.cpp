@@ -2,7 +2,6 @@
 #include "pir.hpp"
 #include "pir_client.hpp"
 #include "../test_utils.hpp"
-#include "old_src/master.hpp"
 
 
 // Throws on failure:
@@ -159,24 +158,15 @@ void expanding_full_dimension_query(TestUtils::SetupConfigs cnfgs) {
 }
 
 std::shared_ptr<Database> gen_db(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
-    auto size_per_item = all->pir_params.ele_size;
-    auto number_of_items = all->pir_params.ele_num;
-
-    auto db(std::make_unique<uint8_t[]>(number_of_items * size_per_item));
-// fill db:
-    seal::Blake2xbPRNGFactory factory;
-    auto gen = factory.create();
-    for (uint64_t i = 0; i < number_of_items; i++) {
-        for (uint64_t j = 0; j < size_per_item; j++) {
-            auto val = gen->generate() % 256;
-            db.get()[(i * size_per_item) + j] = val;
-        }
+    // number of FV plaintexts needed to create the d-dimensional matrix
+    std::uint64_t prod = 1;
+    for (unsigned long i : all->pir_params.nvec) {
+        prod *= i;
     }
-
-    Master server(all->encryption_params, all->pir_params);
-
-    server.set_database(move(db), number_of_items, size_per_item);
-    return server.get_db();
+    std::uint64_t num_matrix_plaintexts = prod;
+    auto db_ = std::make_shared<std::vector<seal::Plaintext>>(num_matrix_plaintexts);
+    std::generate(db_->begin(), db_->end(), [&all](){return all->random_plaintext();});
+    return db_;
 }
 
 void async_expansion(TestUtils::SetupConfigs cnfgs) {
