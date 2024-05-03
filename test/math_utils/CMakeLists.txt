@@ -9,7 +9,7 @@ create_test_sourcelist(Tests
         query_expander_test.cpp
         mult_benchmark.cpp
         frievalds_test.cpp
-        async_mat_mult.cpp
+#        async_mat_mult.cpp deprecated
         threadpool_test.cpp
         thrashing_test.cpp
         benchmarks.cpp

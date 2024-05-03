@@ -92,11 +92,16 @@ int matrix_mult_order_test(int argc, char *argv[]) {
     std::cout << a_plus_c.to_string() << " ..........................." << std::endl;
     Ciphertext e_times_a_plus_c; // e * (a + c)
     Ciphertext f_times_b_plus_d; // f * (b + d)
-    all->w_evaluator->evaluator->multiply_plain(e_encrypted, a_plus_c, e_times_a_plus_c);
-    all->w_evaluator->evaluator->multiply_plain(f_encrypted, b_plus_d, f_times_b_plus_d);
+
+    all->w_evaluator->evaluator->transform_to_ntt_inplace(e_encrypted);
+    all->w_evaluator->evaluator->transform_to_ntt_inplace(f_encrypted);
+    all->w_evaluator->mult(a_plus_c, e_encrypted, e_times_a_plus_c);
+    all->w_evaluator->mult(b_plus_d, f_encrypted, f_times_b_plus_d);
+
 
     Ciphertext e_times_a_plus_c_plus_f_times_b_plus_d; // e * (a + c) + f * (b + d)
     all->w_evaluator->evaluator->add(e_times_a_plus_c, f_times_b_plus_d, e_times_a_plus_c_plus_f_times_b_plus_d);
+    all->w_evaluator->evaluator->transform_from_ntt_inplace(e_times_a_plus_c_plus_f_times_b_plus_d);
 
     std::cout << "finished e * (a + c) + f * (b + d)" << std::endl;//1958182 1
 
@@ -106,10 +111,10 @@ int matrix_mult_order_test(int argc, char *argv[]) {
     Ciphertext b_times_f; // b * f
     Ciphertext c_times_e; // c * e
     Ciphertext d_times_f; // d * f
-    all->w_evaluator->evaluator->multiply_plain(e_encrypted, a, a_times_e);
-    all->w_evaluator->evaluator->multiply_plain(f_encrypted, b, b_times_f);
-    all->w_evaluator->evaluator->multiply_plain(e_encrypted, c, c_times_e);
-    all->w_evaluator->evaluator->multiply_plain(f_encrypted, d, d_times_f);
+    all->w_evaluator->mult(a, e_encrypted, a_times_e);
+    all->w_evaluator->mult(b, f_encrypted, b_times_f);
+    all->w_evaluator->mult(c, e_encrypted, c_times_e);
+    all->w_evaluator->mult(d, f_encrypted, d_times_f);
 
     Ciphertext ae_plus_bf; // (a*e + b*f)
     Ciphertext ce_plus_df; // (c*e + d*f)
@@ -118,6 +123,8 @@ int matrix_mult_order_test(int argc, char *argv[]) {
 
     Ciphertext ae_plus_bf_plus_ce_plus_df; // (a*e + b*f) + (c*e + d*f)
     all->w_evaluator->evaluator->add(ae_plus_bf, ce_plus_df, ae_plus_bf_plus_ce_plus_df);
+    all->w_evaluator->evaluator->transform_from_ntt_inplace(ae_plus_bf_plus_ce_plus_df);
+
     std::cout << "finished (a*e + b*f) + (c*e + d*f)" << std::endl;//1958182 1
 
     Ciphertext trivial_result;
@@ -136,7 +143,7 @@ int matrix_mult_order_test(int argc, char *argv[]) {
     all->decryptor.decrypt(ae_plus_bf_plus_ce_plus_df, result_way_two);
     assert(result_way_one == result_way_two);
 
-    assert(trivial_result.is_transparent()); // TODO: this assert fails
+    assert(trivial_result.is_transparent());
 
     std::cout << "Worked" << std::endl;
 

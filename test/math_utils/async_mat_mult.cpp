@@ -1,4 +1,4 @@
-
+// This test is currently deprecated as async mult does not support Plaintext multiplication
 #include "../test_utils.hpp"
 #include "math_utils/matrix_operations.hpp"
 
@@ -102,7 +102,6 @@ void async_mult_test(const std::shared_ptr<TestUtils::CryptoObjects> &all) {
     matops->to_ntt(A_as_ptx->data);
     auto p = matops->async_mat_mult<>(A_as_ptx, B);
     auto async_c = p->get();
-
     for (uint64_t i = 0; i < C->data.size(); ++i) {
         all->w_evaluator->evaluator->sub_inplace(C->data[i], async_c->data[i]);
         assert(C->data[i].is_transparent());

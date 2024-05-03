@@ -126,7 +126,7 @@ namespace math_utils {
     template<typename U, typename V>
     std::unique_ptr<concurrency::promise<matrix<seal::Ciphertext>>>
     MatrixOperations::async_mat_mult(const std::shared_ptr<matrix<U>> &left_ptr,
-                                     const std::shared_ptr<matrix<V>> &right_ptr) const {
+                                     const std::shared_ptr<matrix<V>> &right_ptr) const { //does not support plaintext mult
 
 
         verify_correct_dimension<U, V>(*left_ptr, *right_ptr);
