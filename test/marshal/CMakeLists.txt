@@ -19,7 +19,7 @@ target_link_libraries(distribicom_marshal_tests multiplication_utils test_utils)
 
 # remove the test driver source file
 set(TestsToRun ${Tests})
-remove(TestsToRun marshal_tests.cpp)
+list(REMOVE_ITEM TestsToRun marshal_tests.cpp)
 
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
