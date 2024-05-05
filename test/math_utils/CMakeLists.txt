@@ -28,7 +28,7 @@ target_link_libraries(distribicom_math_utils_tests multiplication_utils distribi
 
 # remove the test driver source file
 set(TestsToRun ${Tests})
-remove(TestsToRun math_utils_tests.cpp)
+list(REMOVE_ITEM TestsToRun math_utils_tests.cpp)
 
 # Add all the ADD_TEST for each test
 foreach (test ${TestsToRun})
