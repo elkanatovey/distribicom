@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11080232.svg)](https://doi.org/10.5281/zenodo.11080232)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11080231.svg)](https://doi.org/10.5281/zenodo.11080232)
 
 # Distribicom: A communications library that achieves low communication costs and high performance.
 
