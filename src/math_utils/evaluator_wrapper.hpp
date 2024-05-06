@@ -106,12 +106,14 @@ namespace math_utils {
 
         void scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
 
+        void old_scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right, seal::Ciphertext &sum) const;
+
         void trivial_ciphertext(const seal::Plaintext &ptx, seal::Ciphertext &result) const;
 
         /***
          * writes ptx embedding of ctx to ptx_decompositio
          */
-        void get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext  &ptx_decomposition) const;
+        void get_ptx_embedding(const seal::Ciphertext &ctx, EmbeddedCiphertext &ptx_decomposition) const;
 
         void compose_to_ctx(const std::vector<seal::Plaintext> &ptx_decomposition, seal::Ciphertext &decoded) const;
 
@@ -125,8 +127,9 @@ namespace math_utils {
 
         void transform_to_ntt_inplace(EmbeddedCiphertext &encoded) const;
     };
+
     /*
  * for the correct expansion ratio take last_parms_id() times 2
  */
-    uint32_t compute_expansion_ratio(const seal::EncryptionParameters& params);
+    uint32_t compute_expansion_ratio(const seal::EncryptionParameters &params);
 }

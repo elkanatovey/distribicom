@@ -281,6 +281,13 @@ namespace math_utils {
         result = std::move(result_copy);
     }
 
+    void EvaluatorWrapper::old_scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
+                                               seal::Ciphertext &sum) const {
+        seal::Plaintext ptx;
+        ptx = scalar;
+        evaluator->multiply_plain(right, ptx, sum);
+    }
+
     void EvaluatorWrapper::scalar_multiply(std::uint64_t scalar, const seal::Ciphertext &right,
                                            seal::Ciphertext &sum) const {
 

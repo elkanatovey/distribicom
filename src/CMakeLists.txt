@@ -32,3 +32,6 @@ target_link_libraries(main_server distribicom_cpp)
 target_link_libraries(worker distribicom_cpp)
 
 target_link_libraries(worker_bench distribicom_cpp)
+
+add_executable(scalar_mult scalar_mult_benchmark.cpp)
+target_link_libraries(scalar_mult distribicom_cpp)
