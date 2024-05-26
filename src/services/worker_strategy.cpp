@@ -146,29 +146,24 @@ namespace services::work_strategy {
             // before sending the response - ensure we send it in reg-form to compress the data a bit more.
             matops->from_ntt(computed.data);
 
-            // Note that we pass this by reference to the threads. so moving this about is dangerous.
-            std::vector<std::shared_ptr<concurrency::promise<distribicom::MatrixPart>>> to_send_promises;
-            to_send_promises.reserve(computed.rows * computed.cols);
 
-            auto promise_index = -1;
+            auto parts = std::make_unique<distribicom::MatrixParts>();
+            parts->mutable_mp()->Reserve(computed.rows * computed.cols);
+            auto completion_marker = std::make_shared<concurrency::safelatch>(computed.rows * computed.cols);
+
             for (uint64_t i = 0; i < computed.rows; ++i) {
                 for (uint64_t j = 0; j < computed.cols; ++j) {
+                    auto cp = parts->add_mp();
 
-                    to_send_promises.emplace_back(
-                            std::make_shared<concurrency::promise<distribicom::MatrixPart>>(1, nullptr));
-
-                    promise_index++;
                     pool->submit(
                             {
-                                    .f=[&, promise_index, i, j]() {
-                                        auto part = std::make_unique<distribicom::MatrixPart>();
-                                        part->set_row(row_to_index.at(int(i)));
-                                        part->set_col(col_to_query_index.at(int(j)));
-                                        part->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+                                    .f=[&, completion_marker, i, j, cp]() {
 
-                                        to_send_promises[promise_index]->set(std::move(part));
+                                        cp->set_row(row_to_index.at(int(i)));
+                                        cp->set_col(col_to_query_index.at(int(j)));
+                                        cp->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
                                     },
-                                    .wg = to_send_promises[promise_index]->get_latch(),
+                                    .wg = completion_marker,
                                     .name = "worker::send_response",
                             }
                     );
@@ -186,10 +181,8 @@ namespace services::work_strategy {
 
 
             random_wait_time();
-            for (auto &p: to_send_promises) {
-                //Enable write batching in streams (message k + 1 does not rely on responses from message k)
-                stream->Write(*p->get(), grpc::WriteOptions().set_buffer_hint());
-            }
+            completion_marker->wait();
+            stream->Write(*parts.get(), grpc::WriteOptions().set_buffer_hint());
 
             stream->WritesDone();
             auto status = stream->Finish();

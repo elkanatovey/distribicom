@@ -7,7 +7,7 @@
 namespace services {
 
     ::grpc::Status Manager::ReturnLocalWork(::grpc::ServerContext *context,
-                                            ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
+                                            ::grpc::ServerReader<::distribicom::MatrixParts> *reader,
                                             ::distribicom::Ack *resp) {
         UNUSED(resp);
         try {
@@ -25,38 +25,43 @@ namespace services {
             }
 
             std::cout << "Manager::ReturnLocalWork::receiving work." << std::endl;
-            distribicom::MatrixPart tmp;
+            distribicom::MatrixParts tmp;
             auto parts = std::make_shared<std::vector<std::unique_ptr<concurrency::promise<ResultMatPart>>>>();
             auto &parts_vec = *parts;
             while (reader->Read(&tmp)) {
+                auto moved_ptr = std::make_shared<distribicom::MatrixParts>(std::move(tmp));
+                parts_vec.reserve(moved_ptr->mp_size());
+                for(const distribicom::MatrixPart& current_mp: *moved_ptr->mutable_mp()) {
 
-                auto moved_ptr = std::make_shared<distribicom::MatrixPart>(std::move(tmp));
-                parts_vec.emplace_back(std::move(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr)));
-                auto latest = parts_vec.size() - 1;
-                pool->submit(
-                        {
-                                .f = [&, moved_ptr, latest]() {
 
-                                    parts_vec[latest]->set(
-                                            std::make_unique<ResultMatPart>(
-                                                    std::move(
-                                                            ResultMatPart{
-                                                                    std::move(
-                                                                            marshal->unmarshal_seal_object<seal::Ciphertext>(
-                                                                                    moved_ptr->ctx().data())
-                                                                    ),
-                                                                    moved_ptr->row(),
-                                                                    moved_ptr->col()
-                                                            }
-                                                    )
-                                            )
-                                    );
+                    parts_vec.emplace_back(
+                            std::move(std::make_unique<concurrency::promise<ResultMatPart>>(1, nullptr)));
+                    auto latest = parts_vec.size() - 1;
+                    pool->submit(
+                            {
+                                    .f = [&, current_mp, latest]() {
 
-                                },
-                                .wg = parts_vec[latest]->get_latch(),
-                                .name = "Manager::ReturnLocalWork::unmarshal",
-                        }
-                );
+                                        parts_vec[latest]->set(
+                                                std::make_unique<ResultMatPart>(
+                                                        std::move(
+                                                                ResultMatPart{
+                                                                        std::move(
+                                                                                marshal->unmarshal_seal_object<seal::Ciphertext>(
+                                                                                        current_mp.ctx().data())
+                                                                        ),
+                                                                        current_mp.row(),
+                                                                        current_mp.col()
+                                                                }
+                                                        )
+                                                )
+                                        );
+
+                                    },
+                                    .wg = parts_vec[latest]->get_latch(),
+                                    .name = "Manager::ReturnLocalWork::unmarshal",
+                            }
+                    );
+                }
             }
 
 #ifdef FREIVALDS

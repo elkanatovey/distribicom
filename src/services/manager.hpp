@@ -153,7 +153,7 @@ namespace services {
 
         // a worker should send its work, along with credentials of what it sent.
         ::grpc::Status
-        ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixPart> *reader,
+        ReturnLocalWork(::grpc::ServerContext *context, ::grpc::ServerReader<::distribicom::MatrixParts> *reader,
                         ::distribicom::Ack *response) override;
 
 

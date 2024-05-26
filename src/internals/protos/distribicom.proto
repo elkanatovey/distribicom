@@ -25,7 +25,7 @@ service Manager {// masterServer runs this service.
   rpc RegisterAsWorker (WorkerRegistryRequest) returns (stream WorkerTaskPart) {};
 
   // a worker should send its work, along with credentials of what it sent.
-  rpc ReturnLocalWork (stream MatrixPart) returns (Ack) {};
+  rpc ReturnLocalWork (stream MatrixParts) returns (Ack) {};
 }
 
 
@@ -89,6 +89,10 @@ message MatrixPart {
 
   uint32 row = 3;
   uint32 col = 4;
+}
+
+message MatrixParts {
+  repeated MatrixPart mp = 1;
 }
 
 message QueryCiphertext {
