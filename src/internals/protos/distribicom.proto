@@ -76,6 +76,10 @@ message WorkerTaskPart {
   }
 }
 
+message WorkerTaskParts {
+  repeated WorkerTaskPart wtp = 1;
+}
+
 message TaskMetadata{
   uint64 round = 1;
   uint64 epoch = 2;
