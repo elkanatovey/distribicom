@@ -161,7 +161,7 @@ namespace services::work_strategy {
 
                                         cp->set_row(row_to_index.at(int(i)));
                                         cp->set_col(col_to_query_index.at(int(j)));
-                                        cp->mutable_ctx()->set_data(mrshl->marshal_seal_object(computed(i, j)));
+                                        cp->mutable_ctx()->set_data(std::move(mrshl->marshal_seal_object(computed(i,j))));
                                     },
                                     .wg = completion_marker,
                                     .name = "worker::send_response",

@@ -58,6 +58,24 @@ namespace marshal {
             }
         }
 
+        void marshal_batched_seal_ptxs(std::uint64_t num_rows, const std::vector<seal::Plaintext> &in,
+                               std::vector<std::unique_ptr<distribicom::WorkerTaskPart>> &out) const {
+
+            for (std::uint64_t row = 0; row < num_rows; ++row) {
+                for (std::uint64_t col = 0; col < out[row]->mutable_batchedmatrixpart()->mp_size(); ++col) {
+                    std::uint64_t i = row + col*num_rows;
+                    out[row]->mutable_batchedmatrixpart()->mutable_mp(col)->mutable_ptx()->mutable_data()->resize(in[i].save_size());
+                    in[i].save(
+                            (seal::seal_byte *) out[row]->mutable_batchedmatrixpart()->mutable_mp(col)->mutable_ptx()->mutable_data()->data(),
+                            in[i].save_size());
+                    out[row]->mutable_batchedmatrixpart()->mutable_mp(col)->set_row(row);
+                    out[row]->mutable_batchedmatrixpart()->mutable_mp(col)->set_col(col);
+                }
+            }
+
+        }
+
+
         template<typename T>
         std::vector<T> unmarshal_seal_vector(const std::vector<std::string> &in) const {
             std::vector<T> unmarshaled_vec(in.size());

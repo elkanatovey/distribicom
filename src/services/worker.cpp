@@ -98,6 +98,38 @@ namespace services {
         task.ctx_cols[col][0] = std::move(mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp.ctx().data()));
     }
 
+    void Worker::update_current_task_batched() {
+        auto tmp = read_val.mutable_batchedmatrixpart();
+        for(int i =0; i<tmp->mp_size(); i++) {
+//            tmp->mp()
+
+
+            int row = tmp->mp(i).row();
+            int col = tmp->mp(i).col();
+
+            if (tmp->mp(i).has_ptx()) {
+                if (!task.ptx_rows.contains(row)) {
+                    task.ptx_rows[row] = std::move(std::vector<seal::Plaintext>(task.row_size));
+                }
+                if (col >= task.row_size) {
+                    throw std::invalid_argument("Invalid column index, too big");
+                }
+                task.ptx_rows[row][col] = std::move(mrshl->unmarshal_seal_object<seal::Plaintext>(tmp->mp(i).ptx().data()));
+                continue;
+            }
+
+            if (!tmp->mp(i).has_ctx()) {
+                throw std::invalid_argument("Invalid matrix part, neither ptx nor ctx");
+            }
+            if (!task.ctx_cols.contains(col)) {
+                task.ctx_cols[col] = std::move(std::vector<seal::Ciphertext>(1));
+            }
+            task.ctx_cols[col][0] = std::move(mrshl->unmarshal_seal_object<seal::Ciphertext>(tmp->mp(i).ctx().data()));
+        }
+    }
+
+
+
 
     void Worker::OnReadDone(bool ok) {
         try {
@@ -121,6 +153,11 @@ namespace services {
                 case distribicom::WorkerTaskPart::PartCase::kMatrixPart:
 //                    std::cout << "received matrix part" << std::endl;
                     update_current_task();
+                    break;
+
+                case distribicom::WorkerTaskPart::PartCase::kBatchedMatrixPart:
+//                    std::cout << "received matrix parts" << std::endl;
+                    update_current_task_batched();
                     break;
 
                 case distribicom::WorkerTaskPart::PartCase::kMd:
@@ -147,6 +184,7 @@ namespace services {
             read_val.clear_part();
             read_val.clear_gkey();
             read_val.clear_matrixpart();
+            read_val.clear_batchedmatrixpart();
 
         } catch (std::exception &e) {
             std::cerr << "Worker::OnReadDone: failure: " << e.what() << std::endl;

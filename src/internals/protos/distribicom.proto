@@ -73,6 +73,7 @@ message WorkerTaskPart {
     GaloisKeys gkey = 3;
     TaskMetadata md = 4;
     bool task_complete = 5;
+    MatrixParts batchedMatrixPart = 6;
   }
 }
 

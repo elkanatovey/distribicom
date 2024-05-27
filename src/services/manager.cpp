@@ -139,8 +139,8 @@ namespace services {
     Manager::send_db(int rnd, int epoch) {
         auto time = utils::time_it([&]() {
             auto ptx_db = db.many_reads(); // sent to threads via ref, dont exit function without waiting on threads.
-            marshal->marshal_seal_ptxs(ptx_db.mat.data, marshall_db.data);
 
+            marshal->marshal_batched_seal_ptxs(repeated_marshall_db.rows, ptx_db.mat.data, repeated_marshall_db.data);
 
             distribicom::Ack response;
             std::shared_lock lock(mtx);
@@ -158,15 +158,9 @@ namespace services {
                                     auto db_rows = epoch_data.worker_to_responsibilities[name].db_rows;
                                     for (const auto &db_row: db_rows) {
                                         // first send db
-                                        for (std::uint32_t j = 0; j < ptx_db.mat.cols; ++j) {
+                                        stream->add_task_to_write(repeated_marshall_db(db_row, 0).get());
 
-                                            marshall_db(db_row, j)->mutable_matrixpart()->set_row(db_row);
-                                            marshall_db(db_row, j)->mutable_matrixpart()->set_col(j);
-
-                                            stream->add_task_to_write(marshall_db(db_row, j).get());
-                                        }
                                     }
-
 
                                     stream->add_task_to_write(completion_message.get());
 

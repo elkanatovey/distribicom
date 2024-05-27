@@ -97,7 +97,7 @@ namespace services {
         std::unique_ptr<distribicom::WorkerTaskPart> completion_message;
         std::unique_ptr<distribicom::WorkerTaskPart> rnd_msg;
 
-        math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> marshall_db;
+        math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>> repeated_marshall_db;
 
         // TODO: use friendship, instead of ifdef!
 #ifdef DISTRIBICOM_DEBUG
@@ -140,12 +140,17 @@ namespace services {
             completion_message = std::make_unique<distribicom::WorkerTaskPart>();
             completion_message->set_task_complete(true);
             rnd_msg = std::make_unique<distribicom::WorkerTaskPart>();
-            marshall_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, db.cols);
-            for (std::uint64_t i = 0; i < marshall_db.rows; ++i) {
-                for (std::uint64_t j = 0; j < marshall_db.cols; ++j) {
-                    marshall_db.data[marshall_db.pos(i, j)] = std::make_unique<distribicom::WorkerTaskPart>();
-                    marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_row(i);
-                    marshall_db.data[marshall_db.pos(i, j)]->mutable_matrixpart()->set_col(j);
+
+            repeated_marshall_db = math_utils::matrix<std::unique_ptr<distribicom::WorkerTaskPart>>(db.rows, 1);
+            for (std::uint64_t i = 0; i < repeated_marshall_db.rows; ++i) {
+                repeated_marshall_db.data[repeated_marshall_db.pos(i, 0)] = std::make_unique<distribicom::WorkerTaskPart>();
+                repeated_marshall_db.data[repeated_marshall_db.pos(i, 0)]->mutable_batchedmatrixpart()->mutable_mp()->Reserve(repeated_marshall_db.cols);
+
+
+                for (std::uint64_t j = 0; j < db.cols; ++j) {
+                    auto cp = repeated_marshall_db.data[repeated_marshall_db.pos(i, 0)]->mutable_batchedmatrixpart()->add_mp();
+                    cp->set_row(i);
+                    cp->set_row(j);
                 }
             }
         };

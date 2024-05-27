@@ -51,6 +51,8 @@ namespace services {
 
         void update_current_task();
 
+        void update_current_task_batched();
+
     public:
         grpc::Status wait_for_stream_termination();
 
